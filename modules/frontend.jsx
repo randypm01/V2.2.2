@@ -30,12 +30,16 @@ const FE_I18N = {
     a_pas_d: 'Welcome to BEANS Pro. Login credentials sent via SMS — please update your password immediately.',
     // Fields
     f_name: 'Full Name',         f_name_p: 'As shown on your government ID',
-    f_contact: 'Contact',        f_contact_h: 'Mobile / Telegram / WhatsApp',
-    f_contact_p: '+91 98xxx xxxxx or @your_telegram',
+    f_contact: 'Contact',        f_contact_h: 'At least 2 items',
+    contact_types_l: 'Type', contact_value_l: 'Value',
+    contact_types: ['Email','Mobile','Telegram','WhatsApp'],
+    contact_type_p: 'Select …',
+    contact_value_ph: { Email:'e.g. 123@gmail.com', Mobile:'+91 ', Telegram:'@your_telegram', WhatsApp:'+91 98xxx xxxxx' },
+    contact_add: '+ Add contact',
     f_region: 'Region',          f_region_p: 'Select region …',
     f_referrer: 'Referrer (Upline ID)', f_referrer_h: 'Optional — auto-assigned if blank',
     f_referrer_p: 'e.g. AG10042',
-    f_tier: 'Affiliate Tier',    f_tier_h: 'Reviewer may adjust the final tier',
+    f_tier: 'Affiliate Type',    f_tier_h: 'Reviewer may adjust the final type',
     tier_normal_l: 'Individual Affiliate',  tier_normal_d: ['Suitable for personal promotion', '1,000+ social media followers'],
     tier_general_l: 'Team Affiliate',         tier_general_d: ['Suitable for team streamers', '100,000+ social media followers'],
     tier_super_l: 'Master Agent',             tier_super_d: ['Large-scale traffic resources', 'Can recruit sub-affiliates'],
@@ -87,12 +91,16 @@ const FE_I18N = {
     a_pas_t: '申请已通过 🎉',
     a_pas_d: '我们已为您开通专业代理后台,登录账号已通过短信发送,请尽快登录修改初始密码。',
     f_name: '申请人姓名',   f_name_p: '真实姓名(与证件一致)',
-    f_contact: '联系方式',  f_contact_h: '手机 / Telegram / WhatsApp',
-    f_contact_p: '如 +91 98xxx xxxxx 或 @telegram_id',
+    f_contact: '联系方式',  f_contact_h: '至少填写 2 项',
+    contact_types_l: '联系类型', contact_value_l: '联系资料',
+    contact_types: ['Email','手机','Telegram','WhatsApp'],
+    contact_type_p: '请选择 …',
+    contact_value_ph: { Email:'如：123@gmail.com', '手机':'+91 ', Telegram:'@telegram_id', WhatsApp:'+91 98xxx xxxxx' },
+    contact_add: '+ 新增联系方式',
     f_region: '所在地区',   f_region_p: '请选择 …',
     f_referrer: '推荐人(上级代理 ID)', f_referrer_h: '选填,留空将由系统分配',
     f_referrer_p: '如 AG10042',
-    f_tier: '申请等级',     f_tier_h: '审核员可根据资源调整最终等级',
+    f_tier: '申请代理类型',     f_tier_h: '审核员可根据资源调整最终类型',
     tier_normal_l: '个人代理',  tier_normal_d: ['适合个人推广', '社交媒体有1000+的用户关注'],
     tier_general_l: '团队代理', tier_general_d: ['适合有团队的主播', '社交媒体有100,000+的用户关注'],
     tier_super_l: '总代理',       tier_super_d: ['适合有大量的引流资源', '可发展下级专业代理'],
@@ -129,7 +137,7 @@ function FrontendModule() {
   const [failReason, setFailReason] = React.useState('');
 
   const [form, setForm] = React.useState({
-    name: '', contact: '', region: '', referrer: '',
+    name: '', contacts: [{type:'Email',value:''},{type:'手机',value:''}], region: '', referrer: '',
     level: 'normal', reason: '', channels: '',
     idFront: null, idBack: null, selfie: null,
   });
@@ -265,29 +273,84 @@ function FrontendModule() {
         )}
 
         <div className="apply-form">
-          <div className="apply-row">
-            <FeField label={t.f_name} required>
-              <input className="input" placeholder={t.f_name_p}
-                value={form.name} onChange={e=>setField('name', e.target.value)}/>
-            </FeField>
-            <FeField label={t.f_contact} required hint={t.f_contact_h}>
-              <input className="input" placeholder={t.f_contact_p}
-                value={form.contact} onChange={e=>setField('contact', e.target.value)}/>
-            </FeField>
-          </div>
+          <FeField label={t.f_name} required>
+            <input className="input" placeholder={t.f_name_p}
+              value={form.name} onChange={e=>setField('name', e.target.value)}/>
+          </FeField>
 
-          <div className="apply-row">
-            <FeField label={t.f_region} required>
-              <select className="select" value={form.region} onChange={e=>setField('region', e.target.value)}>
-                <option value="">{t.f_region_p}</option>
-                {t.regions.map((r,i)=><option key={i}>{r}</option>)}
-              </select>
-            </FeField>
-            <FeField label={t.f_referrer} hint={t.f_referrer_h}>
-              <input className="input" placeholder={t.f_referrer_p}
-                value={form.referrer} onChange={e=>setField('referrer', e.target.value)}/>
-            </FeField>
-          </div>
+          <FeField label={t.f_region} required>
+            <select className="select" value={form.region} onChange={e=>setField('region', e.target.value)}>
+              <option value="">{t.f_region_p}</option>
+              {t.regions.map((r,i)=><option key={i}>{r}</option>)}
+            </select>
+          </FeField>
+
+          <FeField label={t.f_contact} required hint={t.f_contact_h} hintInline stack>
+            <div className="contact-list">
+              <div className="contact-row contact-head">
+                <div className="contact-cell-type">{t.contact_types_l}<span style={{color:'var(--danger)'}}>*</span></div>
+                <div className="contact-cell-val">{t.contact_value_l}<span style={{color:'var(--danger)'}}>*</span></div>
+                <div className="contact-cell-act"/>
+              </div>
+              {form.contacts.map((c, idx) => {
+                const locked = idx < 2; // 前两项为 Email + 手机，不可删除/改类型
+                const isPhone = c.type === '手机' || c.type === 'Mobile' || c.type === 'WhatsApp';
+                return (
+                <div key={idx} className="contact-row">
+                  <div className="contact-cell-type">
+                    {locked ? (
+                      <div className="contact-type-locked">{c.type}</div>
+                    ) : (
+                      <select className="select" value={c.type}
+                        onChange={e=>{
+                          const next=[...form.contacts]; next[idx]={...next[idx], type:e.target.value, value:''};
+                          setField('contacts', next);
+                        }}>
+                        <option value="">{t.contact_type_p}</option>
+                        {t.contact_types.map(tp => <option key={tp} value={tp}>{tp}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  <div className="contact-cell-val">
+                    {isPhone ? (
+                      <div className="contact-phone-input">
+                        <span className="contact-phone-prefix">+91</span>
+                        <input className="input"
+                          placeholder="98xxx xxxxx"
+                          value={c.value}
+                          onChange={e=>{
+                            const next=[...form.contacts]; next[idx]={...next[idx], value:e.target.value};
+                            setField('contacts', next);
+                          }}/>
+                      </div>
+                    ) : (
+                      <input className="input"
+                        placeholder={t.contact_value_ph[c.type] || ''}
+                        value={c.value}
+                        onChange={e=>{
+                          const next=[...form.contacts]; next[idx]={...next[idx], value:e.target.value};
+                          setField('contacts', next);
+                        }}/>
+                    )}
+                  </div>
+                  <div className="contact-cell-act">
+                    {!locked && (
+                      <button type="button" className="contact-remove" title="移除"
+                        onClick={()=>{
+                          const next=form.contacts.filter((_,i)=>i!==idx);
+                          setField('contacts', next);
+                        }}>−</button>
+                    )}
+                  </div>
+                </div>
+                );
+              })}
+              <button type="button" className="contact-add-btn"
+                onClick={()=>setField('contacts', [...form.contacts, {type:'',value:''}])}>
+                {t.contact_add}
+              </button>
+            </div>
+          </FeField>
 
           <FeField label={t.f_tier} required hint={t.f_tier_h}>
             <div className="apply-radio-group">
@@ -305,26 +368,6 @@ function FrontendModule() {
                     <ul className="apply-radio-d">
                       {(Array.isArray(opt.d) ? opt.d : [opt.d]).map((s,i)=><li key={i}>{s}</li>)}
                     </ul>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </FeField>
-
-          <FeField label={t.f_kyc} required hint={t.f_kyc_h}>
-            <div className="apply-uploads">
-              {[
-                {k:'idFront', l:t.kyc_front,  icon:'image'},
-                {k:'idBack',  l:t.kyc_back,   icon:'image'},
-                {k:'selfie',  l:t.kyc_selfie, icon:'user'},
-              ].map(u => (
-                <div key={u.k}
-                  className={'apply-upload ' + (form[u.k]?'filled':'')}
-                  onClick={()=>setField(u.k, form[u.k] ? null : 'mock-' + u.k + '.jpg')}>
-                  <Icon name={form[u.k]?'check':u.icon} size={20}/>
-                  <div className="apply-upload-l">{u.l}</div>
-                  <div className="apply-upload-h">
-                    {form[u.k] ? t.upload_done : t.upload_idle}
                   </div>
                 </div>
               ))}
@@ -493,12 +536,12 @@ function FeStateStepper({ state, t }) {
   );
 }
 
-function FeField({ label, required, hint, children, stack }) {
+function FeField({ label, required, hint, hintInline, children, stack }) {
   return (
     <div className={'apply-field ' + (stack ? 'stack' : '')}>
-      <div className="apply-field-l">
+      <div className="apply-field-l" style={(hint && hintInline) ? {flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12} : undefined}>
         <span>{label}{required && <span style={{color:'#ef4444',marginLeft:3}}>*</span>}</span>
-        {hint && <span className="apply-field-h">{hint}</span>}
+        {hint && <span className="apply-field-h" style={hintInline ? {marginLeft:'auto',textAlign:'right'} : undefined}>{hint}</span>}
       </div>
       {children}
     </div>

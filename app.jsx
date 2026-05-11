@@ -85,6 +85,7 @@ function App() {
     if (r === 'home') return { kind:'home' };
     if (r === 'prd_home') return { kind:'prd_home', parent:'home' };
     if (r === 'prd_overview') return { kind:'prd_overview', parent: backend === 'prd' ? 'home' : 'home' };
+    if (r === 'version') return { kind:'version', parent:'home' };
     if (r.startsWith('section:')) return { kind:'section', name: r.slice(8), parent:'home' };
     if (r.startsWith('mod:')) {
       const k = r.slice(4);
@@ -127,6 +128,7 @@ function App() {
       return sec?.items.find(i => i.k === pr.k)?.l || pr.k;
     }
     if (pr.kind === 'prd_overview') return '规划优先级';
+    if (pr.kind === 'version') return '版本';
     if (pr.kind === 'phase') {
       const ph = PHASES.find(x => x.key === pr.key);
       return ph ? `${ph.key}_${ph.label}` : pr.key;
@@ -384,6 +386,12 @@ function App() {
               <Icon name="dashboard" size={15} className="sb-icon"/>
               <span>首页</span>
             </div>
+            <div className={'sb-item ' + (isActiveRoute('version')?'active':'')}
+              onClick={()=>setRoute('version')} title="版本">
+              <Icon name="history" size={15} className="sb-icon"/>
+              <span>版本</span>
+              <span className="sb-badge" style={{fontFamily:'JetBrains Mono'}}>v2.2.31</span>
+            </div>
             <div className={'sb-item ' + (isActiveRoute('prd_overview')?'active':'')}
               onClick={()=>setRoute('prd_overview')} title="规划优先级">
               <Icon name="flag" size={15} className="sb-icon"/>
@@ -530,6 +538,9 @@ function App() {
                 </div>
               );
             })()}
+
+            {/* 版本历史 */}
+            {r.kind === 'version' && <window.VersionModule/>}
 
             {/* PRD 规划优先级总览 */}
             {r.kind === 'prd_overview' && <window.PRDOverview onSelect={(k)=>{

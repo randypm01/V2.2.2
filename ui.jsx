@@ -225,20 +225,22 @@ function Avatar({ name, size = 24 }) {
 }
 
 // ============= Drawer =============
-function Drawer({ open, onClose, title, subtitle, children, footer, wide }) {
+function Drawer({ open, onClose, title, subtitle, children, footer, wide, hideHeader }) {
   if (!open) return null;
   return (
     <>
       <div className="drawer-mask" onClick={onClose}/>
       <div className={'drawer ' + (wide?'wide':'')}>
-        <div className="drawer-head">
-          <div>
-            <h3>{title}</h3>
-            {subtitle && <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{subtitle}</div>}
+        {!hideHeader && (
+          <div className="drawer-head">
+            <div>
+              <h3>{title}</h3>
+              {subtitle && <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{subtitle}</div>}
+            </div>
+            <button className="close" onClick={onClose}><Icon name="x" size={14}/></button>
           </div>
-          <button className="close" onClick={onClose}><Icon name="x" size={14}/></button>
-        </div>
-        <div className="drawer-body">{children}</div>
+        )}
+        <div className="drawer-body" style={hideHeader?{padding:0}:undefined}>{children}</div>
         {footer && <div className="drawer-foot">{footer}</div>}
       </div>
     </>
