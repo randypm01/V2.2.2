@@ -1,21 +1,90 @@
 // 代理账户管理
 const { Modal: AM, StatusBadge: AS, RiskBadge: AR, PageHead: APH, SearchInput: ASI, Pagination: APG, Tabs: ATAB, Avatar: AAV, useToast: AUT, Drawer: ADR } = window.UI;
 
-// v2.2.5 自行申请代理 mock 数据 (v2.2.24 字段重构)
-const SELF_APPLICATIONS = [
+// v2.3.0 自行申请代理 共享 store — 让网站前台提交的数据能流入商户后台
+const SELF_APPLICATIONS_INITIAL = [
   { id:'AP000001', name:'Anna_Group',    tier:'normal',  userId:'P34157319', parentId:'AG000000', parentName:'本商户',   contact:'+91 98123 45678',     region:'India · Mumbai',     reason:'个人 YouTube 频道 50k 订阅，主做 Cricket 内容',  channels:'YouTube · Instagram · WhatsApp Group', createdAt:'2026-05-11 23:59:59', updatedAt:'2026-05-11 23:59:59', state:'reviewing' },
   { id:'AP000002', name:'Noah_Group',    tier:'general', userId:'P34157320', parentId:'AG100001', parentName:'Anna_Group',  contact:'@noah_promo',         region:'India · Delhi',      reason:'团队 5 人，主播 + 推广运营',                                    channels:'Telegram 群 12,000+ · Discord',         createdAt:'2026-05-11 23:59:59', updatedAt:'2026-05-12 23:59:59', state:'supplement' },
-  { id:'AP000003', name:'Noah_Group',    tier:'general', userId:'P34157321', parentId:'AG000000', parentName:'本商户',   contact:'+91 90876 54321',     region:'India · Bangalore',  reason:'已有完整推广团队和工具栈，3 个国家市场',                       channels:'Affiliate 网络 · App push',         createdAt:'2026-05-11 23:59:59', updatedAt:'2026-05-13 23:59:59', state:'resubmitted' },
-  { id:'AP000004', name:'Noah_Group',    tier:'general', userId:'P34157322', parentId:'AG000000', parentName:'本商户',   contact:'+91 87654 32109',     region:'India · Pune',       reason:'Instagram 网红 80k 粉丝',                                                channels:'Instagram · TikTok',                       createdAt:'2026-05-11 23:59:59', updatedAt:'2026-05-14 23:59:59', state:'rejected',   failReason:'与现有代理 AG10042 渠道重叠较多，本次申请不通过' },
+  { id:'AP000003', name:'Noah_Group',    tier:'general', userId:'P34157321', parentId:'AG000000', parentName:'本商户',   contact:'+91 90876 54321',     region:'India · Bangalore',  reason:'已有完整推广团队和工具栈，3 个国家市场',                       channels:'Affiliate 网络 · App push',         createdAt:'2026-05-11 23:59:59', updatedAt:'2026-05-13 23:59:59', state:'supplemented' },
+  { id:'AP000004', name:'Noah_Group',    tier:'general', userId:'P34157322', parentId:'AG000000', parentName:'本商户',   contact:'+91 87654 32109',     region:'India · Pune',       reason:'Instagram 网红 80k 粉丝',                                                channels:'Instagram · TikTok',                       createdAt:'2026-05-11 23:59:59', updatedAt:'2026-05-14 23:59:59', state:'failed',   failReason:'与现有代理 AG10042 渠道重叠较多，本次申请不通过' },
   { id:'AP000005', name:'Noah_Group',    tier:'general', userId:'P34157323', parentId:'AG000000', parentName:'本商户',   contact:'@vikram_aff',         region:'India · Ahmedabad',  reason:'隔壁平台代理 3 年，月均流水 ₹500 万',                                      channels:'Telegram · 群组',                   createdAt:'2026-05-11 23:59:59', updatedAt:'2026-05-14 23:59:59', state:'passed' },
 ];
+// 全局共享 store: 网站前台提交 → 商户后台自行申请列表
+if (!window.APS_APPS_STORE) {
+  window.APS_APPS_STORE = { list: [...SELF_APPLICATIONS_INITIAL], listeners: new Set() };
+  window.APS_addApplication = function(app) {
+    const existing = window.APS_APPS_STORE.list;
+    const nowStr = new Date().toISOString().slice(0,19).replace('T',' ');
+    // v2.3.19 同一 userId 若已有非终态(非 passed/failed)申请,直接 UPSERT 复用,避免多条
+    const uid = app.userId;
+    if (uid) {
+      const idx = existing.findIndex(x => x.userId === uid && x.state !== 'passed' && x.state !== 'failed');
+      if (idx >= 0) {
+        const old = existing[idx];
+        const merged = {
+          ...old,
+          name: app.name || old.name,
+          tier: app.tier || old.tier,
+          contact: app.contact || old.contact,
+          region: app.region || old.region,
+          reason: app.reason || old.reason,
+          channels: app.channels || old.channels,
+          updatedAt: nowStr,
+          state: 'reviewing',
+          failReason: null,
+        };
+        window.APS_APPS_STORE.list = existing.map((x,i)=> i===idx ? merged : x);
+        window.APS_APPS_STORE.listeners.forEach(fn => fn());
+        return merged;
+      }
+    }
+    // v2.3.15 基于已存在代理ID 中最大 AP 编号 +1,避免删除后冲突
+    const maxNum = existing.reduce((m, x) => {
+      const n = parseInt(String(x.id || '').replace(/^AP/, ''), 10);
+      return Math.max(m, isNaN(n) ? 0 : n);
+    }, 0);
+    const nextNum = String(maxNum + 1).padStart(6, '0');
+    const full = {
+      id: app.id || ('AP' + nextNum),
+      name: app.name || '未填写',
+      tier: app.tier || 'normal',
+      userId: app.userId || ('P' + Math.floor(10000000 + Math.random()*90000000)),
+      parentId: app.parentId || 'AG000000',
+      parentName: app.parentName || '本商户',
+      contact: app.contact || '',
+      region: app.region || '',
+      reason: app.reason || '',
+      channels: app.channels || '',
+      _formSnapshot: app._formSnapshot || null,
+      createdAt: app.createdAt || nowStr,
+      updatedAt: app.updatedAt || nowStr,
+      state: 'reviewing',
+    };
+    window.APS_APPS_STORE.list = [full, ...existing];
+    window.APS_APPS_STORE.listeners.forEach(fn => fn());
+    return full;
+  };
+}
+function useApsApps() {
+  const [, force] = React.useReducer(x => x + 1, 0);
+  React.useEffect(() => {
+    window.APS_APPS_STORE.listeners.add(force);
+    return () => window.APS_APPS_STORE.listeners.delete(force);
+  }, []);
+  const setApps = (updater) => {
+    const cur = window.APS_APPS_STORE.list;
+    window.APS_APPS_STORE.list = typeof updater === 'function' ? updater(cur) : updater;
+    window.APS_APPS_STORE.listeners.forEach(fn => fn());
+  };
+  return [window.APS_APPS_STORE.list, setApps];
+}
 const TIER_LABEL = { normal:'个人代理', general:'团队代理', super:'总代理' };
 const APP_STATE_META = {
-  reviewing:   { label:'待审核',       fg:'#d97706' },
-  supplement:  { label:'要求补件',   fg:'#7c3aed' },
-  resubmitted: { label:'已补件待审核', fg:'#d97706' },
-  rejected:    { label:'拒绝',           fg:'#dc2626' },
-  passed:      { label:'通过',           fg:'#16a34a' },
+  reviewing:    { label:'待审核',       fg:'#d97706' },
+  supplement:   { label:'要求补件',     fg:'#7c3aed' },
+  supplemented: { label:'已补件待审核', fg:'#d97706' },
+  failed:       { label:'拒绝',         fg:'#dc2626' },
+  passed:       { label:'通过',         fg:'#16a34a' },
 };
 
 function AgentsModule({ initialDetail = null }) {
@@ -64,8 +133,9 @@ function AgentsModule({ initialDetail = null }) {
     setSelected(s);
   };
 
-  const reviewingCount = SELF_APPLICATIONS.filter(a=>a.state==='reviewing').length;
-  const supplementCount = SELF_APPLICATIONS.filter(a=>a.state==='supplement').length;
+  const [apsApps] = useApsApps();
+  const reviewingCount = apsApps.filter(a=>a.state==='reviewing').length;
+  const supplementCount = apsApps.filter(a=>a.state==='supplement').length;
   const pendingAppCount = reviewingCount + supplementCount;
 
   return (
@@ -103,7 +173,44 @@ function AgentsModule({ initialDetail = null }) {
         </div>
       )}
 
-      {source === 'applied' && <SelfApplicationsList apps={SELF_APPLICATIONS} toast={toast}/>}
+      {source === 'applied' && <SelfApplicationsList toast={toast} onCreateAgent={(app, form) => {
+        const newAgent = {
+          id: app.id,
+          name: app.name,
+          parent: form.parent || null,
+          status: 'active',
+          tier: form.type === 'individual' ? 'normal' : form.type === 'team' ? 'general' : 'super',
+          level: 1,
+          players: 0,
+          created: new Date().toISOString(),
+          risk: 'low',
+          _displayId: app.id,
+          _createWay: '自行申请代理',
+          _appData: {
+            userId: app.userId || 'P34157319',
+            reason: app.reason || '',
+            channels: app.channels || '',
+            note: form.note || '',
+            loginName: form.loginName,
+            contacts: form.contacts,
+            appliedAt: app.createdAt || '2026-05-11 23:59:59',
+            history: app.history || [],
+          },
+        };
+        setAgents([newAgent, ...agents]);
+        // v2.3.28 推送到专业代理后台登录账户存储
+        if (window.APS_AGENT_ACCOUNTS && form.loginName && form.password) {
+          window.APS_AGENT_ACCOUNTS.add({
+            agentId: app.id,
+            userId: app.userId || 'P34157319',
+            name: app.name,
+            loginName: form.loginName,
+            password: form.password,
+            tier: newAgent.tier,
+            createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          });
+        }
+      }}/>}
 
       {source === 'merchant' && (
       <div className="card">
@@ -207,7 +314,20 @@ function AgentsModule({ initialDetail = null }) {
       )}
 
       <CreateAgentModal open={showCreate} onClose={()=>setShowCreate(false)} onSubmit={(a)=>{
-        setAgents([{...a, id: 'AG' + String(100000 + agents.length).padStart(6,'0')}, ...agents]);
+        const newId = 'AG' + String(100000 + agents.length).padStart(6,'0');
+        setAgents([{...a, id: newId}, ...agents]);
+        // v2.3.28 商户创建专业代理 也推送到登录账户
+        if (window.APS_AGENT_ACCOUNTS && a.loginName && a.password) {
+          window.APS_AGENT_ACCOUNTS.add({
+            agentId: newId,
+            userId: a.userId || ('P' + Math.floor(10000000 + Math.random()*90000000)),
+            name: a.name,
+            loginName: a.loginName,
+            password: a.password,
+            tier: a.tier || 'normal',
+            createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          });
+        }
         toast('代理 ' + a.name + ' 创建成功');
         setShowCreate(false);
       }}/>
@@ -238,7 +358,7 @@ function CreateAgentModal({ open, onClose, onSubmit, prefill }) {
         name: prefill.name || '',
         type: prefill.tier === 'normal' ? 'individual' : prefill.tier === 'general' ? 'team' : prefill.tier === 'super' ? 'super' : 'individual',
         parent: prefill.parentId || '',
-        remark: (prefill.reason || '') + (prefill.channels ? ('\n推广渠道:' + prefill.channels) : ''),
+        remark: prefill.reason || '',
         contacts: [
           {type:'Email', value:'123@gmail.com'},
           {type:'手机', value:'1234567890', dial:'+91'},
@@ -550,13 +670,15 @@ function AgentDetail({ agent, onClose }) {
             <div className="ad-section-title">基本资料</div>
             <div className="ad-info-card">
               <div className="ad-info-grid">
-                <div><span className="ad-k">代理创建方式:</span><span className="ad-v">商户创建代理</span></div>
-                <div><span className="ad-k">创建代理人:</span><span className="ad-v">randy</span></div>
-                <div><span className="ad-k">代理ID:</span><span className="ad-v text-mono">{agent.id}</span></div>
-                <div><span className="ad-k">创建时间:</span><span className="ad-v text-mono">{fmtDT(agent.created)}</span></div>
+                <div><span className="ad-k">代理创建方式:</span><span className="ad-v">{createWay}</span></div>
+                {isApplied
+                  ? <div><span className="ad-k">用户ID:</span><span className="ad-v text-mono">{agent._appData?.userId || 'P34157319'}</span></div>
+                  : <div><span className="ad-k">创建代理人:</span><span className="ad-v">randy</span></div>}
+                <div><span className="ad-k">代理ID:</span><span className="ad-v text-mono">{displayId}</span></div>
+                <div><span className="ad-k">创建时间:</span><span className="ad-v text-mono">{isApplied ? (agent._appData?.appliedAt || '2026-5-11 23:59:59') : fmtDT(agent.created)}</span></div>
                 <div><span className="ad-k">代理名称:</span><span className="ad-v">{agent.name}</span></div>
                 <div></div>
-                <div><span className="ad-k">登入帐号:</span><span className="ad-v text-mono">{(agent.name||'').replace(/[^A-Za-z]/g,'').toLowerCase() || 'agent'}001</span></div>
+                <div><span className="ad-k">登入帐号:</span><span className="ad-v text-mono">{agent._appData?.loginName || (agent.name||'').replace(/[^A-Za-z]/g,'').toLowerCase() || 'agent'}{isApplied ? '' : '001'}</span></div>
                 <div></div>
                 <div><span className="ad-k">登入密码:</span><span className="ad-v text-mono">********</span></div>
                 <div></div>
@@ -589,8 +711,13 @@ function AgentDetail({ agent, onClose }) {
               </table>
             </div>
 
+            {isApplied && (<>
+              <div className="ad-section-title">申请理由 / 推广渠道说明<span style={{color:'var(--danger)'}}>*</span></div>
+              <textarea className="textarea" rows={4} readOnly value={agent._appData?.reason || ''} placeholder="请描述您的资源情况、预计每月新增玩家数、主要推广渠道与方式..."/>
+            </>)}
+
             <div className="ad-section-title">备注</div>
-            <textarea className="textarea" rows={4} readOnly defaultValue={'· 代理来源、对接人 …\n· 例:Telegram 5w 粉丝群、Youtube、Tiktok 5w 关注、本地板球论坛 …\n· 描述您的资源情况、预计每月新增玩家数、主要推广渠道与方式 …'}/>
+            <textarea className="textarea" rows={4} readOnly value={agent.note || ''} placeholder="(未填写备注)"/>
           </div>
         )}
 
@@ -648,21 +775,29 @@ function AgentDetail({ agent, onClose }) {
                 <tr><th>时间</th><th>操作人</th><th>操作</th></tr>
               </thead>
               <tbody>
-                <tr>
-                  <td className="text-mono">{fmtDT(agent.created)}</td>
-                  <td>商户:管理员-randy</td>
-                  <td>创建专业代理帐户</td>
-                </tr>
-                <tr>
-                  <td className="text-mono">2026-05-11 14:23:08</td>
-                  <td>商户:管理员-randy</td>
-                  <td><a style={{color:'var(--brand)',cursor:'pointer'}}>编辑</a>:基本资料</td>
-                </tr>
-                <tr>
-                  <td className="text-mono">2026-05-11 16:55:42</td>
-                  <td>商户:管理员-randy</td>
-                  <td><a style={{color:'var(--brand)',cursor:'pointer'}}>编辑</a>:帐户状态</td>
-                </tr>
+                {isApplied ? (<>
+                  <tr><td className="text-mono">2026-5-11 23:59:59</td><td>用户:{agent._appData?.userId || 'P34157319'}</td><td>申请专业代理</td></tr>
+                  <tr><td className="text-mono">2026-5-12 23:59:59</td><td>商户:管理员-randy</td><td>要求补件:补件说明…</td></tr>
+                  <tr><td className="text-mono">2026-5-13 23:59:59</td><td>用户:{agent._appData?.userId || 'P34157319'}</td><td>已补件</td></tr>
+                  <tr><td className="text-mono">2026-5-14 23:59:59</td><td>商户:管理员-randy</td><td>拒绝:拒绝原因</td></tr>
+                  <tr><td className="text-mono">2026-5-15 23:59:59</td><td>商户:管理员-randy</td><td>通过:创建专业代理帐户</td></tr>
+                </>) : (<>
+                  <tr>
+                    <td className="text-mono">{fmtDT(agent.created)}</td>
+                    <td>商户:管理员-randy</td>
+                    <td>创建专业代理帐户</td>
+                  </tr>
+                  <tr>
+                    <td className="text-mono">2026-05-11 14:23:08</td>
+                    <td>商户:管理员-randy</td>
+                    <td><a style={{color:'var(--brand)',cursor:'pointer'}}>编辑</a>:基本资料</td>
+                  </tr>
+                  <tr>
+                    <td className="text-mono">2026-05-11 16:55:42</td>
+                    <td>商户:管理员-randy</td>
+                    <td><a style={{color:'var(--brand)',cursor:'pointer'}}>编辑</a>:帐户状态</td>
+                  </tr>
+                </>)}
               </tbody>
             </table>
           </div>
@@ -684,8 +819,8 @@ function AgentDetail({ agent, onClose }) {
 window.AgentsModule = AgentsModule;
 
 // v2.2.5 自行申请代理列表组件 (v2.2.24 重构)
-function SelfApplicationsList({ apps: initialApps, toast }) {
-  const [apps, setApps] = React.useState(initialApps);
+function SelfApplicationsList({ toast, onCreateAgent }) {
+  const [apps, setApps] = useApsApps();
   const [stateFilter, setStateFilter] = React.useState('all');
   const [typeFilter, setTypeFilter] = React.useState('all');
   const [q, setQ] = React.useState('');
@@ -722,16 +857,17 @@ function SelfApplicationsList({ apps: initialApps, toast }) {
     all: apps.length,
     reviewing: apps.filter(a=>a.state==='reviewing').length,
     supplement: apps.filter(a=>a.state==='supplement').length,
-    resubmitted: apps.filter(a=>a.state==='resubmitted').length,
-    rejected: apps.filter(a=>a.state==='rejected').length,
+    supplemented: apps.filter(a=>a.state==='supplemented').length,
+    failed: apps.filter(a=>a.state==='failed').length,
     passed: apps.filter(a=>a.state==='passed').length,
   };
 
   const applyAction = () => {
     if (!actionModal) return;
     const { type, app } = actionModal;
-    const newState = type === 'pass' ? 'passed' : type === 'reject' ? 'rejected' : 'supplement';
-    setApps(apps.map(a => a.id === app.id ? {...a, state:newState, failReason: type==='pass' ? null : reason} : a));
+    const newState = type === 'pass' ? 'passed' : type === 'reject' ? 'failed' : 'supplement';
+    const nowStr = new Date().toISOString().slice(0,19).replace('T',' ');
+    setApps(apps.map(a => a.id === app.id ? {...a, state:newState, failReason: type==='pass' ? null : reason, updatedAt: nowStr} : a));
     toast(`${app.name} · ${type==='pass'?'已通过':type==='reject'?'已拒绝':'已发出补件通知'}`);
     setActionModal(null); setReason(''); setReasonTpl('custom');
     if (detail && detail.id === app.id) setDetail(null);
@@ -741,8 +877,8 @@ function SelfApplicationsList({ apps: initialApps, toast }) {
     {k:'all',l:'全部进度',c:counts.all},
     {k:'reviewing',l:'待审核',c:counts.reviewing},
     {k:'supplement',l:'要求补件',c:counts.supplement},
-    {k:'resubmitted',l:'已补件待审核',c:counts.resubmitted},
-    {k:'rejected',l:'拒绝',c:counts.rejected},
+    {k:'supplemented',l:'已补件待审核',c:counts.supplemented},
+    {k:'failed',l:'拒绝',c:counts.failed},
     {k:'passed',l:'通过',c:counts.passed},
   ];
 
@@ -792,7 +928,7 @@ function SelfApplicationsList({ apps: initialApps, toast }) {
           <tbody>
             {filtered.map(a => {
               const s = APP_STATE_META[a.state];
-              const canAction = a.state==='reviewing' || a.state==='supplement' || a.state==='resubmitted';
+              const canAction = a.state==='reviewing' || a.state==='supplement' || a.state==='supplemented';
               return (
                 <tr key={a.id}>
                   <td className="text-mono" style={{color:'var(--text-0)'}}>{a.id}</td>
@@ -876,10 +1012,10 @@ function SelfApplicationsList({ apps: initialApps, toast }) {
               </table>
 
               <div className="ad-section-title mt-4">申请理由 / 推广渠道说明<span style={{color:'var(--danger)'}}>*</span></div>
-              <textarea className="textarea" rows={4} readOnly value={detail.reason + (detail.channels ? ('\n推广渠道:' + detail.channels) : '')} placeholder="请描述您的资源情况、预计每月新增玩家数、主要推广渠道与方式..." style={{width:'100%'}}/>
+              <textarea className="textarea" rows={4} readOnly value={detail.reason || ''} placeholder="请描述您的资源情况、预计每月新增玩家数、主要推广渠道与方式..." style={{width:'100%'}}/>
 
               {detail.failReason && <>
-                <div className="ad-section-title mt-4">{detail.state==='rejected'?'拒绝原因':'补件说明'}</div>
+                <div className="ad-section-title mt-4">{detail.state==='failed'?'拒绝原因':'补件说明'}</div>
                 <div style={{padding:'10px 12px',background:'#fef2f2',border:'1px solid #fecaca',borderRadius:6,fontSize:13,lineHeight:1.6,color:'#991b1b'}}>{detail.failReason}</div>
               </>}
               </>}
@@ -887,7 +1023,7 @@ function SelfApplicationsList({ apps: initialApps, toast }) {
             {detailTab==='basic' && (
               <div className="agent-detail-foot" style={{justifyContent:'space-between',alignItems:'center'}}>
                 <div style={{fontSize:13,color:'var(--text-1)'}}>申请进度: <span style={{color:APP_STATE_META[detail.state].fg,fontWeight:600}}>{APP_STATE_META[detail.state].label}</span></div>
-                {(detail.state==='reviewing'||detail.state==='supplement'||detail.state==='resubmitted') && (
+                {(detail.state==='reviewing'||detail.state==='supplement'||detail.state==='supplemented') && (
                   <div style={{display:'flex',gap:8}}>
                     <button className="app-act-btn" style={{color:'#7c3aed',borderColor:'#ddd6fe',padding:'5px 12px'}} onClick={()=>openAction('supplement',detail)}>要求补件</button>
                     <button className="app-act-btn" style={{color:'#dc2626',borderColor:'#fecaca',padding:'5px 12px'}} onClick={()=>openAction('reject',detail)}>拒绝</button>
@@ -939,6 +1075,7 @@ function SelfApplicationsList({ apps: initialApps, toast }) {
 
       <CreateAgentModal open={!!passApp} prefill={passApp} onClose={()=>setPassApp(null)} onSubmit={(a)=>{
         setApps(apps.map(x => x.id === passApp.id ? {...x, state:'passed'} : x));
+        if (onCreateAgent) onCreateAgent(passApp, a);
         toast(`${passApp.name} 已通过审核,代理账户创建成功`);
         setPassApp(null);
       }}/>

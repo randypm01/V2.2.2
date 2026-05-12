@@ -29,6 +29,9 @@ const ICONS = {
   upload: 'M12 20V8m0 0l-5 5m5-5l5 5M4 4h16',
   refresh: 'M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5',
   eye: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zm11 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  eyeOff: 'M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.84 19.84 0 0 1 5.06-5.94M9.9 4.24A10.93 10.93 0 0 1 12 4c7 0 11 8 11 8a19.84 19.84 0 0 1-3.17 4.19M1 1l22 22M14.12 14.12a3 3 0 1 1-4.24-4.24',
+  lock: 'M5 11h14v10H5V11zm2 0V7a5 5 0 0 1 10 0v4',
+  logOut: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
   edit: 'M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z',
   trash: 'M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z',
   copy: 'M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l-4-4h-6a2 2 0 0 0-2 2zM16 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2',
@@ -46,7 +49,7 @@ const ICONS = {
   globe: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20',
   layers: 'M12 2L2 7l10 5 10-5-10-5zm-10 11l10 5 10-5M2 17l10 5 10-5',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z',
-  phone: 'M5 4h14v16H5V4zm5 16h4',
+  phone: 'M5 4h14v16H5V4zm5 16h4'
 };
 
 window.Icon = function Icon({ name, size = 14, style, className, strokeWidth = 1.6 }) {
@@ -55,51 +58,51 @@ window.Icon = function Icon({ name, size = 14, style, className, strokeWidth = 1
   const fill = name === 'pie' || name === 'sparkle' ? 'currentColor' : 'none';
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}
-      stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
-      style={{flexShrink:0,...style}} className={className}>
-      <path d={d}/>
-    </svg>
-  );
+    stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+    style={{ flexShrink: 0, ...style }} className={className}>
+      <path d={d} />
+    </svg>);
+
 };
 
 // ============= Switch =============
 window.Switch = function Switch({ on, onChange }) {
   const [v, setV] = useState(on);
   useEffect(() => setV(on), [on]);
-  return <div className={'switch ' + (v ? 'on' : '')} onClick={()=>{ const n=!v; setV(n); onChange && onChange(n); }}/>;
+  return <div className={'switch ' + (v ? 'on' : '')} onClick={() => {const n = !v;setV(n);onChange && onChange(n);}} />;
 };
 
 window.CheckBox = function CheckBox({ on, onChange }) {
   return (
-    <div onClick={(e)=>{ e.stopPropagation(); onChange && onChange(!on); }}
-      style={{
-        width:14, height:14, borderRadius:3,
-        border: on ? '1px solid var(--brand)' : '1px solid var(--line-strong)',
-        background: on ? 'var(--brand)' : 'var(--bg-2)',
-        display:'inline-grid', placeItems:'center', cursor:'pointer', flexShrink:0,
-      }}>
-      {on && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>}
-    </div>
-  );
+    <div onClick={(e) => {e.stopPropagation();onChange && onChange(!on);}}
+    style={{
+      width: 14, height: 14, borderRadius: 3,
+      border: on ? '1px solid var(--brand)' : '1px solid var(--line-strong)',
+      background: on ? 'var(--brand)' : 'var(--bg-2)',
+      display: 'inline-grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0
+    }}>
+      {on && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>}
+    </div>);
+
 };
 
 // ============= Toast =============
 const ToastCtx = createContext(null);
 function ToastProvider({ children }) {
   const [items, setItems] = useState([]);
-  const push = (msg, type='info') => {
+  const push = (msg, type = 'info') => {
     const id = Math.random().toString(36).slice(2);
-    setItems(s => [...s, { id, msg, type }]);
-    setTimeout(()=>setItems(s => s.filter(i => i.id !== id)), 3200);
+    setItems((s) => [...s, { id, msg, type }]);
+    setTimeout(() => setItems((s) => s.filter((i) => i.id !== id)), 3200);
   };
   return (
     <ToastCtx.Provider value={push}>
       {children}
       <div className="toast-stack">
-        {items.map(i => <div key={i.id} className={'toast ' + i.type}>{i.msg}</div>)}
+        {items.map((i) => <div key={i.id} className={'toast ' + i.type}>{i.msg}</div>)}
       </div>
-    </ToastCtx.Provider>
-  );
+    </ToastCtx.Provider>);
+
 }
 const useToast = () => useContext(ToastCtx) || (() => {});
 
@@ -112,22 +115,22 @@ function PageHead({ title, subtitle, children }) {
         {subtitle && <div className="sub">{subtitle}</div>}
       </div>
       <div className="page-head-actions">{children}</div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ============= Tabs =============
 function Tabs({ value, onChange, tabs }) {
   return (
     <div className="tabs">
-      {tabs.map(t => (
-        <div key={t.key} className={'tab ' + (value===t.key?'active':'')} onClick={()=>onChange(t.key)}>
+      {tabs.map((t) =>
+      <div key={t.key} className={'tab ' + (value === t.key ? 'active' : '')} onClick={() => onChange(t.key)}>
           {t.label}
           {typeof t.count === 'number' && <span className="count">{t.count}</span>}
         </div>
-      ))}
-    </div>
-  );
+      )}
+    </div>);
+
 }
 
 // ============= Status Badge =============
@@ -150,78 +153,78 @@ function StatusBadge({ status }) {
     failed: ['b-danger', '失败'],
     proAgent: ['b-brand', '专业代理'],
     cpaTested: ['b-info', '测试中'],
-    excluded: ['b-neutral', '已排除'],
+    excluded: ['b-neutral', '已排除']
   };
   const [c, l] = map[status] || ['b-neutral', status];
-  return <span className={'badge ' + c}><span className="dot"/>{l}</span>;
+  return <span className={'badge ' + c}><span className="dot" />{l}</span>;
 }
 
 // ============= Risk Badge =============
 function RiskBadge({ level }) {
-  const map = { low:'低', medium:'中', high:'高', critical:'紧急' };
+  const map = { low: '低', medium: '中', high: '高', critical: '紧急' };
   return <span className={'risk-' + level}>{map[level] || level}</span>;
 }
 
 // ============= Search Input =============
 function SearchInput({ value, onChange, placeholder, width = 200 }) {
   return (
-    <div className="search-input" style={{width}}>
-      <Icon name="search" size={12} style={{color:'var(--text-3)'}}/>
-      <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>
-    </div>
-  );
+    <div className="search-input" style={{ width }}>
+      <Icon name="search" size={12} style={{ color: 'var(--text-3)' }} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+    </div>);
+
 }
 
 // ============= Date Range =============
 function DateRange({ value, onChange }) {
   const opts = [
-    { v:'today', l:'今日' },
-    { v:'7d',    l:'近 7 日' },
-    { v:'30d',   l:'近 30 日' },
-    { v:'mtd',   l:'本月' },
-    { v:'custom',l:'自定义' },
-  ];
-  const cur = opts.find(o=>o.v===value) || opts[1];
+  { v: 'today', l: '今日' },
+  { v: '7d', l: '近 7 日' },
+  { v: '30d', l: '近 30 日' },
+  { v: 'mtd', l: '本月' },
+  { v: 'custom', l: '自定义' }];
+
+  const cur = opts.find((o) => o.v === value) || opts[1];
   return (
     <span className="dr">
-      <Icon name="history" size={12} style={{color:'var(--text-3)'}}/>
+      <Icon name="history" size={12} style={{ color: 'var(--text-3)' }} />
       {cur.l}
-      <Icon name="chevronDown" size={11} style={{color:'var(--text-3)'}}/>
-    </span>
-  );
+      <Icon name="chevronDown" size={11} style={{ color: 'var(--text-3)' }} />
+    </span>);
+
 }
 
 // ============= Pagination =============
 function Pagination({ page, pageSize, total, onPage }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const arr = [];
-  const lo = Math.max(1, page - 2), hi = Math.min(totalPages, page + 2);
+  const lo = Math.max(1, page - 2),hi = Math.min(totalPages, page + 2);
   for (let i = lo; i <= hi; i++) arr.push(i);
   return (
     <div className="pagination">
-      <span>共 <b style={{color:'var(--text-1)'}}>{total.toLocaleString()}</b> 条 · 第 {page} / {totalPages} 页</span>
+      <span>共 <b style={{ color: 'var(--text-1)' }}>{total.toLocaleString()}</b> 条 · 第 {page} / {totalPages} 页</span>
       <div className="pg-pages">
-        <button disabled={page===1} onClick={()=>onPage(page-1)}>‹</button>
-        {lo > 1 && <><button onClick={()=>onPage(1)}>1</button>{lo>2&&<span style={{padding:'0 4px',color:'var(--text-3)'}}>…</span>}</>}
-        {arr.map(p => <button key={p} className={page===p?'active':''} onClick={()=>onPage(p)}>{p}</button>)}
-        {hi < totalPages && <><span style={{padding:'0 4px',color:'var(--text-3)'}}>…</span><button onClick={()=>onPage(totalPages)}>{totalPages}</button></>}
-        <button disabled={page===totalPages} onClick={()=>onPage(page+1)}>›</button>
+        <button disabled={page === 1} onClick={() => onPage(page - 1)}>‹</button>
+        {lo > 1 && <><button onClick={() => onPage(1)}>1</button>{lo > 2 && <span style={{ padding: '0 4px', color: 'var(--text-3)' }}>…</span>}</>}
+        {arr.map((p) => <button key={p} className={page === p ? 'active' : ''} onClick={() => onPage(p)}>{p}</button>)}
+        {hi < totalPages && <><span style={{ padding: '0 4px', color: 'var(--text-3)' }}>…</span><button onClick={() => onPage(totalPages)}>{totalPages}</button></>}
+        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}>›</button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ============= Avatar =============
 function Avatar({ name, size = 24 }) {
-  const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#22c55e','#06b6d4','#3b82f6','#a855f7','#ef4444'];
-  const idx = (name||'').charCodeAt(0) % colors.length;
-  const initial = (name||'?').charAt(0).toUpperCase();
+  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ef4444'];
+  const idx = (name || '').charCodeAt(0) % colors.length;
+  const initial = (name || '?').charAt(0).toUpperCase();
   return (
-    <div className="avatar" style={{width:size,height:size,fontSize:size*.42,
-      background: 'linear-gradient(135deg, ' + colors[idx] + ', ' + colors[(idx+3)%colors.length] + ')'}}>
+    <div className="avatar" style={{ width: size, height: size, fontSize: size * .42,
+      background: 'linear-gradient(135deg, ' + colors[idx] + ', ' + colors[(idx + 3) % colors.length] + ')' }}>
       {initial}
-    </div>
-  );
+    </div>);
+
 }
 
 // ============= Drawer =============
@@ -229,22 +232,22 @@ function Drawer({ open, onClose, title, subtitle, children, footer, wide, hideHe
   if (!open) return null;
   return (
     <>
-      <div className="drawer-mask" onClick={onClose}/>
-      <div className={'drawer ' + (wide?'wide':'')}>
-        {!hideHeader && (
-          <div className="drawer-head">
+      <div className="drawer-mask" onClick={onClose} />
+      <div className={'drawer ' + (wide ? 'wide' : '')}>
+        {!hideHeader &&
+        <div className="drawer-head">
             <div>
               <h3>{title}</h3>
-              {subtitle && <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{subtitle}</div>}
+              {subtitle && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</div>}
             </div>
-            <button className="close" onClick={onClose}><Icon name="x" size={14}/></button>
+            <button className="close" onClick={onClose}><Icon name="x" size={14} /></button>
           </div>
-        )}
-        <div className="drawer-body" style={hideHeader?{padding:0}:undefined}>{children}</div>
+        }
+        <div className="drawer-body" style={hideHeader ? { padding: 0 } : undefined}>{children}</div>
         {footer && <div className="drawer-foot">{footer}</div>}
       </div>
-    </>
-  );
+    </>);
+
 }
 
 // ============= Modal =============
@@ -253,149 +256,149 @@ function Modal({ open, onClose, title, subtitle, children, footer, width = 560, 
   const w = size === 'lg' ? 720 : size === 'xl' ? 920 : width;
   return (
     <div className="modal-mask" onClick={onClose}>
-      <div className="modal" style={{width: w}} onClick={e=>e.stopPropagation()}>
+      <div className="modal" style={{ width: w }} onClick={(e) => e.stopPropagation()}>
         <div className="drawer-head">
           <div>
             <h3>{title}</h3>
-            {subtitle && <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{subtitle}</div>}
+            {subtitle && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</div>}
           </div>
-          <button className="close" onClick={onClose}><Icon name="x" size={14}/></button>
+          <button className="close" onClick={onClose}><Icon name="x" size={14} /></button>
         </div>
-        <div style={{flex:1,overflow:'auto',padding:'18px 22px'}}>{children}</div>
+        <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>{children}</div>
         {footer && <div className="drawer-foot">{footer}</div>}
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ============= Mini chart components =============
 function Sparkline({ data, height = 28, color = 'var(--brand)' }) {
   if (!data || !data.length) return null;
-  const nums = data.map(d => typeof d === 'number' ? d : (d.y ?? d.value ?? 0));
-  const w = 100, h = height;
-  const max = Math.max(...nums), min = Math.min(...nums);
+  const nums = data.map((d) => typeof d === 'number' ? d : d.y ?? d.value ?? 0);
+  const w = 100,h = height;
+  const max = Math.max(...nums),min = Math.min(...nums);
   const range = max - min || 1;
   const pts = nums.map((v, i) => [
-    (i / (nums.length - 1)) * w,
-    h - ((v - min) / range) * (h - 2) - 1
-  ]);
+  i / (nums.length - 1) * w,
+  h - (v - min) / range * (h - 2) - 1]
+  );
   const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-  const fillId = 'spark' + Math.random().toString(36).slice(2,8);
+  const fillId = 'spark' + Math.random().toString(36).slice(2, 8);
   const fill = line + ' L' + w + ',' + h + ' L0,' + h + ' Z';
   return (
     <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
       <defs><linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor={color} stopOpacity=".4"/><stop offset="1" stopColor={color} stopOpacity="0"/>
+        <stop offset="0" stopColor={color} stopOpacity=".4" /><stop offset="1" stopColor={color} stopOpacity="0" />
       </linearGradient></defs>
-      <path d={fill} fill={`url(#${fillId})`}/>
-      <path d={line} fill="none" stroke={color} strokeWidth="1.4"/>
-    </svg>
-  );
+      <path d={fill} fill={`url(#${fillId})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="1.4" />
+    </svg>);
+
 }
 
 function LineChart({ series, data, height = 220, color = 'var(--brand)', yFmt }) {
   // Backward compat: simple data[] mode + accept {x,y} objects
-  const norm = (s) => ({ ...s, data: s.data.map(d => typeof d === 'number' ? d : (d.y ?? d.value ?? 0)) });
-  const list = (series ? series : (data ? [{ name: '', data, color }] : [])).map(norm);
+  const norm = (s) => ({ ...s, data: s.data.map((d) => typeof d === 'number' ? d : d.y ?? d.value ?? 0) });
+  const list = (series ? series : data ? [{ name: '', data, color }] : []).map(norm);
   if (!list.length) return null;
-  const w = 800, h = height, padL = 44, padB = 24, padT = 10, padR = 12;
-  const innerW = w - padL - padR, innerH = h - padT - padB;
-  const allVals = list.flatMap(s => s.data);
-  const max = Math.max(...allVals), min = Math.min(0, ...allVals);
+  const w = 800,h = height,padL = 44,padB = 24,padT = 10,padR = 12;
+  const innerW = w - padL - padR,innerH = h - padT - padB;
+  const allVals = list.flatMap((s) => s.data);
+  const max = Math.max(...allVals),min = Math.min(0, ...allVals);
   const range = max - min || 1;
   const len = list[0].data.length;
-  const xAt = (i) => padL + (i / (len - 1)) * innerW;
-  const yAt = (v) => padT + innerH - ((v - min) / range) * innerH;
-  const fmt = yFmt || ((v) => v >= 1000 ? (v/1000).toFixed(1)+'k' : v);
+  const xAt = (i) => padL + i / (len - 1) * innerW;
+  const yAt = (v) => padT + innerH - (v - min) / range * innerH;
+  const fmt = yFmt || ((v) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v);
 
   const ticks = 4;
-  const yTicks = Array.from({length:ticks+1}).map((_,i) => min + (range * i / ticks));
+  const yTicks = Array.from({ length: ticks + 1 }).map((_, i) => min + range * i / ticks);
 
   return (
-    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{display:'block'}}>
-      {yTicks.map((v, i) => (
-        <g key={i}>
-          <line x1={padL} y1={yAt(v)} x2={w-padR} y2={yAt(v)} stroke="var(--line-soft)" strokeDasharray="2 4"/>
-          <text x={padL-8} y={yAt(v)+3} textAnchor="end" fill="var(--text-3)" fontSize="10" fontFamily="var(--font-mono)">{fmt(v)}</text>
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+      {yTicks.map((v, i) =>
+      <g key={i}>
+          <line x1={padL} y1={yAt(v)} x2={w - padR} y2={yAt(v)} stroke="var(--line-soft)" strokeDasharray="2 4" />
+          <text x={padL - 8} y={yAt(v) + 3} textAnchor="end" fill="var(--text-3)" fontSize="10" fontFamily="var(--font-mono)">{fmt(v)}</text>
         </g>
-      ))}
+      )}
       {list.map((s, si) => {
         const pts = s.data.map((v, i) => [xAt(i), yAt(v)]);
         const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-        const c = s.color || ['#3b82f6','#22c55e','#f59e0b','#a855f7'][si % 4];
-        const fillId = 'lc' + si + Math.random().toString(36).slice(2,5);
-        const fill = line + ` L${w-padR},${h-padB} L${padL},${h-padB} Z`;
+        const c = s.color || ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7'][si % 4];
+        const fillId = 'lc' + si + Math.random().toString(36).slice(2, 5);
+        const fill = line + ` L${w - padR},${h - padB} L${padL},${h - padB} Z`;
         return (
           <g key={si}>
             <defs><linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor={c} stopOpacity=".25"/><stop offset="1" stopColor={c} stopOpacity="0"/>
+              <stop offset="0" stopColor={c} stopOpacity=".25" /><stop offset="1" stopColor={c} stopOpacity="0" />
             </linearGradient></defs>
-            {si === 0 && <path d={fill} fill={`url(#${fillId})`}/>}
-            <path d={line} fill="none" stroke={c} strokeWidth="1.8"/>
-          </g>
-        );
+            {si === 0 && <path d={fill} fill={`url(#${fillId})`} />}
+            <path d={line} fill="none" stroke={c} strokeWidth="1.8" />
+          </g>);
+
       })}
-      {list.length > 1 && (
-        <g transform={`translate(${padL+8},${padT+4})`}>
-          {list.map((s, si) => (
-            <g key={si} transform={`translate(${si*100},0)`}>
-              <rect width="10" height="3" y="5" fill={s.color || ['#3b82f6','#22c55e','#f59e0b','#a855f7'][si % 4]} rx="1"/>
+      {list.length > 1 &&
+      <g transform={`translate(${padL + 8},${padT + 4})`}>
+          {list.map((s, si) =>
+        <g key={si} transform={`translate(${si * 100},0)`}>
+              <rect width="10" height="3" y="5" fill={s.color || ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7'][si % 4]} rx="1" />
               <text x="14" y="9" fill="var(--text-2)" fontSize="11">{s.name}</text>
             </g>
-          ))}
+        )}
         </g>
-      )}
-    </svg>
-  );
+      }
+    </svg>);
+
 }
 
 function Donut({ data, size = 120, label }) {
-  const total = data.reduce((a,d) => a + d.value, 0);
-  const r = size / 2 - 8, cx = size/2, cy = size/2;
+  const total = data.reduce((a, d) => a + d.value, 0);
+  const r = size / 2 - 8,cx = size / 2,cy = size / 2;
   const C = 2 * Math.PI * r;
   let offset = 0;
   return (
-    <svg width={size} height={size} style={{flexShrink:0}}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-3)" strokeWidth="14"/>
+    <svg width={size} height={size} style={{ flexShrink: 0 }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-3)" strokeWidth="14" />
       {data.map((d, i) => {
-        const len = (d.value / total) * C;
+        const len = d.value / total * C;
         const seg = <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={d.color} strokeWidth="14"
-          strokeDasharray={`${len} ${C-len}`} strokeDashoffset={-offset}
-          transform={`rotate(-90 ${cx} ${cy})`}/>;
+        strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-offset}
+        transform={`rotate(-90 ${cx} ${cy})`} />;
         offset += len;
         return seg;
       })}
-      <text x={cx} y={cy-2} textAnchor="middle" fill="var(--text-0)" fontSize="18" fontWeight="600" fontFamily="var(--font-mono)">{total}</text>
-      <text x={cx} y={cy+14} textAnchor="middle" fill="var(--text-3)" fontSize="10">{label}</text>
-    </svg>
-  );
+      <text x={cx} y={cy - 2} textAnchor="middle" fill="var(--text-0)" fontSize="18" fontWeight="600" fontFamily="var(--font-mono)">{total}</text>
+      <text x={cx} y={cy + 14} textAnchor="middle" fill="var(--text-3)" fontSize="10">{label}</text>
+    </svg>);
+
 }
 
 function BarChart({ data, height = 80, labels }) {
-  const w = 100, h = height;
+  const w = 100,h = height;
   const max = Math.max(...data) || 1;
   const bw = w / data.length * 0.6;
   const gap = w / data.length * 0.4;
   return (
     <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="chart-bar">
       {data.map((v, i) => {
-        const bh = (v / max) * (h - 4);
-        return <rect key={i} x={i * (bw + gap) + gap/2} y={h - bh} width={bw} height={bh} rx="1"/>;
+        const bh = v / max * (h - 4);
+        return <rect key={i} x={i * (bw + gap) + gap / 2} y={h - bh} width={bw} height={bh} rx="1" />;
       })}
-    </svg>
-  );
+    </svg>);
+
 }
 
 function Field({ label, required, children, hint }) {
   return (
-    <label className="field" style={{display:'block',marginBottom:12}}>
-      <div style={{fontSize:11.5,fontWeight:600,color:'var(--text-2)',marginBottom:5}}>
-        {label}{required && <span style={{color:'var(--danger)',marginLeft:3}}>*</span>}
+    <label className="field" style={{ display: 'block', marginBottom: 12 }}>
+      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-2)', marginBottom: 5 }}>
+        {label}{required && <span style={{ color: 'var(--danger)', marginLeft: 3 }}>*</span>}
       </div>
       {children}
-      {hint && <div className="text-mute" style={{fontSize:10.5,marginTop:4}}>{hint}</div>}
-    </label>
-  );
+      {hint && <div className="text-mute" style={{ fontSize: 10.5, marginTop: 4 }}>{hint}</div>}
+    </label>);
+
 }
 
 window.UI = {
@@ -403,5 +406,5 @@ window.UI = {
   ToastProvider, useToast,
   PageHead, Tabs, StatusBadge, RiskBadge, SearchInput, DateRange,
   Pagination, Avatar, Drawer, Modal, LineChart, BarChart, Sparkline, Donut,
-  Field,
+  Field
 };

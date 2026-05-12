@@ -14,6 +14,9 @@ function App() {
   const [frontendRoute, setFrontendRoute] = useState('home');
 
   const [backend, setBackend] = useState('merchant'); // 'merchant' | 'agent' | 'prd' | 'frontend'
+  // v2.3.28 专业代理后台登入态
+  const [loggedInAgent, setLoggedInAgent] = useState(null);
+  const [agentUserMenuOpen, setAgentUserMenuOpen] = useState(false);
   const route = backend === 'prd' ? prdRoute
               : backend === 'agent' ? agentRoute
               : backend === 'frontend' ? frontendRoute
@@ -199,7 +202,7 @@ function App() {
       {backend === 'frontend' && <window.FrontendModule/>}
 
       {/* ========= 第二行:品牌 + 搜索 + 用户 ========= */}
-      {backend !== 'frontend' && (
+      {backend !== 'frontend' && !(backend === 'agent' && !loggedInAgent) && (
       <header className="topbar-v2">
         {backend === 'prd' ? (
           <div className="tbv-brand" style={{cursor:'pointer'}} onClick={()=>setRoute('home')} title="返回首页">
@@ -227,7 +230,7 @@ function App() {
           </div>
         )}
         <div style={{flex:1}}/>
-        {backend !== 'prd' && (<>
+        {backend === 'merchant' && (<>
           <div className="top-search">
             <Icon name="search" size={13}/>
             <input placeholder="搜索代理、玩家、Code、结算单..."/>
@@ -239,12 +242,43 @@ function App() {
             <div className="av">A</div>
             <div className="who"><b>admin</b><small>运营总监</small></div>
             <Icon name="chevronDown" size={12} className="text-mute"/>
+          </div></>)}
+        {backend === 'agent' && loggedInAgent && (
+          <div className="agent-user-wrap" style={{position:'relative'}}>
+            <div className="top-user agent-user-pill" onClick={()=>setAgentUserMenuOpen(v=>!v)} style={{cursor:'pointer'}}>
+              <div className="av" style={{background:'#22c55e',color:'#fff'}}>AP</div>
+              <div className="who"><b>{loggedInAgent.loginName}</b><small className="mono">{loggedInAgent.agentId}</small></div>
+              <Icon name="chevronDown" size={12} className="text-mute"/>
+            </div>
+            {agentUserMenuOpen && (
+              <>
+                <div style={{position:'fixed',inset:0,zIndex:90}} onClick={()=>setAgentUserMenuOpen(false)}/>
+                <div className="agent-user-pop">
+                  <div className="agent-user-pop-row" onClick={()=>{
+                    setAgentUserMenuOpen(false);
+                    setLoggedInAgent(null);
+                    setAgentRoute('home');
+                    window.CURRENT_AGENT_ID = null;
+                  }}>
+                    <Icon name="logOut" size={13}/> 登出
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </>)}
+        )}
       </header>
       )}
 
-      {backend === 'agent' && (
+      {backend === 'agent' && !loggedInAgent && (
+        <window.AgentLoginModule onLogin={(acc) => {
+          setLoggedInAgent(acc);
+          window.CURRENT_AGENT_ID = acc.agentId;
+          setAgentRoute('home');
+        }}/>
+      )}
+
+      {backend === 'agent' && loggedInAgent && (
         <div className="app-body">
           <aside className="sidebar">
             <div className="sb-nav">
@@ -390,7 +424,7 @@ function App() {
               onClick={()=>setRoute('version')} title="版本">
               <Icon name="history" size={15} className="sb-icon"/>
               <span>版本</span>
-              <span className="sb-badge" style={{fontFamily:'JetBrains Mono'}}>v2.2.31</span>
+              <span className="sb-badge" style={{fontFamily:'JetBrains Mono'}}>v2.3.7</span>
             </div>
             <div className={'sb-item ' + (isActiveRoute('prd_overview')?'active':'')}
               onClick={()=>setRoute('prd_overview')} title="规划优先级">

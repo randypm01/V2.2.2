@@ -251,6 +251,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
 .topbar-v2 .top-search { margin-left: 8px; }
 .topbar-v2 .top-icon-btn { margin-left: 4px; align-self: center; }
 .topbar-v2 .top-user { margin-left: 8px; align-self: center; }
+.topbar-v2 .agent-user-wrap { margin-left: 8px; align-self: center; display: flex; align-items: center; }
 
 /* ===== 内容区面包屑 ===== */
 .content-crumbs {
@@ -324,6 +325,121 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
 .top-user .who { display: flex; flex-direction: column; line-height: 1.2; }
 .top-user .who b { font-size: 12px; color: var(--text-0); font-weight: 500; }
 .top-user .who small { font-size: 10.5px; color: var(--text-3); }
+
+/* v2.3.31 专业代理后台登入页 — 参考竟品 2 栏式 */
+.al2-page { display: grid; grid-template-columns: 1.5fr 1fr; min-height: calc(100vh - 50px); background: #fff; }
+/* 左:渐变品牌 */
+.al2-left { position: relative; padding: 36px 60px; background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 50%, #f5f3ff 100%); display: flex; flex-direction: column; }
+.al2-brand { display: flex; align-items: center; gap: 12px; }
+.al2-brand-logo { width: 36px; height: 36px; display: grid; place-items: center; }
+.al2-brand-name { font-size: 22px; font-weight: 700; color: #1e293b; letter-spacing: 0.5px; }
+.al2-illu { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.al2-illu > svg { display: block; }
+.al2-tagline { text-align: center; }
+.al2-tagline-title { font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 14px; }
+.al2-tagline-sub { font-size: 15px; color: #64748b; line-height: 1.6; }
+/* 右:登入面板 */
+.al2-right { position: relative; padding: 0 64px; display: flex; flex-direction: column; background: #fff; }
+.al2-topbar { display: flex; justify-content: flex-end; padding-top: 24px; }
+.al2-lang { position: relative; }
+.al2-lang-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; color: #334155; font-size: 12.5px; cursor: pointer; }
+.al2-lang-btn:hover { border-color: #cbd5e1; background: #f8fafc; }
+.al2-lang-pop { position: absolute; top: 100%; right: 0; margin-top: 6px; min-width: 140px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 24px rgba(15,23,42,.08); overflow: hidden; z-index: 10; }
+.al2-lang-opt { padding: 10px 14px; font-size: 13px; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.al2-lang-opt:hover { background: #f8fafc; }
+.al2-lang-opt.active { color: #3b82f6; background: #eff6ff; }
+/* 表单区 */
+.al2-form-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 500px; width: 100%; margin: 0 auto; padding: 32px 0; }
+.al2-logo { display: flex; flex-direction: column; align-items: center; margin-bottom: 18px; }
+.al2-logo-ring { width: 84px; height: 84px; border: 2px solid #1f2937; border-radius: 50%; display: grid; place-items: center; }
+.al2-logo-name { font-size: 22px; font-weight: 600; color: #0f172a; margin-top: 14px; }
+.al2-welcome-sub-only { font-size: 15px; color: #64748b; margin-bottom: 32px; line-height: 1.6; text-align: center; }
+/* 快速选择 */
+.al2-quick { position: relative; margin-bottom: 18px; }
+.al2-quick-btn { width: 100%; display: flex; align-items: center; gap: 10px; padding: 17px 18px; border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 8px; color: #475569; font-size: 15px; cursor: pointer; }
+.al2-quick-btn:hover { border-color: #93c5fd; background: #eff6ff; color: #3b82f6; }
+.al2-quick-btn > span:first-of-type { flex: 1; text-align: left; }
+.al2-quick-count { padding: 1px 8px; background: #3b82f6; color: #fff; border-radius: 999px; font-size: 11px; font-weight: 600; min-width: 18px; text-align: center; }
+.al2-quick-pop { position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 16px 32px rgba(15,23,42,.10); overflow: hidden; z-index: 10; max-height: 320px; overflow-y: auto; }
+.al2-quick-empty { padding: 40px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+.al2-quick-empty-ico { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto 10px; border-radius: 50%; background: #f1f5f9; color: #94a3b8; }
+.al2-quick-empty-hint { font-size: 11.5px; margin-top: 6px; color: #cbd5e1; line-height: 1.5; }
+.al2-quick-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid #f1f5f9; border-radius: 8px; margin: 8px; cursor: pointer; background: #fff; transition: all 0.15s; }
+.al2-quick-row:hover { background: #f8fafc; border-color: #cbd5e1; }
+.al2-quick-avatar { width: 44px; height: 44px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #14b8a6); color: #fff; font-weight: 700; font-size: 16px; display: grid; place-items: center; flex-shrink: 0; letter-spacing: 0.5px; }
+.al2-quick-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-shrink: 0; }
+.al2-quick-name { font-size: 14px; font-weight: 600; color: #0f172a; line-height: 1.3; }
+.al2-quick-uid { font-size: 12px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; line-height: 1.3; }
+.al2-quick-cred { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #334155; line-height: 1.4; }
+.al2-quick-cred .mono { font-family: 'JetBrains Mono', monospace; color: #0f172a; }
+.al2-quick-label { color: #64748b; margin-right: 4px; }
+.al2-quick-fill { padding: 7px 16px; background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 13px; font-weight: 500; flex-shrink: 0; transition: all 0.15s; }
+.al2-quick-row:hover .al2-quick-fill { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+/* 输入框 */
+.al2-form { display: flex; flex-direction: column; gap: 14px; }
+.al2-field { position: relative; }
+.al2-field input { width: 100%; padding: 18px 48px 18px 20px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; color: #0f172a; background: #fff; outline: none; transition: border-color 0.15s; }
+.al2-field input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.08); }
+.al2-field input::placeholder { color: #94a3b8; }
+.al2-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); padding: 6px; border: 0; background: transparent; color: #94a3b8; cursor: pointer; }
+.al2-eye:hover { color: #475569; }
+.al2-remember { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #475569; cursor: pointer; user-select: none; padding-top: 4px; }
+.al2-remember input { display: none; }
+.al2-cbox { width: 16px; height: 16px; border: 1.5px solid #cbd5e1; border-radius: 4px; display: grid; place-items: center; color: #fff; transition: all 0.15s; }
+.al2-remember input:checked + .al2-cbox { background: #3b82f6; border-color: #3b82f6; }
+.al2-error { padding: 10px 12px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 6px; font-size: 12.5px; }
+.al2-submit { padding: 15px; background: #3b82f6; color: #fff; border: 0; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.15s; }
+.al2-submit:hover { background: #2563eb; }
+.al2-copyright { text-align: center; color: #94a3b8; font-size: 12px; padding: 24px 0; }
+
+/* —— 旧 al-* 样式(v2.3.30 三栏式,保留兼容,不再用) —— */
+.al-page { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: stretch; min-height: calc(100vh - 50px); background: #f8fafc; padding: 40px 32px; }
+.al-card { display: contents; }
+/* 左:品牌区 — 无卡片 */
+.al-left { display: flex; align-items: center; justify-content: center; padding: 20px; }
+.al-brand-art { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.al-brand-title { font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 20px; }
+.al-brand-sub { font-size: 13px; color: #64748b; margin-top: 10px; line-height: 1.6; max-width: 220px; }
+/* 中:账户卡片 */
+.al-accounts { display: flex; flex-direction: column; min-width: 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 4px 16px rgba(15,23,42,.04); padding: 24px 22px; align-self: center; max-height: 80vh; width: 100%; max-width: 380px; justify-self: center; }
+.al-accounts-title { font-size: 14px; color: #1f2937; margin-bottom: 14px; font-weight: 600; }
+.al-accounts-list { flex: 1; min-height: 320px; max-height: 60vh; overflow: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+.al-acc-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafbfc; }
+.al-acc-info { flex: 1; font-size: 12px; color: #334155; line-height: 1.7; min-width: 0; }
+.al-acc-info .mono { font-family: 'JetBrains Mono', monospace; color: #1f2937; }
+.al-fill-btn { padding: 6px 14px; border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 4px; font-size: 12px; cursor: pointer; }
+.al-fill-btn:hover { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+.al-empty { padding: 60px 12px; text-align: center; color: #94a3b8; font-size: 13px; }
+.al-empty-ico { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%; background: #f1f5f9; color: #94a3b8; }
+.al-empty-hint { font-size: 12px; margin-top: 8px; color: #cbd5e1; line-height: 1.5; }
+/* 右:登入卡片 */
+.al-right { padding: 36px 36px; display: flex; flex-direction: column; position: relative; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 4px 16px rgba(15,23,42,.04); align-self: center; max-width: 420px; width: 100%; justify-self: center; min-height: 480px; }
+.al-lang { position: absolute; top: 16px; right: 20px; }
+.al-lang-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; color: #334155; font-size: 12px; cursor: pointer; }
+.al-lang-btn:hover { border-color: #cbd5e1; }
+.al-lang-pop { position: absolute; top: 100%; right: 0; margin-top: 4px; min-width: 120px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 8px 20px rgba(15,23,42,.08); overflow: hidden; z-index: 10; }
+.al-lang-opt { padding: 9px 14px; font-size: 12px; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.al-lang-opt:hover { background: #f8fafc; }
+.al-lang-opt.active { color: #3b82f6; background: #eff6ff; }
+.al-logo { display: flex; flex-direction: column; align-items: center; margin-top: 56px; margin-bottom: 32px; }
+.al-logo-name { font-size: 18px; font-weight: 600; color: #1f2937; margin-top: 10px; }
+.al-form { display: flex; flex-direction: column; gap: 12px; }
+.al-input { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; }
+.al-input:focus-within { border-color: #3b82f6; }
+.al-input-ico { color: #94a3b8; flex-shrink: 0; }
+.al-input input { flex: 1; padding: 10px 0; border: 0; outline: none; font-size: 13px; color: #1f2937; background: transparent; }
+.al-eye { padding: 4px; border: 0; background: transparent; color: #94a3b8; cursor: pointer; }
+.al-remember { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #475569; cursor: pointer; }
+.al-remember input { width: 14px; height: 14px; cursor: pointer; }
+.al-error { padding: 8px 10px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 4px; font-size: 12px; }
+.al-submit { padding: 11px; background: #3b82f6; color: #fff; border: 0; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 6px; }
+.al-submit:hover { background: #2563eb; }
+.al-copyright { margin-top: auto; text-align: center; color: #94a3b8; font-size: 12px; padding-top: 24px; }
+
+/* v2.3.28 代理后台用户悬浮窗 */
+.agent-user-pop { position: absolute; top: calc(100% + 6px); right: 0; min-width: 160px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 8px 24px rgba(15,23,42,.10); padding: 6px; z-index: 100; }
+.agent-user-pop-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 13px; color: #334155; cursor: pointer; border-radius: 4px; }
+.agent-user-pop-row:hover { background: #f1f5f9; color: #1f2937; }
 
 .content { flex: 1; overflow: auto; background: #ffffff; }
 
