@@ -23,7 +23,7 @@ function CodesModule() {
 
   return (
     <div className="page">
-      <UI.PageHead title="分享 Code 与推广链接" subtitle="为代理生成专属推广 Code、Tracking Link 与 QR Code">
+      <UI.PageHead title="代理推广链接" subtitle="为代理生成专属推广 Code、Tracking Link 与 QR Code">
         <button className="btn"><Icon name="download" size={13}/>导出报表</button>
         <button className="btn primary" onClick={()=>setShowCreate(true)}><Icon name="plus" size={13}/>创建 Code</button>
       </UI.PageHead>

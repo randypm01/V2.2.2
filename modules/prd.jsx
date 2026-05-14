@@ -79,18 +79,16 @@ const PRD_FEATURES = {
       scope:['CPA / RevShare / Hybrid / 固定奖励 / 阶梯 / 下级抽成','分润周期 / 结算币种 / 最低结算金额','负盈利是否结转','代理分润方案(适用代理 / 层级 / 比例 / 封顶)'],
       deps:['P0-1'] },
     { id:'P0-8', name:'结算单生成与审核', week:'W4-W5', dev:10, status:'done',
-      side:'商户后台',
+      side:'代理后台',
       mapping:[
-        { backend:'merchant', mod:'settlement', path:'收益 → 结算管理' },
         { backend:'agent', mod:'my_settlement', path:'收益 → 结算单' }
       ],
       why:'代理收益最终落地的环节 — 财务安全的核心',
       scope:['结算单自动生成(按周期)','多级审核流(运营 → 财务 → 风控 → 商户确认)','佣金调整(增/减/补/冻/解冻)','结算单详情(CPA / RevShare / 下级 / 扣款明细)','拒绝结算 / 重新计算'],
       deps:['P0-6','P0-7'] },
     { id:'P0-9', name:'代理钱包与提款', week:'W5', dev:6, status:'done',
-      side:'共用',
+      side:'代理后台',
       mapping:[
-        { backend:'merchant', mod:'wallet', path:'收益 → 代理钱包(审核提款)' },
         { backend:'agent', mod:'my_wallet', path:'收益 → 我的钱包 / 提款' }
       ],
       why:'代理可见的资金账户 — 余额 / 流水 / 提款一体化',
@@ -112,14 +110,12 @@ const PRD_FEATURES = {
       why:'前 10 项数据齐了才能做汇总 — 仪表盘放在 P0 末尾,基于真实数据',
       scope:['代理总览(注册数 / 新增下级 / Clicks / FTD / NGR)','转化漏斗 7 阶段','收益趋势(CPA / RevShare / Hybrid)','风控提醒 + 待处理事项'],
       deps:['P0-1 ~ P0-10'] },
-    { id:'P0-12', name:'操作日志', week:'W6', dev:4, status:'done',
-      side:'商户后台',
-      mapping:[
-        { backend:'merchant', mod:'logs', path:'风控与配置 → 操作日志' }
-      ],
-      why:'合规与审计要求 — 所有 P0 模块的操作必须可追溯',
-      scope:['创建/修改代理记录','审核 CPA / 结算 / 提款记录','冻结佣金 / 风控处理记录','操作人 / 时间 / IP / 操作前后对比','日志导出'],
-      deps:['全部 P0 模块'] },
+    { id:'P0-12', name:'操作日志', week:'W6', dev:4, status:'removed',
+      side:'已移除',
+      mapping:[],
+      why:'v2.4.48 简化版移除 — 商户后台侧栏已去掉「操作日志」入口,代理详情弹窗内仍保留「操作记录」tab 作为轻量版本',
+      scope:[],
+      deps:[] },
     { id:'P0-13', name:'代理我的账户', week:'W6', dev:4, status:'done',
       side:'代理后台',
       mapping:[
@@ -131,7 +127,6 @@ const PRD_FEATURES = {
     { id:'P0-14', name:'代理通知中心', week:'W6', dev:3, status:'done',
       side:'代理后台',
       mapping:[
-        { backend:'merchant', mod:'notifications', path:'风控与配置 → 通知管理' },
         { backend:'agent', mod:'my_notify', path:'我的账户 → 通知中心' }
       ],
       why:'结算 / 风控 / 活动等关键事件需主动触达代理',

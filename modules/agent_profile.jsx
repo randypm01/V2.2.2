@@ -32,81 +32,145 @@ function AgentProfileModule() {
 
   return (
     <div className="page">
-      <PFUI.PageHead title="我的账户" subtitle="基本资料 · 安全设置 · 合作方案">
+      <PFUI.PageHead title="我的账户" subtitle="基本资料 · 合作方案 · 安全设置">
         <button className="btn"><Icon name="download" size={13}/>下载合作协议</button>
       </PFUI.PageHead>
 
       <div className="card">
         <PFUI.Tabs value={tab} onChange={setTab} tabs={[
           {key:'basic',    label:'基本资料'},
-          {key:'security', label:'安全设置'},
           {key:'plan',     label:'合作方案'},
-          {key:'payout',   label:'结算账户'},
+          {key:'security', label:'安全设置'},
         ]}/>
 
-        {tab === 'basic' && (
-          <div style={{padding:'18px 22px'}}>
-            <div className="form-section-title" style={{marginTop:0}}>账号信息</div>
-            <div className="form-grid">
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>代理 ID</label>
-                <input className="input" value={me.id} readOnly style={{background:'var(--bg-3)',fontFamily:'var(--font-mono)'}}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>代理名称</label>
-                <input className="input" defaultValue={me.name}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>代理类型</label>
-                <input className="input" value={D.LABELS.types[me.type] || me.type} readOnly style={{background:'var(--bg-3)'}}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>代理等级</label>
-                <input className="input" value={D.LABELS.tiers[me.tier] || me.tier} readOnly style={{background:'var(--bg-3)'}}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>层级 / 上级</label>
-                <input className="input" value={'L' + me.level + (me.parent ? ' · 上级 ' + me.parent : ' · 直属总代')} readOnly style={{background:'var(--bg-3)',fontFamily:'var(--font-mono)'}}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>市场 / 国家</label>
-                <input className="input" value={(D.LABELS.markets[me.market]||me.market) + ' / ' + (D.LABELS.countries[me.country]||me.country)} readOnly style={{background:'var(--bg-3)'}}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>结算币种</label>
-                <input className="input" value={me.currency} readOnly style={{background:'var(--bg-3)'}}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>注册时间</label>
-                <input className="input" value={new Date(me.created).toLocaleDateString('zh-CN')} readOnly style={{background:'var(--bg-3)'}}/>
-              </div>
-            </div>
+        {tab === 'basic' && (() => {
+          // v2.5.8 重做:字段与商户后台「查看&配置 → 基本资料」一一对应,不存在的字段不出现
+          const D = window.APS_DATA;
+          const isApplied = (me._createWay || '') === '自行申请代理';
+          const displayId = me._displayId || me.id;
+          const createdRaw = isApplied
+            ? (me._appData?.appliedAt || '2026-05-11 23:59:59')
+            : me.created;
+          const createdFmt = (() => {
+            if (!createdRaw) return '—';
+            const d = new Date(createdRaw);
+            if (isNaN(d.getTime())) return String(createdRaw);
+            return d.toISOString().slice(0,10) + ' ' + d.toTimeString().slice(0,8);
+          })();
+          const loginName = me._appData?.loginName || (me.name||'').replace(/[^A-Za-z]/g,'').toLowerCase() || 'agent';
+          const tierLabel = me._aType
+            || (me.tier === 'normal' ? '个人代理' : me.tier === 'general' ? '团队代理' : me.tier === 'super' ? '总代理' : '个人代理');
+          const parentLabel = me.parent
+            ? me.parent + '-' + (D.agents.find(x=>x.id===me.parent)?.name || 'Agent')
+            : 'AG000000-本商户';
+          const statusMap = { active:'已启用', pending:'未启用', frozen:'已冻结', suspended:'已停用' };
+          const contacts = (me._appData?.contacts || []);
+          const findContact = (t) => contacts.find(c => c.type === t);
+          const email = findContact('Email')?.value || '—';
+          const phone = findContact('手机')
+            ? ((findContact('手机').dial || '') + ' ' + findContact('手机').value).trim()
+            : '—';
+          const tg = findContact('Telegram')?.value || '—';
 
-            <div className="form-section-title mt-4">联系方式</div>
-            <div className="form-grid">
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>主要联系方式</label>
-                <input className="input" defaultValue={me.contact}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>Email</label>
-                <input className="input" defaultValue={(me.name.toLowerCase().replace('_','.')) + '@aff.example.com'}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>Telegram</label>
-                <input className="input" defaultValue={'@' + me.name.toLowerCase().replace('_','')}/>
-              </div>
-              <div>
-                <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>WhatsApp</label>
-                <input className="input" defaultValue="+55 11 9 8765-4321"/>
-              </div>
+          const Row = ({ label, value, mono }) => (
+            <div style={{display:'flex',padding:'10px 0',borderBottom:'1px solid var(--line-soft)',fontSize:13}}>
+              <span style={{width:130,color:'var(--text-2)',flexShrink:0}}>{label}</span>
+              <span style={{
+                flex:1,color:'var(--text-0)',
+                fontFamily: mono ? 'var(--font-mono)' : 'inherit'
+              }}>{value || '—'}</span>
             </div>
-            <div style={{marginTop:18,display:'flex',gap:10}}>
-              <button className="btn primary" onClick={()=>toast('资料已保存')}><Icon name="check" size={13}/>保存修改</button>
-              <button className="btn ghost">取消</button>
+          );
+
+          return (
+            <div style={{padding:'18px 22px'}}>
+              <div style={{
+                padding:'10px 14px',marginBottom:14,fontSize:11.5,
+                background:'var(--brand-soft)',border:'1px solid var(--brand-line)',borderRadius:6,
+                color:'var(--brand)',display:'flex',alignItems:'center',gap:8
+              }}>
+                <Icon name="shield" size={13}/>该页信息与商户后台「代理账户管理」同步 — 如需修改请联系商户运营
+              </div>
+
+              <div className="form-section-title" style={{marginTop:0}}>基本资料</div>
+              <div style={{
+                background:'#fafbfc',border:'1px solid var(--line)',borderRadius:8,
+                padding:'4px 16px',marginBottom:14
+              }}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',columnGap:24}}>
+                  <Row label="代理创建方式" value={me._createWay || '商户创建代理'}/>
+                  {isApplied
+                    ? <Row label="用户ID" value={me._appData?.userId || '—'} mono/>
+                    : <Row label="创建代理人" value="randy"/>}
+                  <Row label="代理ID" value={displayId} mono/>
+                  <Row label="创建时间" value={createdFmt} mono/>
+                  <Row label="代理名称" value={me.name}/>
+                  <div/>
+                  <Row label="登入帐号" value={loginName} mono/>
+                  <div/>
+                  <Row label="登入密码" value="********" mono/>
+                  <div/>
+                  <Row label="代理类型" value={tierLabel}/>
+                  <div/>
+                  <Row label="上级代理" value={parentLabel} mono/>
+                  <div/>
+                </div>
+              </div>
+
+              <div style={{
+                display:'flex',alignItems:'center',padding:'10px 16px',
+                background:'#fafbfc',border:'1px solid var(--line)',borderRadius:8,marginBottom:18
+              }}>
+                <span style={{color:'var(--text-2)',fontSize:13,marginRight:10}}>帐户状态:</span>
+                <span className={'status-pill ' + (me.status==='active'?'st-active':me.status==='frozen'?'st-frozen':me.status==='suspended'?'st-suspended':'st-pending')}>
+                  {statusMap[me.status] || '已启用'}
+                </span>
+              </div>
+
+              <div className="form-section-title" style={{marginTop:0}}>联系方式</div>
+              <div style={{border:'1px solid var(--line)',borderRadius:8,overflow:'hidden',marginBottom:18}}>
+                <table className="tbl" style={{margin:0}}>
+                  <thead>
+                    <tr>
+                      <th style={{width:140}}>联系类型</th>
+                      <th>联系资料</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Email</td><td className="text-mono">{email}</td></tr>
+                    <tr><td>手机</td><td className="text-mono">{phone}</td></tr>
+                    <tr><td>Telegram</td><td className="text-mono">{tg}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {isApplied && (
+                <>
+                  <div className="form-section-title" style={{marginTop:0}}>
+                    申请理由 / 推广渠道说明
+                  </div>
+                  <textarea
+                    className="textarea"
+                    rows={4}
+                    readOnly
+                    value={me._appData?.reason || ''}
+                    style={{background:'#fafbfc',marginBottom:14}}
+                  />
+                </>
+              )}
+
+              <div className="form-section-title" style={{marginTop:0}}>备注</div>
+              <textarea
+                className="textarea"
+                rows={3}
+                readOnly
+                value={me.note || ''}
+                placeholder="(无备注)"
+                style={{background:'#fafbfc'}}
+              />
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {tab === 'security' && (
           <div style={{padding:'18px 22px'}}>
@@ -117,40 +181,6 @@ function AgentProfileModule() {
               <SecurityRow icon="phone" title="二步验证 (2FA)" desc="使用 Google Authenticator 或 Authy 扫码绑定"
                 badge={<span className="badge b-warning"><span className="dot"/>未启用</span>}
                 action={<button className="btn sm primary" onClick={()=>setShow2FA(true)}>立即启用</button>}/>
-              <SecurityRow icon="api" title="登录 IP 白名单" desc="仅允许 IP 白名单内的地址登录后台 (可选)"
-                badge={<span className="badge b-neutral">未启用</span>}
-                action={<button className="btn sm">配置</button>}/>
-              <SecurityRow icon="bell" title="登录通知" desc="新设备 / 异地登录时发送 Email 与 Telegram 提醒"
-                badge={<span className="badge b-success"><span className="dot"/>已启用</span>}
-                action={<Switch on={true}/>}/>
-            </div>
-
-            <div className="form-section-title mt-4">登录设备记录</div>
-            <div className="tbl-wrap">
-              <table className="tbl">
-                <thead><tr>
-                  <th>设备 / 浏览器</th><th>IP 地址</th><th>位置</th><th>最近活跃</th><th style={{width:120}}>操作</th>
-                </tr></thead>
-                <tbody>
-                  {devices.map((d,i)=>(
-                    <tr key={i}>
-                      <td>
-                        <div style={{display:'flex',alignItems:'center',gap:8}}>
-                          <Icon name="phone" size={14} style={{color:'var(--text-3)'}}/>
-                          <span>{d.name}</span>
-                          {d.cur && <span className="badge b-success" style={{fontSize:10}}>当前</span>}
-                        </div>
-                      </td>
-                      <td className="text-mono">{d.ip}</td>
-                      <td className="text-mute">{d.loc}</td>
-                      <td className="text-mute" style={{fontSize:11}}>{d.cur ? '在线' : new Date(d.last).toLocaleString('zh-CN')}</td>
-                      <td>
-                        {!d.cur && <button className="btn sm danger" onClick={()=>toast('已踢出 ' + d.name)}>踢出</button>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         )}
@@ -217,59 +247,7 @@ function AgentProfileModule() {
           </div>
         )}
 
-        {tab === 'payout' && (
-          <div style={{padding:'18px 22px'}}>
-            <div className="form-section-title" style={{marginTop:0}}>已绑定收款方式</div>
-            <div style={{display:'grid',gap:10}}>
-              {[
-                { m:'USDT-TRC20', addr:'TXxxx...18jK9q', primary:true, verified:true, last: Date.now()-30*86400000 },
-                { m:'PIX (CPF)',  addr:'***.456.789-01', primary:false, verified:true, last: Date.now()-90*86400000 },
-                { m:'银行电汇',   addr:'Itaú · Ag 0001 · ****1234', primary:false, verified:false, last: null },
-              ].map((p,i) => (
-                <div key={i} style={{padding:14,border:'1px solid var(--line)',borderRadius:8,background:'var(--bg-1)',display:'flex',alignItems:'center',gap:14}}>
-                  <div style={{width:36,height:36,borderRadius:6,background:'var(--bg-2)',display:'grid',placeItems:'center'}}>
-                    <Icon name="wallet" size={18} style={{color:'var(--text-2)'}}/>
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:3}}>
-                      <span style={{fontSize:13,fontWeight:600,color:'var(--text-0)'}}>{p.m}</span>
-                      {p.primary && <span className="badge b-brand" style={{fontSize:10}}>默认</span>}
-                      {p.verified
-                        ? <span className="badge b-success" style={{fontSize:10}}><span className="dot"/>已验证</span>
-                        : <span className="badge b-warning" style={{fontSize:10}}><span className="dot"/>待验证</span>}
-                    </div>
-                    <div className="text-mono text-mute" style={{fontSize:11.5}}>{p.addr}</div>
-                  </div>
-                  <div style={{display:'flex',gap:6}}>
-                    {!p.primary && <button className="btn sm">设为默认</button>}
-                    <button className="btn sm ghost">编辑</button>
-                    <button className="btn sm ghost danger">删除</button>
-                  </div>
-                </div>
-              ))}
-              <button className="btn" style={{alignSelf:'start',marginTop:6}}><Icon name="plus" size={13}/>添加收款方式</button>
-            </div>
-
-            <div className="form-section-title mt-4">合规材料</div>
-            <div className="grid-2" style={{gap:10}}>
-              {[
-                { l:'KYC 身份证明', s:'已上传', v:true },
-                { l:'地址证明', s:'已上传', v:true },
-                { l:'银行账户证明', s:'未上传', v:false },
-                { l:'税务申报表', s:'未上传', v:false },
-              ].map(d => (
-                <div key={d.l} style={{padding:'12px 14px',border:'1px solid var(--line)',borderRadius:6,display:'flex',alignItems:'center',gap:10}}>
-                  <Icon name="file" size={16} style={{color: d.v?'var(--success)':'var(--text-3)'}}/>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:12.5,color:'var(--text-1)',fontWeight:500}}>{d.l}</div>
-                    <div className="text-mute" style={{fontSize:11}}>{d.s}</div>
-                  </div>
-                  <button className="btn sm ghost">{d.v?'查看':'上传'}</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {tab === 'payout' && null /* v2.5.8 removed */}
       </div>
 
       {/* 修改密码 Modal */}

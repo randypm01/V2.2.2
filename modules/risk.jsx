@@ -25,7 +25,7 @@ function RiskModule() {
 
   return (
     <div className="page">
-      <KUI.PageHead title="风控管理" subtitle="代理与玩家风控、佣金风控处理">
+      <KUI.PageHead title="玩家风控管理" subtitle="代理与玩家风控、佣金风控处理">
         <button className="btn"><Icon name="download" size={13}/>导出</button>
         <button className="btn primary"><Icon name="settings" size={13}/>风控规则</button>
       </KUI.PageHead>

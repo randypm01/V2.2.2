@@ -1153,6 +1153,9 @@
 
 
 /* ===== v2.3.2 审核员视角面板移到右侧 + 4 状态展示 ===== */
+/* v2.5.11 隐藏审核员视角面板(后台 Demo)— 上线给用户不应看到 */
+.apply-admin-rail { display: none !important; }
+
 .modal-mask:has(.apply-mobile-modal) {
   align-items: flex-start !important;
   justify-content: center !important;

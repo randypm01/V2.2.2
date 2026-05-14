@@ -31,7 +31,7 @@ function PlayersModule() {
 
   return (
     <div className="page">
-      <PUI.PageHead title="代理玩家管理" subtitle="管理所有代理推广而来的玩家与质量分析">
+      <PUI.PageHead title="玩家损益" subtitle="所有代理推广而来的玩家投注 / NGR / CPA 状态报表">
         <button className="btn"><Icon name="download" size={13}/>导出</button>
       </PUI.PageHead>
 

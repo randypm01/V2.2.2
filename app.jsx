@@ -32,7 +32,7 @@ function App() {
   React.useEffect(() => { window.goRoute = setRoute; }, [backend]);
 
   const [openSections, setOpenSections] = useState({
-    '运营': true, '收益': true, '风控与配置': true,
+    '运营': true, '收益': true, '报表': true, '风控与配置': true,
   });
   const [openPhases, setOpenPhases] = useState({ P0:true });
 
@@ -51,18 +51,14 @@ function App() {
       { k:'agents', l:'代理账户管理', icon:'users', prd:'P0-1' },
       { k:'revshare', l:'分润管理', icon:'pie', prd:'P0-7' },
       { k:'agent_levels', l:'代理等级管理', icon:'flag' },
-      { k:'codes', l:'分享 Code 与链接', icon:'link', prd:'P0-3' },
-      { k:'players', l:'玩家管理', icon:'user', prd:'P0-4' },
     ]},
-    { section: '收益', icon:'wallet', items: [
-      { k:'cpa', l:'CPA 管理', icon:'target', prd:'P0-5' },
-      { k:'settlement', l:'结算管理', icon:'file', alert: 17, prd:'P0-8' },
-      { k:'wallet', l:'代理钱包', icon:'wallet', prd:'P0-9' },
+    { section: '报表', icon:'pie', items: [
+      { k:'agent_revenue', l:'代理收益', icon:'wallet' },
+      { k:'codes', l:'代理推广链接', icon:'link', prd:'P0-3' },
+      { k:'players', l:'玩家损益', icon:'user', prd:'P0-4' },
     ]},
     { section: '风控与配置', icon:'shield', items: [
-      { k:'risk', l:'风控管理', icon:'shield', alert: 6, prd:'P0-10' },
-      { k:'notifications', l:'通知管理', icon:'bell', prd:'P0-14' },
-      { k:'logs', l:'操作日志', icon:'history', prd:'P0-12' },
+      { k:'risk', l:'玩家风控管理', icon:'shield', alert: 6, prd:'P0-10' },
     ]},
   ];
 
@@ -70,17 +66,11 @@ function App() {
   const AGENT_NAV = [
     { section: '我的账户', icon:'user', items: [
       { k:'my_profile', l:'我的账户', icon:'user', prd:'P0-13' },
-      { k:'my_notify', l:'通知中心', icon:'bell', prd:'P0-14' },
     ]},
-    { section: '推广', icon:'link', items: [
+    { section: '推广&收益', icon:'link', items: [
       { k:'my_codes', l:'分享 Code 与链接', icon:'link', prd:'P0-3' },
-      { k:'my_players', l:'我的玩家', icon:'user', prd:'P0-4' },
-    ]},
-    { section: '收益', icon:'wallet', items: [
-      { k:'my_cpa', l:'CPA 报表', icon:'target', prd:'P0-6' },
+      { k:'my_players', l:'玩家损益', icon:'user', prd:'P0-4' },
       { k:'my_revshare', l:'分润报表', icon:'pie', prd:'P0-7' },
-      { k:'my_settlement', l:'结算单', icon:'file', prd:'P0-8' },
-      { k:'my_wallet', l:'我的钱包 / 提款', icon:'wallet', prd:'P0-9' },
     ]},
   ];
 
@@ -285,6 +275,19 @@ function App() {
           // v2.4.16 首次登入成功 → 标记该代理 ID,商户后台据此自动把代理状态改为「已启用」
           if (window.APS_LOGGED_IN_AGENTS && acc.agentId) {
             window.APS_LOGGED_IN_AGENTS.mark(acc.agentId);
+          }
+          // v2.5.12 直接翻商户后台 store 里对应代理的 status pending → active(避免 AgentsModule 未挂载时同步不到)
+          if (window.APS_MERCHANT_AGENTS_STORE && acc.agentId) {
+            const s = window.APS_MERCHANT_AGENTS_STORE;
+            const next = (s.list || []).map(a => {
+              const mid = a._displayId || a.id;
+              if ((mid === acc.agentId || a.id === acc.agentId) && a.status === 'pending') {
+                return { ...a, status: 'active' };
+              }
+              return a;
+            });
+            if (typeof s.setList === 'function') s.setList(next);
+            else s.list = next;
           }
           setAgentRoute('home');
         }}/>
@@ -534,11 +537,8 @@ function App() {
             {r.kind === 'mod' && r.k === 'cpa' && <CpaModule/>}
             {r.kind === 'mod' && r.k === 'revshare' && <RevShareModule/>}
             {r.kind === 'mod' && r.k === 'agent_levels' && <window.AgentLevelsModule/>}
-            {r.kind === 'mod' && r.k === 'settlement' && <SettlementModule/>}
-            {r.kind === 'mod' && r.k === 'wallet' && <WalletModule/>}
+            {r.kind === 'mod' && r.k === 'agent_revenue' && <window.AgentRevenueModule/>}
             {r.kind === 'mod' && r.k === 'risk' && <RiskModule/>}
-            {r.kind === 'mod' && r.k === 'logs' && <LogsModule/>}
-            {r.kind === 'mod' && r.k === 'notifications' && <NotificationsModule/>}
             {r.kind === 'mod' && r.k === 'subs' && <window.SubsModule/>}
             {r.kind === 'mod' && r.k === 'revshare_detail' && <window.RevShareDetailModule/>}
             {r.kind === 'mod' && r.k === 'hybrid' && <window.HybridModule/>}
@@ -559,7 +559,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'multi_currency' && <window.MultiCurrencyModule/>}
             {r.kind === 'mod' && r.k === 'ad_network' && <window.AdNetworkModule/>}
             {r.kind === 'mod' && r.k === 'bi' && <window.BiModule/>}
-            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','settlement','wallet','risk','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
+            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','agent_revenue','settlement','wallet','risk','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
               const sec = NAV.find(s => s.items.some(i => i.k === r.k));
               const it = sec?.items.find(i => i.k === r.k);
               if (!it) return null;

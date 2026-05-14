@@ -47,6 +47,8 @@ const ICONS = {
   sparkle: 'M9 3l1.5 4.5L15 9l-4.5 1.5L9 15l-1.5-4.5L3 9l4.5-1.5L9 3zM18 14l.7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14z',
   external: 'M14 3h7v7M10 14L21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5',
   qr: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h3v3h-3v-3zm5 0h2v2h-2v-2zm-2 5h2v2h-2v-2zm2-2h2v2h-2v-2zm0 4h2v0h-2v0z',
+  pause: 'M10 4H6v16h4V4zm8 0h-4v16h4V4z',
+  play: 'M5 3l14 9-14 9V3z',
   globe: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20',
   layers: 'M12 2L2 7l10 5 10-5-10-5zm-10 11l10 5 10-5M2 17l10 5 10-5',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z',

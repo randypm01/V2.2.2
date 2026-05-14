@@ -2,6 +2,171 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v2.5.14',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '专业代理后台 侧栏整合:推广 + 收益 合并为「推广&收益」,内含 分享 Code 与链接 / 玩家损益 / 分润报表 三个子项(分润报表从原「收益」section 移入)' },
+      { type: 'remove', text: '隐藏「收益」section 及子项「CPA 报表」(my_cpa.jsx 模块文件与路由分发保留,仅 NAV 不展示)' },
+    ],
+  },
+  {
+    ver: 'v2.5.13',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 推广 → 分享 Code 与链接 表格重构(全中文):Code / 名称 / 短链 / 备注 / 注册 / 充值 / 提款 / 充值转化率 / ARPPU / 佣金 / 状态 / 操作 — 删除「点击数 Clicks / 渠道 / Campaign / FTD / CPA / CR%」' },
+      { type: 'modify', text: 'KPI 同步精简:Code 数量 / 累计注册 / 累计充值 / 累计提款 / 累计佣金(去掉 累计 Clicks 与 累计 FTD)' },
+      { type: 'modify', text: '5 条示例数据补上 短链 / 备注 / 充值 / 提款 字段(去掉 channel / campaign / landing / ftds / cpaCount / clicks)' },
+      { type: 'modify', text: '创建 / 编辑 Code 弹窗精简表单:Code 后缀 / 名称 / 短链(选填,留空自动生成)/ 备注;移除 渠道 / Campaign / 落地页 三个字段' },
+      { type: 'modify', text: '渠道对比 tab 改为「各 Code 充值对比 / 各 Code 佣金对比」(不再按渠道分组)' },
+      { type: 'modify', text: '工具栏去掉「全部渠道」筛选;短链列加复制按钮' },
+      { type: 'add', text: '充值转化率 = 充值玩家数 / 注册玩家数(38% 示例转化估算);ARPPU = 充值金额 / 充值玩家数' },
+    ],
+  },
+  {
+    ver: 'v2.5.12',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'fix', text: '修复:专业代理已登入后,「我的账户 → 帐户状态」仍显示「未启用」 — 原 flip 逻辑只在「商户后台 / 代理账户管理」模块挂载时触发,代理直接登入后没访问商户后台则状态不会翻;新增 app.jsx onLogin 直接写商户 store status pending → active + useCurrentAgent 增加防御性 override(已 mark 过登入的代理强制 active),双保险' },
+    ],
+  },
+  {
+    ver: 'v2.5.11',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '网站前台 专业代理申请弹窗 隐藏右侧「审核员视角(后台 Demo)」面板(.apply-admin-rail { display:none }) — 上线时用户不应看到 Demo 控件;代码与 i18n 保留,后续如需调试再开 CSS' },
+    ],
+  },
+  {
+    ver: 'v2.5.10',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '专业代理后台 侧栏「我的玩家」改名「玩家损益」;my_players.jsx PageHead 标题同步;副标题改成「我推广而来的玩家清单与盈亏分析」' },
+      { type: 'add', text: '玩家损益:加入 5 条固定示例玩家(P88001001~005),覆盖 已首存 / 有效CPA / VIP / 风控中 / 已拒 五种典型场景,所有 KPI / Tabs / 筛选 / 详情抽屉 都基于真实+示例数据合并展示' },
+      { type: 'modify', text: '分享 Code 与链接 功能完善:codes 改为 useState,创建后立即入列;新增 编辑弹窗(改名称/渠道/Campaign/落地页;Code 后缀创建后锁定);新增 启用 ⇄ 暂停 切换(单按钮);新增 删除(二次确认弹窗);操作列扩到 6 个图标按钮(链接/QR/复制/编辑/启停/删除)' },
+      { type: 'add', text: '分享 Code 与链接:加入 5 条固定示例 Code(MAIN/IG2026/TG/WC2026/VIP),覆盖 YouTube / Instagram / Telegram / TikTok 四个渠道与 启用/暂停 两种状态;KPI、Code 列表、渠道对比 都基于完整数据展示' },
+    ],
+  },
+  {
+    ver: 'v2.5.9',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'remove', text: '专业代理后台 → 我的账户 → 安全设置 删除:登录 IP 白名单 / 登录通知 / 登录设备记录(表格) — 只保留 登录密码 + 二步验证 2FA 两项' },
+      { type: 'remove', text: '专业代理后台 侧栏删除 3 个入口:通知中心 / 结算单 / 我的钱包·提款 — 模块文件 my_notify.jsx / my_settlement.jsx / my_wallet.jsx 与路由分发保留(便于后续恢复)' },
+    ],
+  },
+  {
+    ver: 'v2.5.8',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 我的账户 → 基本资料 完全按商户后台「代理账户管理 → 查看&配置 → 基本资料」字段同步:代理创建方式 / 用户ID或创建代理人 / 代理ID / 创建时间 / 代理名称 / 登入帐号 / 登入密码 / 代理类型 / 上级代理 / 帐户状态 / 联系方式表(Email/手机/Telegram)/ 申请理由(仅自行申请)/ 备注' },
+      { type: 'remove', text: '专业代理后台 → 基本资料 删除商户后台没有的字段:代理等级 / 层级L1 / 市场国家 / 结算币种 / 注册时间(原 toLocaleDateString)。统一改用「创建时间」精确到秒,与商户后台一致' },
+      { type: 'remove', text: '清理 agent_profile.jsx 中残留的旧 form-grid 字段 + payout(结算账户)tab JSX 块' },
+      { type: 'modify', text: '布局改成与商户后台一致的两列只读卡片(灰底 + 分隔线 + label-value),联系方式用 .tbl 表格;顶部蓝色提示「该页信息与商户后台同步」' },
+    ],
+  },
+  {
+    ver: 'v2.5.7',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'fix', text: '修复 v2.5.6 登入专业代理后台崩溃:`useCurrentAgent` 调用了不存在的 `store.getList()` 方法(store 实际暴露的是 `store.list` 数组),改为直接读 `store.list`;同步修复 agent_revenue.jsx 中同样的误用' },
+    ],
+  },
+  {
+    ver: 'v2.5.6',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'remove', text: '专业代理后台 → 我的账户 删除「结算账户」tab' },
+      { type: 'modify', text: '专业代理后台 → 我的账户 tab 顺序调整:基本资料 / 合作方案 / 安全设置(原 基本资料 / 安全设置 / 合作方案 / 结算账户)' },
+      { type: 'modify', text: '专业代理后台 → 我的账户 → 基本资料 与 商户后台「代理账户管理」该代理记录同步:useCurrentAgent 优先从 APS_MERCHANT_AGENTS_STORE 取,商户编辑代理基本资料后,代理本人后台立刻看到同一份数据;联系方式优先从 _appData.contacts 取(自行申请代理填写的真实值);所有字段改只读 + 顶部蓝色提示「该页信息与商户后台同步,如需修改请联系商户运营」' },
+    ],
+  },
+  {
+    ver: 'v2.5.5',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'remove', text: '商户后台侧栏 隐藏「收益」整个 section + 子项「CPA 管理」 — 简化版当前阶段不需要;modules/cpa.jsx 与路由分发保留,后续如需恢复仅需把 NAV 项加回即可' },
+    ],
+  },
+  {
+    ver: 'v2.5.4',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '侧栏「报表」section 顺序调整:玩家损益 与 代理推广链接 互换位置 — 现在顺序为 代理收益 / 代理推广链接 / 玩家损益' },
+    ],
+  },
+  {
+    ver: 'v2.5.3',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '侧栏调整:「分享 Code 与链接」从「运营」section 移到「报表」section,并重命名为「代理推广链接」(NAV label + codes.jsx PageHead 标题同步;路由 key 保持 codes 不变)' },
+      { type: 'modify', text: '「报表」section 现在 3 个子项:代理收益 / 玩家损益 / 代理推广链接' },
+    ],
+  },
+  {
+    ver: 'v2.5.2',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '侧栏调整:风控与配置 → 风控管理 重命名为「玩家风控管理」(NAV label + risk.jsx PageHead 标题同步)' },
+      { type: 'modify', text: '侧栏调整:玩家管理 从「运营」section 移到「报表」section,并重命名为「玩家损益」(NAV label + players.jsx PageHead 标题同步;路由 key 保持 players 不变,旧链接仍有效)' },
+      { type: 'modify', text: '「报表」section 现在包含:代理收益 / 玩家损益 两个子项' },
+    ],
+  },
+  {
+    ver: 'v2.5.1',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'remove', text: '商户后台 收益 section 删除「结算管理」模块入口;删除 modules/settlement.jsx;index.html 移除引用;app.jsx 路由分发移除 settlement case' },
+      { type: 'modify', text: 'PRD P0-8 结算单生成审核 mapping 去掉 merchant settlement,仅剩代理后台 my_settlement' },
+      { type: 'add', text: '代理后台「收益 → 结算单」(my_settlement)保留 — 代理本人仍可查看结算单' },
+    ],
+  },
+  {
+    ver: 'v2.5.0',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'fix', text: '修复 v2.4.49 侧栏「报表 → 代理收益」未出现的问题:NAV 数组未真正写入,这次显式插入到「收益」与「风控与配置」之间;openSections 默认展开补上「报表」+ 保留「收益」' },
+      { type: 'modify', text: '版本号按用户要求从 v2.5.0 起步' },
+    ],
+  },
+  {
+    ver: 'v2.4.49',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'add', text: '商户后台侧栏 风控与配置 上方新增大项「报表」,内含子项「代理收益」' },
+      { type: 'add', text: '新增 modules/agent_revenue.jsx 模块:KPI 4 个(总收益 / 总 NGR / 本期未结算 / 活跃代理)+ 工具栏(搜索 + 代理类型筛选 + 日期范围)+ 表格 10 列(代理ID / 名称 / 类型 / 玩家数 / NGR / 單付費分潤 / 收益分潤 / 本期未結算 / 總收益 / 操作),所有数值列可点击表头排序,分页 12 条/页' },
+      { type: 'add', text: '数据源:从 window.APS_MERCHANT_AGENTS_STORE 实时取代理列表;CPA/分润按 commission 拆分(40~69% CPA + 余下分润,基于 ID 末三位稳定分配)' },
+      { type: 'modify', text: 'app.jsx 侧栏分组默认展开补上「报表」;NAV 新增大项 + 路由分发 + fallback whitelist;index.html 引用 agent_revenue.jsx' },
+    ],
+  },
+  {
+    ver: 'v2.4.48',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'remove', text: '商户后台侧栏删除 3 个模块入口:代理钱包(收益)、通知管理(风控与配置)、操作日志(风控与配置) — 简化版只保留代理网络核心审计/结算链路' },
+      { type: 'remove', text: '删除 modules/wallet.jsx / modules/notifications.jsx / modules/logs.jsx 三个文件;index.html 同步移除 3 个 script 引用' },
+      { type: 'remove', text: 'app.jsx 路由分发移除 wallet / notifications / logs 三个 case' },
+      { type: 'modify', text: 'PRD 数据同步:P0-9 代理钱包 mapping 去掉 merchant wallet(仅剩代理后台 my_wallet);P0-14 通知中心 mapping 去掉 merchant notifications(仅剩代理后台 my_notify);P0-12 操作日志 标记为 removed,mapping 清空' },
+      { type: 'modify', text: '代理后台 my_wallet / my_notify 模块保留 — 代理本人仍可使用钱包与通知' },
+    ],
+  },
+  {
     ver: 'v2.4.47',
     date: '2026-05-14',
     current: true,

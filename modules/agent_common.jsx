@@ -5,8 +5,25 @@ window.CURRENT_AGENT_ID = 'AG100007';
 // 拿到当前代理对象 / 玩家 / Code / CPA / 结算等
 window.useCurrentAgent = function() {
   const D = window.APS_DATA;
-  const me = D.agents.find(a => a.id === window.CURRENT_AGENT_ID) || D.agents[0];
-  return me;
+  // v2.5.6 优先从商户后台 store 拿同一条代理记录,确保「专业代理后台 / 我的账户」与「商户后台 / 代理账户管理」基本资料同步
+  const store = window.APS_MERCHANT_AGENTS_STORE;
+  const id = window.CURRENT_AGENT_ID;
+  if (store) {
+    const list = store.list || [];
+    const hit = list.find(a => a.id === id || a._displayId === id);
+    if (hit) {
+      const base = D.agents.find(a => a.id === id) || D.agents[0];
+      // v2.5.12 防御:已登入的代理 status 强制 active(即便 store 还未及时更新)
+      const loggedSet = window.APS_LOGGED_IN_AGENTS && window.APS_LOGGED_IN_AGENTS.set;
+      const merged = { ...base, ...hit };
+      if (loggedSet && hit.status === 'pending') {
+        const mid = hit._displayId || hit.id;
+        if (loggedSet.has(mid) || loggedSet.has(hit.id)) merged.status = 'active';
+      }
+      return merged;
+    }
+  }
+  return D.agents.find(a => a.id === id) || D.agents[0];
 };
 
 // 代理后台:页面顶部代理身份卡(常驻在每个模块顶部)

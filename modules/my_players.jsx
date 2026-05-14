@@ -1,5 +1,27 @@
-// 代理后台 - 我的玩家 P0-4
+// 代理后台 - 玩家损益 P0-4 (v2.5.10 重命名:我的玩家 → 玩家损益)
 const APUI = window.UI;
+
+// v2.5.10 固定 5 条示例玩家 — 保证页面有数据,即便当前代理无关联玩家
+function buildSamplePlayers(agentId, agentCodePrefix) {
+  const days = (n) => Date.now() - n * 86400000;
+  return [
+    { id:'P88001001', agentId, code:agentCodePrefix+'-MAIN', country:'BR', currency:'USD',
+      vip:0, ftd:true, deposit:1200, withdraw:350, wager:8400, ngr:420,
+      cpaStatus:'approved', risk:'none', regAt:days(28), ftdAt:days(27) },
+    { id:'P88001002', agentId, code:agentCodePrefix+'-IG2026', country:'IN', currency:'USD',
+      vip:3, ftd:true, deposit:5800, withdraw:2100, wager:48000, ngr:1820,
+      cpaStatus:'approved', risk:'none', regAt:days(20), ftdAt:days(20) },
+    { id:'P88001003', agentId, code:agentCodePrefix+'-TG', country:'PH', currency:'USD',
+      vip:5, ftd:true, deposit:18500, withdraw:7200, wager:124000, ngr:6450,
+      cpaStatus:'approved', risk:'low', regAt:days(45), ftdAt:days(44) },
+    { id:'P88001004', agentId, code:agentCodePrefix+'-MAIN', country:'KR', currency:'USD',
+      vip:0, ftd:true, deposit:240, withdraw:0, wager:980, ngr:-80,
+      cpaStatus:'pending', risk:'none', regAt:days(6), ftdAt:days(5) },
+    { id:'P88001005', agentId, code:agentCodePrefix+'-WC2026', country:'BR', currency:'USD',
+      vip:2, ftd:true, deposit:3200, withdraw:1500, wager:21000, ngr:780,
+      cpaStatus:'rejected', risk:'medium', regAt:days(35), ftdAt:days(34) },
+  ];
+}
 
 function MyPlayersModule() {
   const D = window.APS_DATA;
@@ -10,7 +32,12 @@ function MyPlayersModule() {
   const [page, setPage] = React.useState(1);
   const [detail, setDetail] = React.useState(null);
 
-  const my = D.players.filter(p => p.agentId === me.id);
+  // v2.5.10 当前代理的玩家:实际数据 + 5 条示例(示例放最前)
+  const codePrefix = me.id.replace(/^A[GP]/, 'AF');
+  const my = React.useMemo(() => {
+    const real = D.players.filter(p => p.agentId === me.id);
+    return [...buildSamplePlayers(me.id, codePrefix), ...real];
+  }, [me.id]);
 
   const filtered = React.useMemo(() => my.filter(p => {
     if (tab === 'ftd' && !p.ftd) return false;
@@ -36,7 +63,7 @@ function MyPlayersModule() {
 
   return (
     <div className="page">
-      <APUI.PageHead title="我的玩家" subtitle="我推广而来的玩家清单与质量分析">
+      <APUI.PageHead title="玩家损益" subtitle="我推广而来的玩家清单与盈亏分析 — 充值 / 提款 / 投注 / NGR">
         <button className="btn"><Icon name="download" size={13}/>导出</button>
       </APUI.PageHead>
 
