@@ -20,6 +20,27 @@
       }
     };
   }
+  // v2.4.16 已成功登入过的代理 ID 全局集合 — 商户后台据此把对应代理状态自动改为「已启用」
+  if (!window.APS_LOGGED_IN_AGENTS) {
+    const LS_KEY = 'APS_LOGGED_IN_AGENTS';
+    let initial = [];
+    try { initial = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e){}
+    window.APS_LOGGED_IN_AGENTS = {
+      set: new Set(initial),
+      listeners: new Set(),
+      has(id) { return this.set.has(id); },
+      mark(id) {
+        if (!id || this.set.has(id)) return;
+        this.set.add(id);
+        try { localStorage.setItem(LS_KEY, JSON.stringify([...this.set])); } catch(e){}
+        this.listeners.forEach(fn => fn(id));
+      },
+      subscribe(fn) {
+        this.listeners.add(fn);
+        return () => this.listeners.delete(fn);
+      },
+    };
+  }
 })();
 
 window.AgentLoginModule = function ({ onLogin }) {
@@ -165,12 +186,16 @@ window.AgentLoginModule = function ({ onLogin }) {
                     <div>暂无账户</div>
                     <div className="al2-quick-empty-hint">商户审核通过 / 创建专业代理 后会显示在此</div>
                   </div> :
-              accounts.map((acc, i) =>
-              <div key={acc.loginName + i} className="al2-quick-row" onClick={() => fillFromAcc(acc)}>
-                    <div className="al2-quick-avatar">AP</div>
+              accounts.map((acc, i) => {
+                // v2.4.19 头像前缀 + 代理ID 显示根据 agentId 区分:AG=商户创建、AP=自行申请
+                const isAp = String(acc.agentId || '').startsWith('AP');
+                const prefix = isAp ? 'AP' : 'AG';
+                return (
+                <div key={acc.loginName + i} className="al2-quick-row" onClick={() => fillFromAcc(acc)}>
+                    <div className="al2-quick-avatar" style={{background: isAp ? '#10b981' : '#3b82f6'}}>{prefix}</div>
                     <div className="al2-quick-info">
                       <div className="al2-quick-name">{acc.name || acc.loginName}</div>
-                      <div className="al2-quick-uid mono">{acc.userId || '-'}</div>
+                      <div className="al2-quick-uid mono">{acc.agentId || acc.userId || '-'}</div>
                     </div>
                     <div className="al2-quick-cred">
                       <div><span className="al2-quick-label">账号:</span><span className="mono">{acc.loginName}</span></div>
@@ -178,7 +203,8 @@ window.AgentLoginModule = function ({ onLogin }) {
                     </div>
                     <span className="al2-quick-fill">填入</span>
                   </div>
-              )}
+                );
+              })}
               </div>
             }
           </div>

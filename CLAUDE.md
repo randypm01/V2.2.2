@@ -128,6 +128,21 @@ uploads/
 
 ---
 
+## ⚠️ 七 · A、版本记录规则(强制,不可省略)
+
+**每次代码更新 = 必须同时新增 `modules/version.jsx` 版本记录,不要询问、不要等用户提醒。**
+
+操作:
+1. 改代码 → 顶部插入新一条 `{ ver, date, current: true, changes: [...] }`
+2. 上一条 `current: true` 一定要改回 `current: false`(或删除该字段)— 永远只有一条 current
+3. `ver` 自增小版本号(看顶部最新一条 +0.0.1)
+4. `changes` 用 `{ type: 'fix' | 'add' | 'modify' | 'remove' | 'feat', text: '...'  }`,文字写清楚改了什么、为什么
+5. **小改动也要记** — bug 修复、文案微调、样式调整、删除某个字段都要记
+
+历史教训:用户多次明确要求过这个规则(QA2 chat 中提醒了 3 次)— 不要再让用户提醒。
+
+---
+
 ## 八、新 chat 接续指引
 
 1. 先 `read_file CLAUDE.md`(就是这份)

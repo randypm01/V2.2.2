@@ -2,9 +2,402 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v2.4.47',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'fix', text: '修复:商户创建代理 / 自行申请通过创建代理 时,弹窗里配置的「分润模式 + 权限配置」未持久化到新代理对象,导致「查看&配置 → 分润模式」打开是空状态 — 两个 onSubmit 路径都补上 `_comm: a.commission` 与 `_perms: a.perms`' },
+    ],
+  },
+  {
+    ver: 'v2.4.46',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '创建代理 分润模式 下拉框 收益分潤方案 选项格式优化:补上中间的「方案類型」 — 改成「收益分潤方案 · 用戶損失基數分潤 · 方案名稱」 / 「收益分潤方案 · 週期資產變動分潤 · 方案名稱」三段式;單付費分潤方案无子类型仍保持两段(單付費分潤方案 · 方案名稱)' },
+    ],
+  },
+  {
+    ver: 'v2.4.45',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'fix', text: '下拉框颜色与外层容器太接近看不清:.input / .select / .textarea 背景改纯白 #fff(原 #f8fafc 与 bg-2 几乎一致),增加 hover 边框反馈;创建代理 結算/分潤時間 radio 容器底色加深到 #f1f5f9,让内嵌白色下拉框对比更清晰' },
+    ],
+  },
+  {
+    ver: 'v2.4.44',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'fix', text: '修复 `.select` 下拉框文字看不清 + 原生下拉箭头位置偏移:给 .input/.select 固定 height:32px;.select 改用 appearance:none + 自定义 SVG 箭头(右内边距 30px,箭头固定在右 10px),所有下拉(创建代理 分润模式 / 表格筛选 等)样式一致' },
+    ],
+  },
+  {
+    ver: 'v2.4.43',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '创建专业代理账户 弹窗 第 2 步「分润模式」重做:删除旧的 CPA / RevShare / Hybrid 3 卡片选择,改成「結算/分潤時間(2 選 1)+ 分潤方案類型(多選下拉)」 — 同时适用于「商户创建代理」和「自行申请代理通过」两个入口' },
+      { type: 'add', text: '結算/分潤時間 radio 2 选 1:每周固定(子下拉 每周一~每周日)/ 每月固定(子下拉 每月1號~每月31號)' },
+      { type: 'add', text: '分潤方案類型 多選下拉:options 读取分润管理 SEED_SINGLE + SEED_REVENUE,显示格式「分潤模式 · 方案名稱」(如「單付費分潤方案 · 方案1_有效首次存款」/「收益分潤方案 · 用戶損失基數分潤」);可 + 新增分潤方案 / − 删除单行;最少保留 1 项' },
+      { type: 'add', text: '弹窗右上角「分潤管理」链接:点击关闭弹窗并跳转到分润管理页(window.goRoute 存在时)' },
+      { type: 'add', text: '查看&配置弹窗 分润模式 tab 同步切换为新组件(window.CommissionModeForm);旧字符串数据 \'RevShare\' 自动迁移为默认对象' },
+      { type: 'add', text: 'revshare.jsx 暴露 window.RV_PLANS / window.CommissionModeForm / window.resolvePlanLabels,供 agents.jsx 复用' },
+    ],
+  },
+  {
+    ver: 'v2.4.42',
+    date: '2026-05-14',
+    current: true,
+    changes: [
+      { type: 'modify', text: '收益分潤 新增弹窗 简化:删除「先选类型 → 再填表」两步流程,改成单一弹窗 — 顶部「方案類型」下拉框,选择后自动带出对应的 計算口徑流程(只读,不可编辑)' },
+      { type: 'modify', text: '計算口徑流程框 改为只读 pre:未选类型时灰底占位「選擇方案類型後,此處會帶出對應的計算公式」;选了类型立刻渲染对应公式;编辑模式下方案類型锁定不可改' },
+    ],
+  },
+  {
+    ver: 'v2.4.41',
+    date: '2026-05-14',
+    changes: [
+      { type: 'modify', text: '分润管理 内容页按 PRD 重做:删除旧的 4 个 tab(CPA / RevShare / Hybrid / 下级),改成「單付費分潤 / 收益分潤」两个 tab' },
+      { type: 'add', text: '單付費分潤 tab:9 列表格(方案名稱 / 最低首存 / 流水倍數 / 最低 NGR / 有效天數 / 活躍留存 toggle / 留存天數 / 排除提款過玩家 toggle / 備註)+ 新增/編輯 弹窗,含两个 toggle 联动(活躍留存 关闭时活躍留存天數 禁用)' },
+      { type: 'add', text: '收益分潤 tab:7 列表格(方案類型 / 方案名稱 / 代理分成比例 / 計算口徑 查看 / 封頂金額 / 備註)+ 两步新增(先选类型 用戶損失基數分潤 / 週期資產變動分潤,再填详细参数)' },
+      { type: 'add', text: '計算口徑流程 完整展示 STEP-1~5 公式(用戶損失基數分潤)和 STEP-1~3 公式(週期資產變動分潤),编辑表单内 + 列表「查看」按钮共用同一段公式' },
+      { type: 'add', text: '所有方案支持 编辑 / 刪除(刪除二次确认弹窗,提示「正在使用此方案的代理需重新指派」)' },
+    ],
+  },
+  {
+    ver: 'v2.4.40',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '代理等级管理页面崩溃修复:`window.UI.Icon` 在 ui.jsx 中未导出(取自 window.Icon),改为直接用 window.Icon;APH 由 window.UI.PageHead 取得' },
+    ],
+  },
+  {
+    ver: 'v2.4.39',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '商户后台侧栏:分润管理 从「收益」分组移到「运营」分组,紧跟「代理账户管理」之后' },
+      { type: 'add', text: '商户后台新增 代理等级管理 模块(modules/agent_levels.jsx),位于「运营 → 分润管理」下方;含 5 个示例等级(入门/进阶/高级/金牌/钻石)、最低玩家数 + 最低 NGR + CPA / RevShare 加成 + 代理数,带晋级规则说明' },
+      { type: 'add', text: 'app.jsx 路由分发新增 agent_levels case;index.html 引入 agent_levels.jsx' },
+    ],
+  },
+  {
+    ver: 'v2.4.38',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '说明弹窗 已创建代理 操作记录 chip 列表实际加入 编辑(v2.4.37 因 edit 失败漏掉,这次补上)' },
+    ],
+  },
+  {
+    ver: 'v2.4.37',
+    date: '2026-05-13',
+    changes: [
+      { type: 'feat', text: '完善已创建代理详情(查看&配置)编辑功能:点击 编辑 → 进入编辑模式,显示 取消/保存 按钮' },
+      { type: 'feat', text: '基本资料 tab 可编辑:代理名称、登入帐号、备注(textarea 在只读时灰底)' },
+      { type: 'feat', text: '分润模式 / 权限配置 tab 在非编辑模式 pointer-events:none + 半透明,只读;编辑模式下可改' },
+      { type: 'feat', text: '保存时:写回全局 store(name/note/_appData.loginName/_comm/_perms),并在操作记录追加「编辑:基本资料 / 分润模式 / 权限配置」类型 edit 日志(灰色 chip)' },
+      { type: 'feat', text: '取消:回滚 draft 到 agent 当前值' },
+      { type: 'add', text: '说明弹窗 已创建代理 操作记录 chip 列表加入 编辑;规则段落补充编辑日志说明' },
+    ],
+  },
+  {
+    ver: 'v2.4.36',
+    date: '2026-05-13',
+    changes: [
+      { type: 'add', text: '说明弹窗(两个 tab 都加)新增「操作记录 · 规则」段落:展示该 tab 下可能出现的日志类型 chip + 规则说明(成对/终态/继承等)' },
+    ],
+  },
+  {
+    ver: 'v2.4.35',
+    date: '2026-05-13',
+    changes: [
+      { type: 'feat', text: '完善操作记录功能 — 自行申请代理(查看&审核)与已创建代理(查看&配置)详情页的操作记录改为基于真实状态变更的动态记录' },
+      { type: 'feat', text: '新增 LogTimeline 时间线组件:左侧彩色点 + 右侧 chip(类型) + 时间 + 操作人 + 备注气泡;支持 11 种操作类型(申请/补件/已补件/拒绝/通过/创建/编辑/冻结/再启用/停用/首次登入)' },
+      { type: 'feat', text: '5 笔自行申请示例数据按 state 自动注入对应历史日志(reviewing/supplement/supplemented/failed/passed)' },
+      { type: 'feat', text: '5 笔示例代理按 status 注入对应日志(创建+登入/冻结/停用)' },
+      { type: 'feat', text: '商户审核操作(要求补件/拒绝/通过)与代理状态变更(冻结/再启用/停用)自动追加日志' },
+      { type: 'feat', text: '自行申请审核通过创建代理时,继承申请单的 _logs 历史 + 追加 创建 日志,形成完整链路' },
+    ],
+  },
+  {
+    ver: 'v2.4.34',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '状态确认弹窗 代理名称+ID 文字颜色与确认按钮颜色对齐:冻结=蓝 #2563eb、再次启用=绿 #16a34a、停用=红 #dc2626' },
+      { type: 'modify', text: '冻结/再次启用 确认按钮也改为实心(原 primary 默认 brand 蓝),三个按钮风格统一' },
+    ],
+  },
+  {
+    ver: 'v2.4.33',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '状态操作确认弹窗(冻结/再次启用/停用):正文改为三行居中排版,代理名称(AG範例1) + 代理ID(AG100001) 同一行,字体放大到 20px、蓝色 brand 色' },
+    ],
+  },
+  {
+    ver: 'v2.4.32',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '状态操作确认弹窗:正文加上代理ID(text-mono)显示;停用帐户确认按钮改为实心红色 #dc2626 + 白字(原 btn.danger 是浅红色不显眼)' },
+    ],
+  },
+  {
+    ver: 'v2.4.31',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '「冻结帐户 / 再次启用 / 停用帐户」二次确认从浏览器原生 window.confirm 改为 AM 弹窗(样式同「要求补件」弹窗:标题 + 副标题 + 取消/确认按钮)' },
+      { type: 'modify', text: '停用帐户确认按钮使用 danger 红色样式,其他两个用 primary 蓝色' },
+    ],
+  },
+  {
+    ver: 'v2.4.30',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '表格内「账户状态」(已创建代理表)与「申请进度」(自行申请代理表)的标签都改为 chip 样式:圆角边框 + 浅色底,与说明弹窗一致' },
+      { type: 'modify', text: 'styles.css .status-pill 加上 padding/border/border-radius/min-width,各状态加 background' },
+      { type: 'modify', text: 'APP_STATE_META 各状态新增 bg 浅色底字段,表格渲染从纯文本改为 chip span' },
+    ],
+  },
+  {
+    ver: 'v2.4.29',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '说明弹窗 帐户状态列表 与 申请进度列表 的标签也改为 chip 样式(圆角边框 + 浅色底),与下方流程图风格统一' },
+    ],
+  },
+  {
+    ver: 'v2.4.28',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '已创建代理 说明弹窗 流程关系样式对齐 自行申请代理:状态用 chip(圆角边框 + 浅色底)显示;移除所有 fontStyle:italic' },
+    ],
+  },
+  {
+    ver: 'v2.4.27',
+    date: '2026-05-13',
+    changes: [
+      { type: 'add', text: '已创建代理 说明弹窗 新增「专业代理账户 · 创建流程」(商户直接创建 / 自行申请审核通过 → 均落到 未启用)与「账户状态 · 流转关系」(未启用→已启用、已启用↔已冻结、任意状态→已停用 终态)' },
+    ],
+  },
+  {
+    ver: 'v2.4.26',
+    date: '2026-05-13',
+    changes: [
+      { type: 'add', text: '自行申请代理 说明弹窗 新增「申请进度 · 流程关系」段落:可视化各进度间的流转(用户提交→待审核→通过/拒绝/要求补件→已补件待审核→ 循环)' },
+    ],
+  },
+  {
+    ver: 'v2.4.25',
+    date: '2026-05-13',
+    changes: [
+      { type: 'add', text: '说明弹窗新增「代理ID 编号规则」段落:商户创建 AG1xxxxx(蓝)、自行申请 AP2xxxxx(绿);自行申请页只显示 AP 规则' },
+    ],
+  },
+  {
+    ver: 'v2.4.24',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '「冻结帐户」与「再次启用」按钮也加入二次确认弹窗(此前只有「停用帐户」有)' },
+    ],
+  },
+  {
+    ver: 'v2.4.23',
+    date: '2026-05-13',
+    changes: [
+      { type: 'feat', text: '代理详情页 帐户状态操作按钮接入功能:点击「冻结帐户」→ 状态变为 已冻结、点击「停用帐户」→ 状态变为 已停用(带二次确认)' },
+      { type: 'feat', text: '当帐户状态为 已冻结 时,显示「再次启用」按钮(绿色边框),点击后状态变为 已启用' },
+      { type: 'modify', text: '帐户状态为 已停用 时不再显示任何状态操作按钮(状态不可撤销)' },
+      { type: 'modify', text: '状态变更同时写回 window.APS_MERCHANT_AGENTS_STORE,列表与详情同步' },
+    ],
+  },
+  {
+    ver: 'v2.4.22',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '自行申请代理新建申请的 AP ID 计算:同时纳入「已创建代理」store 中已存在的 AP _displayId(如 AP範例6=AP200006),避免冲突' },
+      { type: 'modify', text: '审核不一定按代理ID顺序,新申请 ID = max(所有已存在 AP 编号,包括已审核通过且落到已创建代理列表的) + 1' },
+    ],
+  },
+  {
+    ver: 'v2.4.21',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '商户新建代理 ID 计算改为「max(现有 AG 编号) + 1」(AP 行不计入),修复初始第一笔新建出现 AG100006 而非 AG100005 的问题' },
+    ],
+  },
+  {
+    ver: 'v2.4.20',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '修复:商户新建代理后,原 5 笔代理的「代理类型 / 创建方式 / 代理ID」错位 — 原本这些值由 index 计算,新增 prepend 后所有 index 偏移导致错位' },
+      { type: 'fix', text: '把 _aType / _createWay / _displayId 烘焙(bake)为每个 agent 对象的属性,渲染与筛选都用属性而非 index;新建代理时同步在对象上设置这 3 个字段' },
+    ],
+  },
+  {
+    ver: 'v2.4.19',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '商户新建代理切换分页后不见 — agents 状态由 React local state 提升为 window.APS_MERCHANT_AGENTS_STORE 全局 store(切换页面/重新挂载后保留)' },
+      { type: 'fix', text: '专业代理后台 登入页快速选择账户卡片 头像/ID 显示:根据 agentId 前缀区分 AG(蓝色,商户创建)与 AP(绿色,自行申请),并将原本显示的 userId 改为 agentId' },
+      { type: 'fix', text: '专业代理后台 顶栏用户胶囊 头像:同样根据 agentId 前缀显示 AG/AP 与对应底色' },
+    ],
+  },
+  {
+    ver: 'v2.4.18',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '说明弹窗(已创建代理):账户状态顺序 已启用↔未启用 互换(未启用 在前);已冻结 文案补充可用功能范围' },
+      { type: 'modify', text: '说明弹窗(自行申请代理):移除 风险等级 / 账户状态 两个段落,只保留 申请进度' },
+      { type: 'modify', text: '申请进度「通过」文案改为「由管理员手动创建专业代理账户」(原为「系统自动创建」)' },
+    ],
+  },
+  {
+    ver: 'v2.4.17',
+    date: '2026-05-13',
+    changes: [
+      { type: 'add', text: '代理账户管理:已创建代理 / 自行申请代理 两个 tab 都新增「说明」按钮(顶部按钮行右侧,ghost 样式),点击弹出说明弹窗' },
+      { type: 'add', text: '说明弹窗内容:风险等级(低/中/高)与 账户状态(已启用/未启用/已冻结/已停用)含义;在 自行申请代理 tab 下额外显示 申请进度 5 段说明' },
+      { type: 'add', text: 'ui.jsx ICONS 新增 info 图标' },
+    ],
+  },
+  {
+    ver: 'v2.4.16',
+    date: '2026-05-13',
+    changes: [
+      { type: 'feat', text: '新创建专业代理(商户创建 / 自行申请审核通过)账户状态默认为「未启用」(原 active)' },
+      { type: 'feat', text: '新增 window.APS_LOGGED_IN_AGENTS 全局集合(localStorage 持久化):代理首次登入专业代理后台成功时自动登记 agentId' },
+      { type: 'feat', text: 'AgentsModule 订阅登入事件,代理 ID 命中后状态自动从「未启用」翻为「已启用」' },
+    ],
+  },
+  {
+    ver: 'v2.4.15',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '修复:已创建代理页「创建专业代理」最后一步点击「创建代理帐户」后整页白屏崩溃 — 新建代理对象未填 status/created/players/risk/tier 等字段,导致渲染时 new Date(undefined).toISOString() 抛出 RangeError' },
+      { type: 'fix', text: '新建代理 ID 起点同步 v2.4.13:AG + (100001 + agents.length)' },
+    ],
+  },
+  {
+    ver: 'v2.4.14',
+    date: '2026-05-13',
+    changes: [
+      { type: 'fix', text: '已创建代理列表中 AP範例6(自行申请代理)的「查看&配置」详情页:注入 _displayId/_createWay/_appData,让详情页正确显示为自行申请代理的内容(此前误显示为商户创建代理)' },
+    ],
+  },
+  {
+    ver: 'v2.4.13',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '商户创建代理 ID 起点 AG100000 → AG100001:前 4 行依序显示 AG100001~AG100004(AP範例6 仍为 AP200006)' },
+      { type: 'modify', text: 'data.js 同步调整 parent 引用起点 100001+srand' },
+    ],
+  },
+  {
+    ver: 'v2.4.12',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '已创建代理列表行顺序调整:AP範例6(自行申请)从首行移到最后一行,前 4 行依序为 AG範例1~4' },
+      { type: 'modify', text: '同步更新 data.js 前 5 笔代理 name/status/risk/players 与 agents.jsx 的 isApplied/FIXED_TYPES/displayId 公式' },
+    ],
+  },
+  {
+    ver: 'v2.4.11',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '自行申请代理示例 5 笔:代理名称改为 AP範例1~5、代理类型改为 个人/个人/个人/团队/总(对应 tier normal/normal/normal/general/super)' },
+      { type: 'modify', text: '已创建代理列表第一行(AP200006)代理名称改为 AP範例6(避开 AP範例1)' },
+    ],
+  },
+  {
+    ver: 'v2.4.10',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '已创建代理列表中自行申请行的 ID 起点改为 AP200006(第一行),避开 自行申请代理 tab 中已使用的 AP200001~5' },
+    ],
+  },
+  {
+    ver: 'v2.4.9',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '代理ID 编号规则统一:商户创建代理 = AG1xxxxx,自行申请代理 = AP2xxxxx' },
+      { type: 'modify', text: 'SELF_APPLICATIONS_INITIAL 5 条示例 ID 从 AP000001~5 改为 AP200001~5' },
+      { type: 'modify', text: '已创建代理表格中自行申请行的 displayId 公式改为 AP + (200001 + i)' },
+      { type: 'modify', text: '新申请单生成 AP 编号最小值底线 = 200001' },
+    ],
+  },
+  {
+    ver: 'v2.4.8',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '代理账户管理示例数据:第一行代理ID AP100000 → AP200001' },
+    ],
+  },
+  {
+    ver: 'v2.4.7',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '代理账户管理示例数据:前 5 笔代理名称改为 AP範例1 / AG範例1~4,代理类型改为 个人/个人/个人/团队/总' },
+    ],
+  },
+  {
+    ver: 'v2.4.6',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '自行申请代理:「导出申请记录」从 tabs 卡片内 toolbar 移到顶部按钮行,文案改为「导出」、图标/大小同已创建代理页的导出按钮' },
+      { type: 'modify', text: '「全局配置」按钮样式改为 btn primary(蓝色,同创建专业代理按钮)' },
+    ],
+  },
+  {
+    ver: 'v2.4.5',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '「全局配置」按钮位置移到「自行申请代理」tab 内、tabs 卡片上方独立一行(白色 btn 样式)' },
+      { type: 'modify', text: '模板状态由 SelfApplicationsList 提升到父级 AgentsModule,通过 props 传入' },
+    ],
+  },
+  {
+    ver: 'v2.4.4',
+    date: '2026-05-13',
+    changes: [
+      { type: 'add', text: '自行申请代理 tab 列新增「全局配置」按钮(右上角),点击弹窗可配置「要求补件」与「拒绝」的模板1/模板2 内容' },
+      { type: 'add', text: '模板内容 localStorage 持久化,可恢复默认' },
+    ],
+  },
+  {
+    ver: 'v2.4.3',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '代理账户管理:Tab「全部代理」→「全部状态」' },
+      { type: 'modify', text: '示例数据前两行创建方式互换:第一行改为「自行申请代理」、第二行改为「商户创建代理」' },
+    ],
+  },
+  {
+    ver: 'v2.4.2',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '代理账户管理示例数据:未启用(pending)代理的玩家数固定为 0' },
+    ],
+  },
+  {
+    ver: 'v2.4.1',
+    date: '2026-05-13',
+    changes: [
+      { type: 'modify', text: '代理账户管理示例数据:前 5 笔固定风险等级 低/低/低/中/高、账户状态 未启用/未启用/已启用/已冻结/已停用' },
+    ],
+  },
+  {
+    ver: 'v2.4.0',
+    date: '2026-05-13',
+    changes: [
+      { type: 'add', text: '代理账户管理:新增「未啟用」分页(status=pending),位于「已启用」和「已冻结」之间' },
+      { type: 'fix', text: '原「待审核」分页标签更正为「未啟用」—— 筛选条件本来就是 status===pending,只是标签对齐了 statusMap' },
+      { type: 'modify', text: '版本号从 v2.4.0 起步(用户指示)' },
+    ],
+  },
+  {
     ver: 'v2.3.39',
     date: '2026-05-12',
-    current: true,
     changes: [
       { type: 'fix', text: '代理后台顶栏用户胶囊垂直居中(agent-user-wrap 加 align-self:center)' },
     ],

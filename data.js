@@ -33,16 +33,24 @@ function genAgents(n=80) {
   for (let i = 0; i < n; i++) {
     const created = Date.now() - srand(1, 720) * 86400000;
     const lastLogin = Date.now() - srand(0, 90) * 86400000;
-    const players = srand(0, 4500);
+    // 前 5 笔示例 status 固定(见下方);未启用(pending)的玩家数固定为 0
+    // v2.4.12 顺序调整:AG×4 在前、AP 在最后(原本 AP 在首行)
+    const fixedStatus = i < 5 ? ['pending','active','frozen','suspended','pending'][i] : null;
+    const players = fixedStatus === 'pending' ? 0 : srand(0, 4500);
     const commission = srand(0, 250000);
     list.push({
-      id: id('AG', 100000 + i),
-      name: spick(FIRST_NAMES) + '_' + spick(['VIP','Pro','Elite','Network','Media','Group','Team','Studio']),
+      // v2.4.13 AG ID 起点改为 AG100001(原 AG100000),让首行(AG範例1)显示为 AG100001
+      id: id('AG', 100001 + i),
+      // 前 5 笔示例代理名称:AG範例1~4 在前、AP範例6 在最后
+      name: i < 5
+        ? (i === 4 ? 'AP範例6' : `AG範例${i + 1}`)
+        : spick(FIRST_NAMES) + '_' + spick(['VIP','Pro','Elite','Network','Media','Group','Team','Studio']),
       type: spick(AGENT_TYPES),
       level: srand(1, 5),
       tier: spick(AGENT_LEVELS),
-      parent: i > 5 ? id('AG', 100000 + srand(0, Math.min(i-1, 8))) : null,
-      status: spick(['active','active','active','active','frozen','suspended','pending']),
+      parent: i > 5 ? id('AG', 100001 + srand(0, Math.min(i-1, 8))) : null,
+      // 前 5 笔示例数据固定:依序 未启用/未启用/已启用/已冻结/已停用
+      status: fixedStatus || spick(['active','active','active','active','frozen','suspended','pending']),
       country: spick(COUNTRIES),
       market: spick(MARKETS),
       currency: spick(CURRENCIES),
@@ -53,7 +61,10 @@ function genAgents(n=80) {
       commission,
       pendingCommission: srand(0, 50000),
       ngr: srand(5000, 800000),
-      risk: spick(['low','low','low','medium','medium','high']),
+      // 前 5 笔示例数据固定风险等级:依序 低/低/中/高/低 (AG×4 + AP範例6)
+      risk: i < 5
+        ? ['low','low','medium','high','low'][i]
+        : spick(['low','low','low','medium','medium','high']),
       contact: spick(['telegram','whatsapp','email']) + ':@' + spick(FIRST_NAMES).toLowerCase() + srand(100,999),
     });
   }

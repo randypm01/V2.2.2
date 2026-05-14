@@ -28,6 +28,9 @@ function App() {
     else setMerchantRoute(r);
   };
 
+  // v2.4.43 暴露到 window,供创建代理弹窗「分润管理」链接跳转
+  React.useEffect(() => { window.goRoute = setRoute; }, [backend]);
+
   const [openSections, setOpenSections] = useState({
     '运营': true, '收益': true, '风控与配置': true,
   });
@@ -46,12 +49,13 @@ function App() {
     { section: '运营', icon:'pulse', items: [
       { k:'dashboard', l:'仪表盘', icon:'dashboard', prd:'P0-11' },
       { k:'agents', l:'代理账户管理', icon:'users', prd:'P0-1' },
+      { k:'revshare', l:'分润管理', icon:'pie', prd:'P0-7' },
+      { k:'agent_levels', l:'代理等级管理', icon:'flag' },
       { k:'codes', l:'分享 Code 与链接', icon:'link', prd:'P0-3' },
       { k:'players', l:'玩家管理', icon:'user', prd:'P0-4' },
     ]},
     { section: '收益', icon:'wallet', items: [
       { k:'cpa', l:'CPA 管理', icon:'target', prd:'P0-5' },
-      { k:'revshare', l:'分润管理', icon:'pie', prd:'P0-7' },
       { k:'settlement', l:'结算管理', icon:'file', alert: 17, prd:'P0-8' },
       { k:'wallet', l:'代理钱包', icon:'wallet', prd:'P0-9' },
     ]},
@@ -246,7 +250,11 @@ function App() {
         {backend === 'agent' && loggedInAgent && (
           <div className="agent-user-wrap" style={{position:'relative'}}>
             <div className="top-user agent-user-pill" onClick={()=>setAgentUserMenuOpen(v=>!v)} style={{cursor:'pointer'}}>
-              <div className="av" style={{background:'#22c55e',color:'#fff'}}>AP</div>
+              {(() => {
+                // v2.4.19 头像前缀根据 agentId 区分:AG=商户创建、AP=自行申请
+                const isAp = String(loggedInAgent.agentId || '').startsWith('AP');
+                return <div className="av" style={{background: isAp ? '#22c55e' : '#3b82f6',color:'#fff'}}>{isAp ? 'AP' : 'AG'}</div>;
+              })()}
               <div className="who"><b>{loggedInAgent.loginName}</b><small className="mono">{loggedInAgent.agentId}</small></div>
               <Icon name="chevronDown" size={12} className="text-mute"/>
             </div>
@@ -274,6 +282,10 @@ function App() {
         <window.AgentLoginModule onLogin={(acc) => {
           setLoggedInAgent(acc);
           window.CURRENT_AGENT_ID = acc.agentId;
+          // v2.4.16 首次登入成功 → 标记该代理 ID,商户后台据此自动把代理状态改为「已启用」
+          if (window.APS_LOGGED_IN_AGENTS && acc.agentId) {
+            window.APS_LOGGED_IN_AGENTS.mark(acc.agentId);
+          }
           setAgentRoute('home');
         }}/>
       )}
@@ -521,6 +533,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'players' && <PlayersModule/>}
             {r.kind === 'mod' && r.k === 'cpa' && <CpaModule/>}
             {r.kind === 'mod' && r.k === 'revshare' && <RevShareModule/>}
+            {r.kind === 'mod' && r.k === 'agent_levels' && <window.AgentLevelsModule/>}
             {r.kind === 'mod' && r.k === 'settlement' && <SettlementModule/>}
             {r.kind === 'mod' && r.k === 'wallet' && <WalletModule/>}
             {r.kind === 'mod' && r.k === 'risk' && <RiskModule/>}
@@ -546,7 +559,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'multi_currency' && <window.MultiCurrencyModule/>}
             {r.kind === 'mod' && r.k === 'ad_network' && <window.AdNetworkModule/>}
             {r.kind === 'mod' && r.k === 'bi' && <window.BiModule/>}
-            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','settlement','wallet','risk','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
+            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','settlement','wallet','risk','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
               const sec = NAV.find(s => s.items.some(i => i.k === r.k));
               const it = sec?.items.find(i => i.k === r.k);
               if (!it) return null;
