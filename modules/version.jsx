@@ -2,9 +2,184 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.0.15',
+    date: '2026-05-15',
+    current: true,
+    changes: [
+      { type: 'add', text: '商户后台 → 已创建代理 → 查看&配置 详情抽屉新增两个 Tab(权限配置 后面):「流量来源」「收款方式」,商户创建代理 + 自行申请代理 都生效' },
+      { type: 'add', text: '流量来源 Tab:列表展示代理推广所使用的频道/平台账号/落地页 URL;无数据时显示「(未填写流量来源)」;编辑模式下可改输入框、移除单条、新增多条' },
+      { type: 'add', text: '收款方式 Tab:付款方式锁定 UPI(蓝色 chip);UPI ID + 收款人姓名 两个字段(编辑模式下可改);底部黄色提示「当前阶段仅支持 UPI,后续会开放其他渠道」' },
+      { type: 'add', text: '示例数据:agent._traffic / agent._payment 没有时自动生成默认 2 条 URL(youtube/telegram) + UPI 默认值(loginName@paytm + 代理名作收款人),与 AgentDetail 保持一致体验' },
+      { type: 'modify', text: 'saveEdit 操作日志映射 + cancelEdit 重置逻辑 扩展支持 traffic / payment;切换代理时 useEffect 同步重置;编辑按钮在两个新 tab 下也显示' },
+    ],
+  },
+  {
+    ver: 'v3.0.14',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '注册弹窗 第 3 页 密码校验规则调整:① 请填写此栏位 ② 最少 8 个字元 ③ 密码必须包含 8-50 个字元,并包含字母大小写、数字' },
+      { type: 'remove', text: '注册弹窗 第 3 页 删除「强密码」校验项(原长度 >=12 视为强密码)' },
+      { type: 'modify', text: 'passChecks.pattern 规则从 /^[a-zA-Z0-9#_.\\/&!@]+$/ 改为强制要求 [A-Z] + [a-z] + [0-9],并限定长度 8-50' },
+    ],
+  },
+  {
+    ver: 'v3.0.13',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '注册弹窗 第 2 页:「Youtube、Tiktok、Telegram、Facebook...」从输入框 placeholder 移到 标签「流量来源链接(选填)」后方,作为浅色 hint 文字内联显示;placeholder 改回「https://domain.com」' },
+      { type: 'add', text: '注册弹窗 第 2 页:流量来源链接 改为多条 — 输入框下方新增「+ 新增流量来源链接」按钮(复用 .contact-add-btn 蓝色虚线胶囊),可添加多个 URL;第 2 条起每行尾带 − 移除按钮' },
+      { type: 'modify', text: 'form 模型 trafficUrl(string)→ trafficUrls(array of string),默认 [\'\'];新增 updateTraffic/addTraffic/removeTraffic 三个 handler' },
+    ],
+  },
+  {
+    ver: 'v3.0.12',
+    date: '2026-05-15',
+    changes: [
+      { type: 'remove', text: '注册弹窗 第 1 页 基本资料:删除「联系方式 *」外标签 + 「· 至少填写 2 项」hint;删除 .contact-list 外层边框/灰底,行直接平铺,行间距 8px' },
+      { type: 'remove', text: '注册弹窗 第 1 页:删除「联系类型/联系资料」表头行' },
+      { type: 'modify', text: '注册弹窗 第 1 页:手机国际码改为固定显示 +91(印度) — 移除国码下拉,只保留输入框前的 +91 prefix' },
+      { type: 'modify', text: '注册弹窗 第 2 页 流量来源与收款:「偏好付款方式」改名「收款方式」,值锁定为 UPI(只读灰底标签,不可选)' },
+      { type: 'remove', text: '注册弹窗 第 2 页:删除「电子邮件」付款邮箱字段(payEmail)' },
+      { type: 'modify', text: '注册弹窗 第 2 页:「流量来源链接」标签后加「(选填)」,placeholder 改为「Youtube、Tiktok、Telegram、Facebook ...」;step2 校验改为始终通过(下一页按钮始终亮起)' },
+      { type: 'modify', text: '布局调整:第 2 页从 2 列网格改为单列(流量来源链接占满 + 收款方式独行)' },
+    ],
+  },
+  {
+    ver: 'v3.0.11',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '注册弹窗 副标题(欢迎加入文案 / step 2 流量介绍 / step 3 用户名问候)位置从 步骤指示器下方 移到 标题「注册」下方;步骤指示器始终显示在底部' },
+      { type: 'add', text: '步骤指示器 3 个圆下方新增中文名称:基本资料 / 流量来源与收款 / 创建账户(EN: Basic Info / Traffic & Payment / Create Account)' },
+      { type: 'add', text: '步骤名称根据当前 step 联动配色:已完成步骤蓝色 / 当前步骤深黑加粗 / 未来步骤灰色' },
+    ],
+  },
+  {
+    ver: 'v3.0.10',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '招募营销页 顶栏布局优化:.aglp-nav-inner 取消 max-width:1200px 居中限制,改为全宽 + grid 三栏布局(auto 1fr auto)— logo 靠左、actions 靠右、中间导航(费用/工具/仪表板/如何运作)真正居中' },
+      { type: 'modify', text: '导航链接 .aglp-nav-links 改 justify-content:center,gap 加大到 32px' },
+      { type: 'modify', text: '「成为合作伙伴」按钮配色更显眼:从 白底蓝字 改为 金橙渐变(#fbbf24 → #f59e0b)+ 深灰字 + 阴影;hover 上抬+加深阴影。在浅蓝 Hero 与白色顶栏上都很跳' },
+      { type: 'modify', text: '小屏(<980px)顶栏 padding 调小到 12px 20px' },
+    ],
+  },
+  {
+    ver: 'v3.0.9',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '语言切换从两段胶囊(EN | 中文)改为下拉按钮:Globe 图标 + 当前语言短码(中 / EN) + Chevron;点击展开下拉,选项为 English / 繁體中文,带 active 高亮 + ✓ 勾选' },
+      { type: 'add', text: '下拉支持深色变体(dark) — 招募营销页深蓝顶栏可传入 variant=\"dark\" 启用半透明白底玻璃态;登入后顶栏(白底)使用默认白色样式' },
+      { type: 'modify', text: '招募营销页 顶栏「登入」左侧的胶囊改用通用 AgentLangSwitch(与登入后顶栏统一组件)' },
+      { type: 'modify', text: '下拉点击 mask 自动关闭,Esc 不再单独绑(用 mask 即可)' },
+    ],
+  },
+  {
+    ver: 'v3.0.8',
+    date: '2026-05-15',
+    changes: [
+      { type: 'add', text: '招募营销页 + 登入弹窗 + 注册弹窗 + 登入后页面(顶栏 / 侧栏 / 仪表盘 / 各模块 PageHead)全部接入中英文 i18n' },
+      { type: 'add', text: '新增全局语言状态 window.APS_LANG_STORE(localStorage 持久化 + subscribe/publish);新增 React hook window.useAgentLang;新增 window.t(key, fallback) 翻译辅助函数;字典挂载在 window.APS_I18N.zh / en' },
+      { type: 'add', text: '新增 window.AgentLangSwitch 通用胶囊组件(EN | 中文 圆角分段);在登入后 顶栏「用户胶囊」左侧固定显示,选择后整个登入后界面立即切换' },
+      { type: 'add', text: '后台 i18n 字典 80+ 个 key 覆盖:top.* / nav.* / home.* / hero.* / page.* / login.* / reg.*' },
+      { type: 'modify', text: '登入弹窗(LoginModal):标题 / 副标题 / 快速选择账户 / 输入框 placeholder / 显示密码 title / 记住账号 / 登入按钮 / 错误提示 / 底部「立即申请」全部 i18n' },
+      { type: 'modify', text: '注册弹窗(RegisterModal):标题 / 4 步骤所有文案 / 申请人姓名 / 联系方式表头 / 流量来源 / 付款方式 / 用户名 / 密码 / 密码校验 4 项 / 条款 + 联盟讯息 / Complete / 成功页 4 行 / 订阅按钮 全部 i18n' },
+      { type: 'modify', text: 'app.jsx 顶栏:专业代理后台品牌名 / 登出 文字 i18n;侧栏 AGENT_NAV(我的账户 / 推广&收益 + 4 个子项 + PRD首页)全部 i18n;App 顶部订阅 useAgentLang 触发整树重渲染' },
+      { type: 'modify', text: 'AgentDashboardModule:你好 / 欢迎回来 / 通知中心 / 创建 Code / 4 张 KPI 卡(本月佣金 / 有效 CPA / 累计 NGR / 我的玩家)/ 近 30 天佣金趋势图标题 + 副标 i18n;日期 toLocaleString 在 EN 下用 en-US locale' },
+      { type: 'modify', text: 'AgentHero:正常状态徽章 / 4 项 KPI(玩家 / 有效 CPA / 累计 NGR / 本月佣金)i18n' },
+      { type: 'modify', text: 'my_profile / my_codes / my_players / my_revshare 4 个模块 PageHead title + subtitle i18n;模块内部表格列名 / 详情字段暂保持中文(后续逐步翻译)' },
+      { type: 'modify', text: '原 LANDING_I18N 在 agent_login.jsx 内继续保留,语言状态从本地 useState 迁移到全局 useAgentLang,与登入后页面共享一个 lang 状态' },
+    ],
+  },
+  {
+    ver: 'v3.0.7',
+    date: '2026-05-15',
+    changes: [
+      { type: 'add', text: '招募营销页 顶栏「登入」按钮左侧新增 EN / 中文 语言切换胶囊(参考网站前台 FeLangSwitch 样式),白底蓝字 active 态;选择后写入 localStorage(APS_LANDING_LANG)持久化' },
+      { type: 'add', text: '新增 LANDING_I18N 中英文 i18n 表,覆盖整页:顶栏 / Hero(含标题/副标/4 项 KPI/3 张浮层卡)/ 福利 5 卡 / 费用 3 卡(badge + 列表) / 工具 5 卡 / 仪表板预览(KPI 标签 + 3 项特性) / 4 步骤 / 深色 CTA / Footer 版权 + 链接;切换 EN 后整页英文渲染,中文回切立刻生效' },
+      { type: 'modify', text: '原硬编码的中文文案全部替换为 t.xxx 取值;Hero 大标题拆为 title_a / title_b / em / title_c 四段,适应中英文不同语序(英文「Earn Cash Without Any Hassle」,中文「赢取现金 一点也不麻烦哟」)' },
+      { type: 'remove', text: '登入弹窗 / 注册弹窗内文案暂保持简体中文(后续如需也可加入 i18n)' },
+    ],
+  },
+  {
+    ver: 'v3.0.6',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '招募营销页 注册弹窗 第 1 页字段重构 — 按用户要求精简' },
+      { type: 'remove', text: '删除字段:名字 / 姓氏 / 电子邮件 / 语言 / Messenger(选填) / Messenger 用户名 / 电话号码 / 国家' },
+      { type: 'add', text: '新增字段「申请人姓名」(单字段,placeholder:真实姓名(与证件一致))' },
+      { type: 'modify', text: '联系方式 改用商户后台「自行申请代理」弹窗同款动态列表:Email + Mobile 锁定为前两行必填,可「+ 新增联系方式」加 Telegram / WhatsApp;手机/WhatsApp 行自带国码下拉(13 国,默认 +86 中国);复用全局 .contact-list / .contact-row / .contact-type-locked / .contact-phone-input / .contact-add-btn 样式' },
+      { type: 'modify', text: 'step1Valid 校验改为:申请人姓名非空 + 前两项联系方式 value 非空' },
+      { type: 'modify', text: 'step3 副标题 form.firstName 引用改为 form.applyName(避免引用已删除的字段)' },
+    ],
+  },
+  {
+    ver: 'v3.0.5',
+    date: '2026-05-15',
+    changes: [
+      { type: 'fix', text: '修复 招募营销页 顶栏在滚动时不固定的问题:.aglp 容器原本有 `overflow-y:auto` 会形成第二层滚动容器,使内部 sticky 失效;移除后页面滚动归还给外层 `.content`(app 主滚动容器),`.aglp-nav { position:sticky; top:0 }` 现在能正确钉在顶部' },
+    ],
+  },
+  {
+    ver: 'v3.0.4',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '招募营销页 配色优化 — 颜色太重的问题:Hero / CTA 区背景从深海军藍渐变(#0f172a → #1e3a8a)改为更亮的品牌蓝渐变(#2563eb → #3b82f6 → #60a5fa),并新增放射状装饰条纹层(repeating-conic-gradient + radial mask),呼应 1xBet 风格' },
+      { type: 'modify', text: 'featured 卡片(RevShare)从深蓝渐变改为亮品牌蓝(#3b82f6 → #2563eb);徽章「最受欢迎」从金底棕字改为白底蓝字 + 阴影;CTA 按钮从金色改为白底蓝字' },
+      { type: 'modify', text: 'gold 按钮(成为合作伙伴/CTA)从金橙渐变改为白底蓝字,与浅蓝 Hero 背景对比更柔和' },
+      { type: 'modify', text: 'Hero 大标题强调字「麻烦」从亮金 #fbbf24 改为浅金 #fef3c7 + 柔光阴影,降低饱和度' },
+      { type: 'modify', text: 'Hero KPI 大数字从金色改为白色,小字 + 标签调整透明度;eyebrow 胶囊从金色描边改为白色玻璃态(backdrop-filter blur)' },
+      { type: 'modify', text: 'Footer 背景从纯黑 #0f172a 改为深灰蓝 #1e293b,层级更柔和' },
+    ],
+  },
+  {
+    ver: 'v3.0.3',
+    date: '2026-05-15',
+    changes: [
+      { type: 'add', text: '招募营销页 新增「成为合作伙伴」注册流程(3 步骤弹窗 + 成功页),参考 1xBet 联盟注册流程' },
+      { type: 'add', text: '步骤 1 「欢迎加入」:名字 / 姓氏 / 电子邮件 / 语言(8 种) / Messenger(选填,7 种) / Messenger 用户名 / 电话号码(国码下拉,13 国) / 国家;必填字段非空时下一页按钮才亮起' },
+      { type: 'add', text: '步骤 2 「流量介绍」:流量来源链接 / 偏好付款方式(10 种,Skrill/Neteller/USDT/银行/支付宝等) / 付款电子邮箱' },
+      { type: 'add', text: '步骤 3 「帐户资讯」:用户名 / 密码 / 重新输入密码;实时密码校验列表(请填写 / 最少 8 字元 / 字母+数字+特殊字符 / 强密码) + 重复密码校验;条款&条件 + 联盟讯息 两个 checkbox(前者必勾才能 Complete)' },
+      { type: 'add', text: '步骤 4 「成功页」:绿色勾选大图标 + 「很高兴你加入我们!」+ 24 小时审查提示 + Telegram 订阅按钮' },
+      { type: 'add', text: '步骤指示器:1 → 2 → 3 圆点 + 连接线,已完成步骤填蓝色 + ✓,当前步骤白底蓝圈,未来步骤灰色' },
+      { type: 'add', text: '弹窗右上角 X 关闭 / Esc 键关闭 / 点击遮罩关闭;步骤 2/3 顶部左侧「< 上一步」箭头;登入弹窗底部「立即申请」与注册弹窗底部「立即登入」可互相切换' },
+      { type: 'modify', text: '所有「成为合作伙伴 / 联系我们 / 加入我们 / 申请方案」按钮(顶栏 + Hero + 3 张费用卡 + CTA 区)统一指向注册弹窗;「登入」按钮单独指向登入弹窗' },
+      { type: 'remove', text: '注册资料 暂时不同步到「商户后台 → 代理账户管理 → 自行申请代理」(按用户要求);后续如需打通,只需在 Complete 时调用 APS_addApplication' },
+    ],
+  },
+  {
+    ver: 'v3.0.2',
+    date: '2026-05-15',
+    current: true,
+    changes: [
+      { type: 'fix', text: '修复 招募营销页 Hero 右侧三张浮层数据卡片在中等视口宽度下被挤成「一字一行」竖排:加 min-width:180px + white-space:nowrap;容器 .aglp-hero-viz 加 min-width:340px;Hero 栏栅格比例 1.2fr/1fr → 1.1fr/1fr;新增 max-width:1180px 媒体查询,卡片缩小但不压扁' },
+    ],
+  },
+  {
+    ver: 'v3.0.1',
+    date: '2026-05-15',
+    changes: [
+      { type: 'modify', text: '专业代理后台 登入页 重做为「招募营销 Landing Page」(参考 1x.partners/tw 结构):整页改为单页营销页,包含 顶栏 / Hero / 福利 / 费用 / 工具 / 联盟仪表板预览 / 4 步骤 / CTA / Footer 9 个区块' },
+      { type: 'modify', text: '原登入表单 完整搬到「登入弹窗」中:顶栏右上「登入」按钮 + Hero 的「成为合作伙伴」按钮 + 各 CTA 按钮 均触发弹窗;表单字段(账号 / 密码 / 显示密码切换 / 快速选择已创建账户 / 记住账号 / 错误提示)与登入逻辑完全保留,Esc / 点击遮罩 / 关闭按钮 均可关闭' },
+      { type: 'add', text: 'Hero 区块:大标题「赢取现金 · 一点也不麻烦哟」+ 4 项 KPI 横条(15 年市场 / 300万+ 每日玩家 / 62 国 / 40% 营收分享上限)+ 3 张浮层数据卡可视化(本月佣金 / 推介玩家 + 柱图 / 营收分享当前等级进度条)' },
+      { type: 'add', text: '费用区块:3 张方案卡片(CPA 单付费 / RevShare 营收分享 40% — 标记「最受欢迎」/ Hybrid 混合型),含特性列表 + CTA' },
+      { type: 'add', text: '工具区块:5 张推广工具卡(横幅&落地页 / Smart Link / JSON Push / 促销代码 / S2S 整合)' },
+      { type: 'add', text: '联盟仪表板预览:左侧 3 项特性(我的账户 / 实时统计 / 详细报告)+ 右侧模拟仪表板截图(3 KPI + SVG 折线图)' },
+      { type: 'add', text: '4 步骤区块:注册 → 发布广告 → 推介新顾客 → 提款,顶部带数字徽章 + 大图标' },
+      { type: 'add', text: '深色 CTA 区块 + 简洁 Footer(© 2026 Partners-MM v3.0.0)' },
+      { type: 'add', text: 'ui.jsx 新增 7 个图标:star / layout / send / code / plug / zap / userPlus(供营销页使用)' },
+      { type: 'modify', text: '原 .al2-* 旧登入页样式不再使用(保留 styles.css,可后续清理)' },
+    ],
+  },
+  {
+    ver: 'v3.0.0',
+    date: '2026-05-15',
+    changes: [
+      { type: 'baseline', text: '版本号基线升级至 v3.0.0(用户指示) — 后续小版本从 v3.0.1 起递增;之前的 v2.x 历史记录全部保留作为参考' },
+    ],
+  },
+  {
     ver: 'v2.5.14',
     date: '2026-05-14',
-    current: true,
     changes: [
       { type: 'modify', text: '专业代理后台 侧栏整合:推广 + 收益 合并为「推广&收益」,内含 分享 Code 与链接 / 玩家损益 / 分润报表 三个子项(分润报表从原「收益」section 移入)' },
       { type: 'remove', text: '隐藏「收益」section 及子项「CPA 报表」(my_cpa.jsx 模块文件与路由分发保留,仅 NAV 不展示)' },

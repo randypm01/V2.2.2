@@ -5,6 +5,8 @@ function AgentDashboardModule({ onNav }) {
   const D = window.APS_DATA;
   const F = window.APS_FMT;
   const me = window.useCurrentAgent();
+  const [lang] = window.useAgentLang();
+  const T = (k, fb) => window.t(k, fb);
   const myPlayers = D.players.filter(p => p.agentId === me.id);
   const myCodes = D.codes.filter(c => c.agent === me.id);
   const myCpa = D.cpaRecords.filter(c => c.agentId === me.id);
@@ -27,9 +29,9 @@ function AgentDashboardModule({ onNav }) {
 
   return (
     <div className="page">
-      <ADUI.PageHead title={'你好,' + me.name} subtitle={'欢迎回来 · 上次登录 ' + new Date(Date.now()-2*3600*1000).toLocaleString('zh-CN')}>
-        <button className="btn"><Icon name="bell" size={13}/>通知中心 <span style={{marginLeft:6,padding:'1px 6px',background:'var(--danger)',color:'#fff',borderRadius:8,fontSize:10}}>5</span></button>
-        <button className="btn primary" onClick={()=>go('my_codes')}><Icon name="plus" size={13}/>创建 Code</button>
+      <ADUI.PageHead title={T('home.hello','你好,') + me.name} subtitle={T('home.welcome_back','欢迎回来 · 上次登录') + ' ' + new Date(Date.now()-2*3600*1000).toLocaleString(lang === 'en' ? 'en-US' : 'zh-CN')}>
+        <button className="btn"><Icon name="bell" size={13}/>{T('home.notify_center','通知中心')} <span style={{marginLeft:6,padding:'1px 6px',background:'var(--danger)',color:'#fff',borderRadius:8,fontSize:10}}>5</span></button>
+        <button className="btn primary" onClick={()=>go('my_codes')}><Icon name="plus" size={13}/>{T('home.create_code','创建 Code')}</button>
       </ADUI.PageHead>
 
       <window.AgentHero tone="#3b82f6"/>
@@ -37,10 +39,10 @@ function AgentDashboardModule({ onNav }) {
       {/* 重点 KPI 4 张大卡 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:14}}>
         {[
-          { l:'本月佣金 (USD)', v:'$'+F.money(monthCommission), d:'+18.4% MoM', ic:'wallet', tone:'#0891b2', sub:'已结算 3 张 · 待付款 $2,847', mod:'my_settlement' },
-          { l:'有效 CPA 数', v:F.fmtNum(validCpa), d:'+12 本月', ic:'check', tone:'#16a34a', sub:'通过率 ' + (myCpa.length?(validCpa/myCpa.length*100).toFixed(0):0) + '%', mod:'my_cpa' },
-          { l:'累计 NGR', v:'$'+F.money(ngr), d: ngr>0?'盈利':'负盈利', ic:'pie', tone:'#22c55e', sub:'分润预估 $'+F.money(revShare), mod:'my_revshare' },
-          { l:'我的玩家', v:F.fmtNum(myPlayers.length), d:'+'+ftd+' 已首存', ic:'users', tone:'#a855f7', sub: myPlayers.filter(p=>p.vip>=4).length + ' VIP', mod:'my_players' },
+          { l: T('home.kpi.commission','本月佣金 (USD)'), v:'$'+F.money(monthCommission), d:'+18.4% MoM', ic:'wallet', tone:'#0891b2', sub: T('home.kpi.commission.sub','已结算 3 张 · 待付款') + ' $2,847', mod:'my_settlement' },
+          { l: T('home.kpi.cpa','有效 CPA 数'), v:F.fmtNum(validCpa), d: '+12 ' + T('home.kpi.cpa.delta','本月'), ic:'check', tone:'#16a34a', sub: T('home.kpi.cpa.sub','通过率') + ' ' + (myCpa.length?(validCpa/myCpa.length*100).toFixed(0):0) + '%', mod:'my_cpa' },
+          { l: T('home.kpi.ngr','累计 NGR'), v:'$'+F.money(ngr), d: ngr>0?T('home.kpi.ngr.delta.win','盈利'):T('home.kpi.ngr.delta.loss','负盈利'), ic:'pie', tone:'#22c55e', sub: T('home.kpi.ngr.sub','分润预估') + ' $'+F.money(revShare), mod:'my_revshare' },
+          { l: T('home.kpi.players','我的玩家'), v:F.fmtNum(myPlayers.length), d:'+'+ftd+' ' + T('home.kpi.players.delta_a','已首存'), ic:'users', tone:'#a855f7', sub: myPlayers.filter(p=>p.vip>=4).length + ' ' + T('home.kpi.players.sub_vip','VIP'), mod:'my_players' },
         ].map((k, i) => (
           <div key={i} onClick={()=>go(k.mod)} style={{
             padding:18,
@@ -74,8 +76,8 @@ function AgentDashboardModule({ onNav }) {
         <div className="card">
           <div style={{padding:'14px 18px 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <div>
-              <div style={{fontSize:14,fontWeight:600,color:'var(--text-0)'}}>近 30 天佣金趋势</div>
-              <div className="text-mute" style={{fontSize:11.5,marginTop:2}}>每日佣金累计 (CPA + RevShare)</div>
+              <div style={{fontSize:14,fontWeight:600,color:'var(--text-0)'}}>{T('home.chart.title','近 30 天佣金趋势')}</div>
+              <div className="text-mute" style={{fontSize:11.5,marginTop:2}}>{T('home.chart.sub','每日佣金累计 (CPA + RevShare)')}</div>
             </div>
             <div style={{display:'flex',gap:6}}>
               <button className="btn sm">7 天</button>

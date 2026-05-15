@@ -26,6 +26,8 @@ function buildSamplePlayers(agentId, agentCodePrefix) {
 function MyPlayersModule() {
   const D = window.APS_DATA;
   const F = window.APS_FMT;
+  const [lang] = window.useAgentLang();
+  const T = (k, fb) => window.t(k, fb);
   const me = window.useCurrentAgent();
   const [tab, setTab] = React.useState('all');
   const [q, setQ] = React.useState('');
@@ -63,7 +65,7 @@ function MyPlayersModule() {
 
   return (
     <div className="page">
-      <APUI.PageHead title="玩家损益" subtitle="我推广而来的玩家清单与盈亏分析 — 充值 / 提款 / 投注 / NGR">
+      <APUI.PageHead title={T('page.my_players.title','玩家损益')} subtitle={T('page.my_players.sub','我推广而来的玩家清单与盈亏分析 — 充值 / 提款 / 投注 / NGR')}>
         <button className="btn"><Icon name="download" size={13}/>导出</button>
       </APUI.PageHead>
 

@@ -2,6 +2,9 @@
 const { useState, useEffect } = React;
 
 function App() {
+  // v3.0.8 订阅全局语言状态，使 App 在切语言时重新渲染
+  const [_aglang] = window.useAgentLang ? window.useAgentLang() : ['zh'];
+  const T = (k, fb) => window.t ? window.t(k, fb) : fb;
   const [t, setTweak] = window.useTweaks ? window.useTweaks(/*EDITMODE-BEGIN*/{
     "density": "dense",
     "accent": "#3b82f6"
@@ -64,13 +67,13 @@ function App() {
 
   // 专业代理后台 NAV
   const AGENT_NAV = [
-    { section: '我的账户', icon:'user', items: [
-      { k:'my_profile', l:'我的账户', icon:'user', prd:'P0-13' },
+    { section: T('nav.sec.account', '我的账户'), icon:'user', items: [
+      { k:'my_profile', l: T('nav.item.my_profile', '我的账户'), icon:'user', prd:'P0-13' },
     ]},
-    { section: '推广&收益', icon:'link', items: [
-      { k:'my_codes', l:'分享 Code 与链接', icon:'link', prd:'P0-3' },
-      { k:'my_players', l:'玩家损益', icon:'user', prd:'P0-4' },
-      { k:'my_revshare', l:'分润报表', icon:'pie', prd:'P0-7' },
+    { section: T('nav.sec.promote_earn', '推广&收益'), icon:'link', items: [
+      { k:'my_codes', l: T('nav.item.my_codes', '分享 Code 与链接'), icon:'link', prd:'P0-3' },
+      { k:'my_players', l: T('nav.item.my_players', '玩家损益'), icon:'user', prd:'P0-4' },
+      { k:'my_revshare', l: T('nav.item.my_revshare', '分润报表'), icon:'pie', prd:'P0-7' },
     ]},
   ];
 
@@ -219,7 +222,7 @@ function App() {
             <div className="logo" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
               <Icon name="users" size={18}/>
             </div>
-            <div className="name">專業代理後台</div>
+            <div className="name">{T('top.brand', '專業代理後台')}</div>
             <span className="ver-inline">v1.0</span>
           </div>
         )}
@@ -237,6 +240,9 @@ function App() {
             <div className="who"><b>admin</b><small>运营总监</small></div>
             <Icon name="chevronDown" size={12} className="text-mute"/>
           </div></>)}
+        {backend === 'agent' && loggedInAgent && (
+          <window.AgentLangSwitch variant="topbar"/>
+        )}
         {backend === 'agent' && loggedInAgent && (
           <div className="agent-user-wrap" style={{position:'relative'}}>
             <div className="top-user agent-user-pill" onClick={()=>setAgentUserMenuOpen(v=>!v)} style={{cursor:'pointer'}}>
@@ -258,7 +264,7 @@ function App() {
                     setAgentRoute('home');
                     window.CURRENT_AGENT_ID = null;
                   }}>
-                    <Icon name="logOut" size={13}/> 登出
+                    <Icon name="logOut" size={13}/> {T('top.logout', '登出')}
                   </div>
                 </div>
               </>
@@ -303,9 +309,9 @@ function App() {
                 <span>首页</span>
               </div>
               <div className={'sb-item ' + (isActiveRoute('prd_home')?'active':'')}
-                onClick={()=>setRoute('prd_home')} title="PRD首页" style={{marginBottom:6}}>
+                onClick={()=>setRoute('prd_home')} title={T('nav.prd_home', 'PRD首页')} style={{marginBottom:6}}>
                 <Icon name="folder" size={15} className="sb-icon"/>
-                <span>PRD首页</span>
+                <span>{T('nav.prd_home', 'PRD首页')}</span>
               </div>
               {AGENT_NAV.map(sec => {
                 const isOpen = openSections[sec.section] !== false;

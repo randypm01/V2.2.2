@@ -33,6 +33,8 @@ function buildSampleCodes(agentId) {
 function MyCodesModule() {
   const D = window.APS_DATA;
   const F = window.APS_FMT;
+  const [lang] = window.useAgentLang();
+  const T = (k, fb) => window.t(k, fb);
   const toast = ACUI.useToast();
   const me = window.useCurrentAgent();
   const [tab, setTab] = React.useState('list');
@@ -98,7 +100,7 @@ function MyCodesModule() {
 
   return (
     <div className="page">
-      <ACUI.PageHead title="分享 Code 与链接" subtitle="管理我的专属推广 Code、Tracking Link 与 QR Code">
+      <ACUI.PageHead title={T('page.my_codes.title','分享 Code 与链接')} subtitle={T('page.my_codes.sub','管理我的专属推广 Code、Tracking Link 与 QR Code')}>
         <button className="btn"><Icon name="download" size={13}/>导出报表</button>
         <button className="btn primary" onClick={()=>setShowCreate(true)}><Icon name="plus" size={13}/>创建 Code</button>
       </ACUI.PageHead>

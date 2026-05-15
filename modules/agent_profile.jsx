@@ -6,6 +6,8 @@ function AgentProfileModule() {
   const F = window.APS_FMT;
   const toast = PFUI.useToast();
   const me = window.useCurrentAgent();
+  const [lang] = window.useAgentLang();
+  const T = (k, fb) => window.t(k, fb);
   const [tab, setTab] = React.useState('basic');
   const [show2FA, setShow2FA] = React.useState(false);
   const [showPwd, setShowPwd] = React.useState(false);
@@ -32,7 +34,7 @@ function AgentProfileModule() {
 
   return (
     <div className="page">
-      <PFUI.PageHead title="我的账户" subtitle="基本资料 · 合作方案 · 安全设置">
+      <PFUI.PageHead title={T('page.my_profile.title','我的账户')} subtitle={T('page.my_profile.sub','基本资料 · 合作方案 · 安全设置')}>
         <button className="btn"><Icon name="download" size={13}/>下载合作协议</button>
       </PFUI.PageHead>
 

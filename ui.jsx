@@ -52,7 +52,15 @@ const ICONS = {
   globe: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20',
   layers: 'M12 2L2 7l10 5 10-5-10-5zm-10 11l10 5 10-5M2 17l10 5 10-5',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z',
-  phone: 'M5 4h14v16H5V4zm5 16h4'
+  phone: 'M5 4h14v16H5V4zm5 16h4',
+  // v3.0.1 招募营销页用图标
+  star: 'M12 2l3 7 7 .6-5.5 4.8 1.8 7.1L12 17l-6.3 4.5 1.8-7.1L2 9.6 9 9l3-7z',
+  layout: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z',
+  send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  code: 'M16 18l6-6-6-6M8 6l-6 6 6 6M14 4l-4 16',
+  plug: 'M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8zm6 10v4',
+  zap: 'M13 2L4 14h7l-1 8 9-12h-7l1-8z',
+  userPlus: 'M14 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-8 2-8 5v1h12M19 8v6M16 11h6'
 };
 
 window.Icon = function Icon({ name, size = 14, style, className, strokeWidth = 1.6 }) {

@@ -5,6 +5,8 @@ function MyRevshareModule() {
   const D = window.APS_DATA;
   const F = window.APS_FMT;
   const me = window.useCurrentAgent();
+  const [lang] = window.useAgentLang();
+  const T = (k, fb) => window.t(k, fb);
   const [tab, setTab] = React.useState('overview');
 
   const myPlayers = D.players.filter(p => p.agentId === me.id);
@@ -25,7 +27,7 @@ function MyRevshareModule() {
 
   return (
     <div className="page">
-      <ARSUI.PageHead title="我的分润 (RevShare)" subtitle="基于玩家 NGR 的长期分润收益">
+      <ARSUI.PageHead title={T('page.my_revshare.title','分润报表')} subtitle={T('page.my_revshare.sub','按周期查看您的 RevShare 收益与计算明细')}>
         <button className="btn"><Icon name="download" size={13}/>导出</button>
       </ARSUI.PageHead>
 

@@ -1,7 +1,7 @@
-// 专业代理后台 · 登入页 (v2.3.31 — 参考竟品)
-// - 左侧:渐变背景 + 品牌 logo + 插图 + 标题 + 副标题(铺满)
-// - 右侧:白底登入面板 + 顶栏语言切换 + 欢迎语 + 表单 + 大按钮
-// - 已创建账户列表:右上「快速选择账户」按钮 → 展开下拉(只在有账户时显示)
+// 专业代理后台 · 招募营销页 + 登入弹窗 (v3.0.1)
+// - 整页改为单页营销 landing(顶栏 / Hero / 费用 / 工具 / 仪表板预览 / 4 步骤 / FAQ / Footer)
+// - 右上角「登入」按钮 → 弹出登入弹窗(原登入表单完整搬到弹窗内,逻辑不变)
+// - 「立即申请」按钮 → 同样弹出登入弹窗,顶部加一句「已有账户?请登入」(暂用同一弹窗占位)
 (function () {
   if (!window.APS_AGENT_ACCOUNTS) {
     window.APS_AGENT_ACCOUNTS = {
@@ -10,21 +10,20 @@
       add(acc) {
         if (!acc || !acc.loginName) return;
         const i = this.list.findIndex((x) => x.loginName === acc.loginName);
-        if (i >= 0) this.list[i] = { ...this.list[i], ...acc };else
-        this.list = [acc, ...this.list];
+        if (i >= 0) this.list[i] = { ...this.list[i], ...acc };
+        else this.list = [acc, ...this.list];
         this.listeners.forEach((fn) => fn());
       },
       subscribe(fn) {
         this.listeners.push(fn);
-        return () => {this.listeners = this.listeners.filter((f) => f !== fn);};
-      }
+        return () => { this.listeners = this.listeners.filter((f) => f !== fn); };
+      },
     };
   }
-  // v2.4.16 已成功登入过的代理 ID 全局集合 — 商户后台据此把对应代理状态自动改为「已启用」
   if (!window.APS_LOGGED_IN_AGENTS) {
     const LS_KEY = 'APS_LOGGED_IN_AGENTS';
     let initial = [];
-    try { initial = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e){}
+    try { initial = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch (e) {}
     window.APS_LOGGED_IN_AGENTS = {
       set: new Set(initial),
       listeners: new Set(),
@@ -32,8 +31,8 @@
       mark(id) {
         if (!id || this.set.has(id)) return;
         this.set.add(id);
-        try { localStorage.setItem(LS_KEY, JSON.stringify([...this.set])); } catch(e){}
-        this.listeners.forEach(fn => fn(id));
+        try { localStorage.setItem(LS_KEY, JSON.stringify([...this.set])); } catch (e) {}
+        this.listeners.forEach((fn) => fn(id));
       },
       subscribe(fn) {
         this.listeners.add(fn);
@@ -43,38 +42,230 @@
   }
 })();
 
-window.AgentLoginModule = function ({ onLogin }) {
+// ============ 样式注入(只插入一次) ============
+function ensureLandingStyle() {
+  if (document.getElementById('aglp-style')) return;
+  const s = document.createElement('style');
+  s.id = 'aglp-style';
+  s.textContent = `
+.aglp { background:#fff; color:#0f172a; font-family:Inter, "Noto Sans SC", system-ui, sans-serif; min-height:100vh; }
+.aglp * { box-sizing:border-box; }
+.aglp-wrap { max-width:1200px; margin:0 auto; padding:0 32px; }
+
+/* 顶栏 — sticky 在父级滚动容器内固定 */
+.aglp-nav { position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92); backdrop-filter:blur(10px); border-bottom:1px solid #e5e7eb; }
+.aglp-nav-inner { max-width:none; margin:0; padding:14px 40px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:32px; }
+.aglp-brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; }
+.aglp-brand-mark { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#3b82f6,#1e40af); color:#fff; display:grid; place-items:center; font-weight:800; font-size:13px; letter-spacing:0.5px; }
+.aglp-nav-links { display:flex; gap:32px; justify-content:center; }
+.aglp-nav-link { color:#475569; font-size:14px; cursor:pointer; padding:6px 0; border-bottom:2px solid transparent; transition:.15s; }
+.aglp-nav-link:hover { color:#1e40af; border-bottom-color:#3b82f6; }
+.aglp-nav-actions { display:flex; gap:10px; align-items:center; }
+.aglp-btn { padding:9px 18px; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; border:1px solid transparent; transition:.15s; display:inline-flex; align-items:center; gap:6px; }
+.aglp-btn.ghost { background:transparent; border-color:#cbd5e1; color:#1e293b; }
+.aglp-btn.ghost:hover { border-color:#3b82f6; color:#1e40af; }
+.aglp-btn.primary { background:#3b82f6; color:#fff; }
+.aglp-btn.primary:hover { background:#1e40af; }
+.aglp-btn.gold { background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#1f2937; border:none; font-weight:700; box-shadow:0 2px 8px -2px rgba(245,158,11,.4); }
+.aglp-btn.gold:hover { filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 8px 20px -4px rgba(245,158,11,.55); }
+.aglp-btn.lg { padding:13px 28px; font-size:15px; }
+
+/* Hero */
+.aglp-hero { position:relative; background:linear-gradient(135deg,#2563eb 0%,#3b82f6 45%,#60a5fa 100%); color:#fff; overflow:hidden; padding:84px 0 100px; }
+.aglp-hero::before { content:''; position:absolute; inset:0; background-image:radial-gradient(ellipse 80% 60% at 70% 50%, rgba(255,255,255,.18), transparent 60%), radial-gradient(circle at 15% 20%, rgba(186,230,253,.25), transparent 50%); pointer-events:none; }
+.aglp-hero::after { content:''; position:absolute; inset:0; background-image:repeating-conic-gradient(from 0deg at 75% 55%, rgba(255,255,255,.06) 0deg, transparent 1deg 4deg, rgba(255,255,255,.04) 5deg, transparent 6deg 10deg); pointer-events:none; mask-image:radial-gradient(ellipse 80% 90% at 75% 55%, #000 30%, transparent 75%); -webkit-mask-image:radial-gradient(ellipse 80% 90% at 75% 55%, #000 30%, transparent 75%); }
+.aglp-hero-grid { position:relative; display:grid; grid-template-columns:1.1fr 1fr; gap:48px; align-items:center; }
+.aglp-hero-eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.15); color:#fff; border-radius:99px; font-size:12.5px; font-weight:600; letter-spacing:0.3px; margin-bottom:20px; backdrop-filter:blur(4px); }
+.aglp-hero-title { font-size:54px; font-weight:800; line-height:1.1; letter-spacing:-1px; margin:0 0 20px; }
+.aglp-hero-title em { color:#fef3c7; font-style:normal; text-shadow:0 2px 16px rgba(254,243,199,.4); }
+.aglp-hero-sub { font-size:18px; line-height:1.6; color:rgba(255,255,255,.88); margin:0 0 32px; max-width:520px; }
+.aglp-hero-actions { display:flex; gap:14px; margin-bottom:48px; flex-wrap:wrap; }
+.aglp-hero-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:24px; padding-top:32px; border-top:1px solid rgba(255,255,255,.2); }
+.aglp-stat { display:flex; flex-direction:column; gap:4px; }
+.aglp-stat-val { font-size:30px; font-weight:800; color:#fff; letter-spacing:-0.5px; line-height:1; font-family:Inter, sans-serif; }
+.aglp-stat-val .small { font-size:18px; color:rgba(255,255,255,.7); margin-left:4px; }
+.aglp-stat-lbl { font-size:13px; color:rgba(255,255,255,.75); }
+
+/* Hero 右侧可视化 */
+.aglp-hero-viz { position:relative; aspect-ratio:1/1; width:100%; max-width:440px; min-width:340px; margin-left:auto; }
+.aglp-viz-card { position:absolute; background:#fff; color:#0f172a; border-radius:14px; padding:14px 16px; box-shadow:0 24px 48px -12px rgba(0,0,0,.4); min-width:180px; white-space:nowrap; }
+.aglp-viz-card.c1 { top:8%; left:0; width:60%; }
+.aglp-viz-card.c2 { top:38%; right:0; width:58%; }
+.aglp-viz-card.c3 { bottom:0; left:20%; width:64%; }
+.aglp-viz-card-label { font-size:11.5px; color:#64748b; margin-bottom:6px; }
+.aglp-viz-card-val { font-size:24px; font-weight:800; color:#0f172a; line-height:1; font-family:'JetBrains Mono', monospace; letter-spacing:-0.5px; }
+.aglp-viz-card-val .accent { color:#3b82f6; }
+.aglp-viz-card-val .gold { color:#f59e0b; }
+.aglp-viz-card-delta { display:inline-flex; align-items:center; gap:3px; margin-top:6px; padding:2px 7px; background:#dcfce7; color:#15803d; border-radius:99px; font-size:11px; font-weight:600; }
+.aglp-viz-bars { display:flex; align-items:flex-end; gap:4px; height:32px; margin-top:8px; }
+.aglp-viz-bars span { flex:1; background:linear-gradient(to top,#3b82f6,#60a5fa); border-radius:2px 2px 0 0; }
+
+.aglp-lang { display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:99px; background:#f1f5f9; border:1px solid #e5e7eb; }
+.aglp-lang button { background:transparent; border:0; cursor:pointer; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600; color:#64748b; letter-spacing:0.3px; transition:.15s; }
+.aglp-lang button.active { background:#fff; color:#1e40af; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.aglp-lang button:not(.active):hover { color:#1e293b; }
+.aglp-lang .div { width:1px; height:12px; background:#e5e7eb; }
+
+/* 通用 Section */
+.aglp-section { padding:80px 0; }
+.aglp-section.alt { background:#f8fafc; }
+.aglp-eyebrow { color:#3b82f6; font-size:13px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
+.aglp-section-title { font-size:38px; font-weight:800; color:#0f172a; letter-spacing:-0.6px; margin:0 0 14px; line-height:1.15; }
+.aglp-section-sub { font-size:16px; color:#64748b; max-width:640px; margin:0 0 48px; line-height:1.6; }
+
+/* 费用 */
+.aglp-comm-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.aglp-comm-card { padding:32px 28px; border-radius:14px; border:1px solid #e5e7eb; background:#fff; position:relative; transition:.2s; cursor:default; }
+.aglp-comm-card.featured { background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%); color:#fff; border-color:transparent; transform:scale(1.02); box-shadow:0 30px 60px -20px rgba(37,99,235,.45); }
+.aglp-comm-card:not(.featured):hover { border-color:#3b82f6; transform:translateY(-2px); box-shadow:0 18px 36px -16px rgba(59,130,246,.25); }
+.aglp-comm-badge { position:absolute; top:-12px; left:28px; padding:4px 12px; background:#fff; color:#1e40af; border-radius:99px; font-size:11.5px; font-weight:700; letter-spacing:0.4px; box-shadow:0 6px 14px -3px rgba(30,64,175,.3); }
+.aglp-comm-name { font-size:16px; font-weight:700; margin-bottom:8px; opacity:.9; }
+.aglp-comm-rate { font-size:48px; font-weight:800; letter-spacing:-1.5px; line-height:1; margin-bottom:6px; }
+.aglp-comm-rate .unit { font-size:20px; font-weight:600; margin-left:2px; opacity:.7; }
+.aglp-comm-card.featured .aglp-comm-rate { color:#fff; }
+.aglp-comm-hint { font-size:13.5px; opacity:.7; margin-bottom:24px; line-height:1.5; }
+.aglp-comm-list { list-style:none; padding:0; margin:0 0 24px; font-size:14px; line-height:1.9; }
+.aglp-comm-list li { display:flex; gap:8px; align-items:flex-start; }
+.aglp-comm-list li::before { content:''; flex-shrink:0; width:16px; height:16px; margin-top:3px; border-radius:50%; background:#dbeafe url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 8 L7 12 L13 4' stroke='%233b82f6' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/12px no-repeat; }
+.aglp-comm-card.featured .aglp-comm-list li::before { background:rgba(251,191,36,.2) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 8 L7 12 L13 4' stroke='%23fbbf24' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/12px no-repeat; }
+.aglp-comm-cta { width:100%; padding:12px; border-radius:8px; border:1px solid #cbd5e1; background:transparent; font-size:14px; font-weight:600; color:#1e293b; cursor:pointer; transition:.15s; }
+.aglp-comm-cta:hover { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+.aglp-comm-card.featured .aglp-comm-cta { background:#fff; color:#1e40af; border-color:#fff; }
+.aglp-comm-card.featured .aglp-comm-cta:hover { background:#eff6ff; color:#1e40af; }
+
+/* 工具 */
+.aglp-tools { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+.aglp-tool { padding:24px 18px; border-radius:12px; background:#fff; border:1px solid #e5e7eb; transition:.2s; cursor:default; }
+.aglp-tool:hover { border-color:#3b82f6; transform:translateY(-3px); box-shadow:0 18px 32px -16px rgba(59,130,246,.3); }
+.aglp-tool-ic { width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,#dbeafe,#bfdbfe); color:#1e40af; display:grid; place-items:center; margin-bottom:14px; }
+.aglp-tool-name { font-size:15px; font-weight:700; color:#0f172a; margin-bottom:6px; }
+.aglp-tool-desc { font-size:13px; color:#64748b; line-height:1.5; }
+
+/* 仪表板预览 */
+.aglp-dash { display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
+.aglp-dash-features { display:flex; flex-direction:column; gap:22px; }
+.aglp-dash-feat { display:flex; gap:16px; }
+.aglp-dash-feat-ic { width:46px; height:46px; flex-shrink:0; border-radius:10px; background:linear-gradient(135deg,#3b82f6,#1e40af); color:#fff; display:grid; place-items:center; }
+.aglp-dash-feat-t { font-size:16px; font-weight:700; color:#0f172a; margin-bottom:4px; }
+.aglp-dash-feat-d { font-size:13.5px; color:#64748b; line-height:1.55; }
+.aglp-dash-preview { aspect-ratio:4/3; background:#fff; border-radius:14px; box-shadow:0 30px 60px -20px rgba(15,23,42,.2); border:1px solid #e5e7eb; padding:14px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+.aglp-dash-bar { display:flex; gap:6px; }
+.aglp-dash-bar span { width:9px; height:9px; border-radius:50%; }
+.aglp-dash-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.aglp-dash-kpi { padding:12px; background:#f8fafc; border-radius:8px; }
+.aglp-dash-kpi-l { font-size:10px; color:#64748b; margin-bottom:3px; }
+.aglp-dash-kpi-v { font-size:18px; font-weight:800; color:#0f172a; font-family:'JetBrains Mono'; letter-spacing:-0.4px; }
+.aglp-dash-kpi-v.accent { color:#3b82f6; }
+.aglp-dash-kpi-v.gold { color:#f59e0b; }
+.aglp-dash-chart { flex:1; background:linear-gradient(135deg,#eff6ff,#dbeafe); border-radius:8px; padding:12px; position:relative; overflow:hidden; }
+.aglp-dash-chart svg { width:100%; height:100%; }
+
+/* 4 步骤 */
+.aglp-steps { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; position:relative; }
+.aglp-step { padding:28px 20px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; position:relative; }
+.aglp-step-num { position:absolute; top:-14px; left:20px; width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#3b82f6,#1e40af); color:#fff; font-weight:800; font-size:13px; display:grid; place-items:center; box-shadow:0 6px 14px -4px rgba(59,130,246,.5); }
+.aglp-step-ic { color:#3b82f6; margin:8px 0 14px; }
+.aglp-step-t { font-size:16px; font-weight:700; color:#0f172a; margin-bottom:6px; }
+.aglp-step-d { font-size:13.5px; color:#64748b; line-height:1.55; }
+
+/* CTA 大区 */
+.aglp-cta { padding:80px 0; background:linear-gradient(135deg,#2563eb 0%,#3b82f6 50%,#60a5fa 100%); color:#fff; text-align:center; position:relative; overflow:hidden; }
+.aglp-cta::before { content:''; position:absolute; inset:0; background-image:radial-gradient(ellipse 80% 60% at 30% 50%, rgba(255,255,255,.18), transparent 60%), radial-gradient(circle at 80% 80%, rgba(186,230,253,.2), transparent 50%); pointer-events:none; }
+.aglp-cta::after { content:''; position:absolute; inset:0; background-image:repeating-conic-gradient(from 0deg at 25% 50%, rgba(255,255,255,.05) 0deg, transparent 1deg 4deg, rgba(255,255,255,.03) 5deg, transparent 6deg 10deg); pointer-events:none; mask-image:radial-gradient(ellipse 80% 90% at 25% 50%, #000 30%, transparent 75%); -webkit-mask-image:radial-gradient(ellipse 80% 90% at 25% 50%, #000 30%, transparent 75%); }
+.aglp-cta-title { position:relative; font-size:36px; font-weight:800; letter-spacing:-0.5px; margin:0 0 16px; }
+.aglp-cta-sub { position:relative; font-size:16px; color:rgba(255,255,255,.88); margin:0 0 32px; }
+
+/* Footer */
+.aglp-footer { padding:32px 0; background:#1e293b; color:rgba(255,255,255,.55); font-size:13px; }
+.aglp-footer-inner { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+
+/* 登入弹窗 */
+.aglp-mask { position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(4px); display:grid; place-items:center; z-index:1000; padding:20px; animation:aglpFadeIn .2s ease; }
+@keyframes aglpFadeIn { from{opacity:0} to{opacity:1} }
+.aglp-modal { width:100%; max-width:420px; background:#fff; border-radius:16px; box-shadow:0 30px 80px -20px rgba(0,0,0,.4); padding:32px; position:relative; animation:aglpSlideIn .25s ease; }
+@keyframes aglpSlideIn { from{transform:translateY(20px); opacity:0} to{transform:translateY(0); opacity:1} }
+.aglp-modal-close { position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:8px; border:none; background:transparent; color:#64748b; cursor:pointer; display:grid; place-items:center; transition:.15s; }
+.aglp-modal-close:hover { background:#f1f5f9; color:#0f172a; }
+.aglp-modal-logo { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.aglp-modal-logo .mark { width:36px; height:36px; border-radius:9px; background:linear-gradient(135deg,#3b82f6,#1e40af); color:#fff; display:grid; place-items:center; font-weight:800; font-size:14px; }
+.aglp-modal-logo .name { font-size:18px; font-weight:700; color:#0f172a; }
+.aglp-modal-sub { font-size:13.5px; color:#64748b; margin:0 0 22px; line-height:1.5; }
+.aglp-mfield { position:relative; margin-bottom:12px; }
+.aglp-mfield input { width:100%; padding:13px 16px; border-radius:8px; border:1px solid #e5e7eb; background:#f8fafc; font-size:14px; transition:.15s; outline:none; }
+.aglp-mfield input:focus { border-color:#3b82f6; background:#fff; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.aglp-mfield .eye { position:absolute; right:10px; top:50%; transform:translateY(-50%); width:30px; height:30px; border-radius:6px; border:none; background:transparent; cursor:pointer; color:#64748b; display:grid; place-items:center; }
+.aglp-mfield .eye:hover { background:#f1f5f9; }
+.aglp-quick { margin-bottom:12px; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+.aglp-quick-btn { width:100%; padding:11px 14px; background:#f8fafc; border:none; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13.5px; color:#1e293b; }
+.aglp-quick-btn:hover { background:#eff6ff; }
+.aglp-quick-btn .count { margin-left:auto; padding:1px 8px; border-radius:99px; background:#3b82f6; color:#fff; font-size:11px; font-weight:600; min-width:22px; text-align:center; }
+.aglp-quick-list { max-height:240px; overflow-y:auto; border-top:1px solid #e5e7eb; }
+.aglp-quick-row { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; transition:.15s; }
+.aglp-quick-row:hover { background:#f8fafc; }
+.aglp-quick-row:last-child { border-bottom:none; }
+.aglp-quick-row .av { width:30px; height:30px; border-radius:6px; color:#fff; display:grid; place-items:center; font-size:10.5px; font-weight:700; flex-shrink:0; }
+.aglp-quick-row .info { flex:1; min-width:0; }
+.aglp-quick-row .nm { font-size:13px; font-weight:600; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aglp-quick-row .id { font-size:11px; color:#64748b; font-family:'JetBrains Mono'; }
+.aglp-quick-row .fill { font-size:11.5px; font-weight:600; color:#3b82f6; padding:3px 10px; border-radius:99px; background:#dbeafe; }
+.aglp-quick-empty { padding:18px; text-align:center; font-size:12.5px; color:#94a3b8; }
+.aglp-mremember { display:flex; align-items:center; gap:8px; font-size:13px; color:#475569; cursor:pointer; padding:6px 0; margin-bottom:14px; user-select:none; }
+.aglp-mremember input { display:none; }
+.aglp-mcbox { width:16px; height:16px; border-radius:4px; border:1.5px solid #cbd5e1; display:grid; place-items:center; transition:.15s; }
+.aglp-mremember input:checked + .aglp-mcbox { background:#3b82f6; border-color:#3b82f6; color:#fff; }
+.aglp-merror { padding:10px 12px; background:#fef2f2; color:#b91c1c; border-radius:6px; font-size:13px; margin-bottom:12px; }
+.aglp-msubmit { width:100%; padding:13px; border-radius:8px; border:none; background:linear-gradient(135deg,#3b82f6,#1e40af); color:#fff; font-size:15px; font-weight:600; cursor:pointer; transition:.15s; }
+.aglp-msubmit:hover { filter:brightness(1.08); box-shadow:0 8px 20px -6px rgba(59,130,246,.5); }
+.aglp-modal-foot { margin-top:16px; padding-top:16px; border-top:1px solid #f1f5f9; text-align:center; font-size:12.5px; color:#94a3b8; }
+.aglp-modal-foot a { color:#3b82f6; cursor:pointer; font-weight:600; }
+
+/* 自适应 */
+@media (max-width:1180px) {
+  .aglp-hero-viz { min-width:300px; max-width:380px; }
+  .aglp-viz-card { min-width:160px; padding:12px 14px; }
+  .aglp-viz-card-val { font-size:20px; }
+}
+@media (max-width:980px) {
+  .aglp-nav-inner { padding:12px 20px; }
+  .aglp-hero-grid { grid-template-columns:1fr; }
+  .aglp-hero-viz { display:none; }
+  .aglp-hero-title { font-size:38px; }
+  .aglp-hero-stats { grid-template-columns:repeat(2,1fr); }
+  .aglp-comm-grid { grid-template-columns:1fr; }
+  .aglp-tools { grid-template-columns:repeat(2,1fr); }
+  .aglp-steps { grid-template-columns:repeat(2,1fr); }
+  .aglp-dash { grid-template-columns:1fr; }
+  .aglp-nav-links { display:none; }
+  .aglp-section { padding:56px 0; }
+  .aglp-section-title { font-size:28px; }
+}
+`;
+  document.head.appendChild(s);
+}
+
+// ============ 登入弹窗(原表单完整搬到这里) ============
+function LoginModal({ onClose, onLogin, onSwitchRegister }) {
   const { Icon } = window.UI;
   const [, force] = React.useReducer((x) => x + 1, 0);
+  const [lang] = window.useAgentLang();
+  const T = (k) => window.t(k);
   const [loginName, setLoginName] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [showPwd, setShowPwd] = React.useState(false);
   const [remember, setRemember] = React.useState(false);
   const [error, setError] = React.useState('');
-  const [lang, setLang] = React.useState('简体中文');
-  const [langOpen, setLangOpen] = React.useState(false);
   const [accOpen, setAccOpen] = React.useState(false);
-  const langRef = React.useRef(null);
-  const accRef = React.useRef(null);
-
-  React.useEffect(() => {
-    const onDoc = (e) => {
-      if (langOpen && langRef.current && !langRef.current.contains(e.target)) setLangOpen(false);
-      if (accOpen && accRef.current && !accRef.current.contains(e.target)) setAccOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [langOpen, accOpen]);
 
   React.useEffect(() => {
     const unsub = window.APS_AGENT_ACCOUNTS.subscribe(force);
     const saved = localStorage.getItem('APS_REMEMBER_LOGIN');
-    if (saved) {setLoginName(saved);setRemember(true);}
-    return unsub;
-  }, []);
+    if (saved) { setLoginName(saved); setRemember(true); }
+    const onEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onEsc);
+    return () => { unsub(); document.removeEventListener('keydown', onEsc); };
+  }, [onClose]);
 
   const accounts = window.APS_AGENT_ACCOUNTS.list;
-
   const fillFromAcc = (acc) => {
     setLoginName(acc.loginName || '');
     setPassword(acc.password || '');
@@ -83,167 +274,912 @@ window.AgentLoginModule = function ({ onLogin }) {
   };
 
   const handleLogin = () => {
-    if (!loginName || !password) {setError('请输入帐号与密码');return;}
+    if (!loginName || !password) { setError(T('login.err.empty')); return; }
     const acc = accounts.find((a) => a.loginName === loginName && a.password === password);
-    if (!acc) {setError('帐号或密码错误');return;}
-    if (remember) localStorage.setItem('APS_REMEMBER_LOGIN', loginName);else
-    localStorage.removeItem('APS_REMEMBER_LOGIN');
+    if (!acc) { setError(T('login.err.wrong')); return; }
+    if (remember) localStorage.setItem('APS_REMEMBER_LOGIN', loginName);
+    else localStorage.removeItem('APS_REMEMBER_LOGIN');
     onLogin(acc);
   };
 
   return (
-    <div className="al2-page">
-      {/* 左:品牌区 */}
-      <div className="al2-left">
-        <div className="al2-illu">
-          <svg width="380" height="240" viewBox="0 0 380 240" fill="none" preserveAspectRatio="xMidYMax meet">
-            {/* 平台底座 */}
-            <ellipse cx="190" cy="220" rx="150" ry="14" fill="#1e40af" opacity="0.18" />
-            <path d="M50 200 L190 240 L330 200 L190 160 Z" fill="#3b82f6" />
-            <path d="M50 200 L190 240 L190 248 L50 208 Z" fill="#1e40af" />
-            <path d="M190 240 L330 200 L330 208 L190 248 Z" fill="#1e3a8a" />
-            {/* 屏幕 */}
-            <rect x="120" y="80" width="42" height="60" rx="3" fill="#60a5fa" />
-            <rect x="170" y="65" width="50" height="70" rx="3" fill="#3b82f6" />
-            <rect x="228" y="85" width="40" height="55" rx="3" fill="#60a5fa" />
-            {/* 屏幕内图表 */}
-            <polyline points="125,128 135,118 145,123 155,108" stroke="#fff" strokeWidth="2" fill="none" />
-            <rect x="178" y="115" width="6" height="14" fill="#fff" />
-            <rect x="188" y="105" width="6" height="24" fill="#fff" />
-            <rect x="198" y="98" width="6" height="31" fill="#fff" />
-            <rect x="208" y="88" width="6" height="41" fill="#fff" />
-            <circle cx="248" cy="113" r="14" stroke="#fff" strokeWidth="2" fill="none" />
-            <path d="M248 113 L262 113 A14 14 0 0 0 256 102 Z" fill="#fff" />
-            {/* 人物 */}
-            <circle cx="195" cy="55" r="10" fill="#1f2937" />
-            <rect x="187" y="65" width="16" height="22" rx="3" fill="#a78bfa" />
-            <path d="M187 75 L173 95 M203 75 L218 95" stroke="#1f2937" strokeWidth="3" strokeLinecap="round" />
-            {/* 装饰 */}
-            <circle cx="80" cy="60" r="14" fill="#c4b5fd" />
-            <path d="M68 60 Q80 50 92 60 Q80 70 68 60Z" fill="#a78bfa" />
-            <circle cx="320" cy="100" r="6" fill="#fbbf24" />
-            <circle cx="60" cy="160" r="4" fill="#34d399" />
-            <circle cx="340" cy="180" r="5" fill="#f472b6" />
-          </svg>
+    <div className="aglp-mask" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="aglp-modal">
+        <button className="aglp-modal-close" onClick={onClose} title={T('login.close')}><Icon name="x" size={16}/></button>
 
-          <div className="al2-tagline">
-            <div className="al2-tagline-title">专业代理管理系统</div>
-            <div className="al2-tagline-sub">查看邀请玩家数据 · CPA / 分润报表 · 钱包提款</div>
-          </div>
+        <div className="aglp-modal-logo">
+          <div className="mark">MM</div>
+          <div className="name">{T('login.title')}</div>
         </div>
-      </div>
+        <p className="aglp-modal-sub">{T('login.sub')}</p>
 
-      {/* 右:登入面板 */}
-      <div className="al2-right">
-        <div className="al2-topbar">
-          <div className="al2-lang" ref={langRef}>
-            <button type="button" className="al2-lang-btn" onClick={() => setLangOpen((v) => !v)}>
-              <Icon name="globe" size={14} />
-              <span style={{ fontSize: "18px" }}>{lang}</span>
-              <Icon name="chevronDown" size={11} />
-            </button>
-            {langOpen &&
-            <div className="al2-lang-pop">
-                {['简体中文', 'English'].map((l) =>
-              <div
-                key={l}
-                className={'al2-lang-opt' + (l === lang ? ' active' : '')}
-                onClick={() => {setLang(l);setLangOpen(false);}}>
-                
-                    <span>{l}</span>
-                    {l === lang && <Icon name="check" size={12} />}
-                  </div>
-              )}
-              </div>
-            }
-          </div>
-        </div>
-
-        <div className="al2-form-wrap">
-          <div className="al2-logo">
-            <div className="al2-logo-ring">
-              <svg width="36" height="36" viewBox="0 0 36 36">
-                <path d="M9 24 Q18 6 27 24 Q18 18 9 24 Z" fill="#1f2937" />
-              </svg>
-            </div>
-            <div className="al2-logo-name" style={{ fontSize: "26px" }}>MM专业代理后台</div>
-          </div>
-          <div className="al2-welcome-sub al2-welcome-sub-only" style={{ fontSize: "18px" }}>请输入您的账户信息以开始管理您的代理业务</div>
-
-          {/* 快速选择已创建账户 */}
-          <div className="al2-quick" ref={accRef}>
-            <button type="button" className="al2-quick-btn" onClick={() => setAccOpen((v) => !v)}>
-              <Icon name="users" size={16} />
-              <span>快速选择已创建账户</span>
-              <span className="al2-quick-count">{accounts.length}</span>
-              <Icon name="chevronDown" size={14} />
-            </button>
-            {accOpen &&
-            <div className="al2-quick-pop">
-                {accounts.length === 0 ?
-              <div className="al2-quick-empty">
-                    <div className="al2-quick-empty-ico"><Icon name="users" size={18} /></div>
-                    <div>暂无账户</div>
-                    <div className="al2-quick-empty-hint">商户审核通过 / 创建专业代理 后会显示在此</div>
-                  </div> :
-              accounts.map((acc, i) => {
-                // v2.4.19 头像前缀 + 代理ID 显示根据 agentId 区分:AG=商户创建、AP=自行申请
+        <div className="aglp-quick">
+          <button type="button" className="aglp-quick-btn" onClick={() => setAccOpen((v) => !v)}>
+            <Icon name="users" size={14}/>
+            <span>{T('login.quick.label')}</span>
+            <span className="count">{accounts.length}</span>
+            <Icon name="chevronDown" size={12} style={{ marginLeft:4, transform: accOpen ? 'rotate(180deg)' : 'none', transition:'.15s' }}/>
+          </button>
+          {accOpen && (
+            <div className="aglp-quick-list">
+              {accounts.length === 0 ? (
+                <div className="aglp-quick-empty">{T('login.quick.empty')}</div>
+              ) : accounts.map((acc, i) => {
                 const isAp = String(acc.agentId || '').startsWith('AP');
-                const prefix = isAp ? 'AP' : 'AG';
                 return (
-                <div key={acc.loginName + i} className="al2-quick-row" onClick={() => fillFromAcc(acc)}>
-                    <div className="al2-quick-avatar" style={{background: isAp ? '#10b981' : '#3b82f6'}}>{prefix}</div>
-                    <div className="al2-quick-info">
-                      <div className="al2-quick-name">{acc.name || acc.loginName}</div>
-                      <div className="al2-quick-uid mono">{acc.agentId || acc.userId || '-'}</div>
+                  <div key={acc.loginName + i} className="aglp-quick-row" onClick={() => fillFromAcc(acc)}>
+                    <div className="av" style={{ background: isAp ? '#10b981' : '#3b82f6' }}>{isAp ? 'AP' : 'AG'}</div>
+                    <div className="info">
+                      <div className="nm">{acc.name || acc.loginName}</div>
+                      <div className="id">{acc.agentId || acc.userId || '-'} · {acc.loginName} / {acc.password}</div>
                     </div>
-                    <div className="al2-quick-cred">
-                      <div><span className="al2-quick-label">账号:</span><span className="mono">{acc.loginName}</span></div>
-                      <div><span className="al2-quick-label">密码:</span><span className="mono">{acc.password}</span></div>
-                    </div>
-                    <span className="al2-quick-fill">填入</span>
+                    <span className="fill">{T('login.fill')}</span>
                   </div>
                 );
               })}
-              </div>
-            }
-          </div>
-
-          <div className="al2-form">
-            <div className="al2-field">
-              <input
-                placeholder="账号"
-                value={loginName}
-                onChange={(e) => {setLoginName(e.target.value);setError('');}}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
-              
             </div>
-            <div className="al2-field">
-              <input
-                type={showPwd ? 'text' : 'password'}
-                placeholder="密码"
-                value={password}
-                onChange={(e) => {setPassword(e.target.value);setError('');}}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
-              
-              <button type="button" className="al2-eye" onClick={() => setShowPwd((v) => !v)} title={showPwd ? '隐藏密码' : '显示密码'}>
-                <Icon name={showPwd ? 'eye' : 'eyeOff'} size={15} />
-              </button>
-            </div>
-
-            <label className="al2-remember">
-              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-              <span className="al2-cbox">{remember && <Icon name="check" size={12} />}</span>
-              <span>记住账号</span>
-            </label>
-
-            {error && <div className="al2-error">{error}</div>}
-            <button className="al2-submit" onClick={handleLogin}>登入</button>
-          </div>
+          )}
         </div>
 
-        <div className="al2-copyright" style={{ fontSize: "16px" }}>Copyright © 2024 MM</div>
-      </div>
-    </div>);
+        <div className="aglp-mfield">
+          <input
+            placeholder={T('login.username.ph')}
+            value={loginName}
+            onChange={(e) => { setLoginName(e.target.value); setError(''); }}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+          />
+        </div>
+        <div className="aglp-mfield">
+          <input
+            type={showPwd ? 'text' : 'password'}
+            placeholder={T('login.password.ph')}
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(''); }}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            style={{ paddingRight:42 }}
+          />
+          <button type="button" className="eye" onClick={() => setShowPwd((v) => !v)} title={showPwd ? T('login.eye.hide') : T('login.eye.show')}>
+            <Icon name={showPwd ? 'eye' : 'eyeOff'} size={14}/>
+          </button>
+        </div>
 
+        <label className="aglp-mremember">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}/>
+          <span className="aglp-mcbox">{remember && <Icon name="check" size={11}/>}</span>
+          <span>{T('login.remember')}</span>
+        </label>
+
+        {error && <div className="aglp-merror">{error}</div>}
+
+        <button className="aglp-msubmit" onClick={handleLogin}>{T('login.submit')}</button>
+
+        <div className="aglp-modal-foot">{T('login.foot.q')} <a onClick={() => { onClose(); onSwitchRegister && onSwitchRegister(); }}>{T('login.foot.apply')}</a></div>
+      </div>
+    </div>
+  );
+}
+
+// ============ 注册弹窗(3 步骤 + 成功页) ============
+const REG_COUNTRIES = [
+  { code:'+86', flag:'🇨🇳', name:'中国' },
+  { code:'+886', flag:'🇹🇼', name:'台湾' },
+  { code:'+852', flag:'🇭🇰', name:'香港' },
+  { code:'+81', flag:'🇯🇵', name:'日本' },
+  { code:'+82', flag:'🇰🇷', name:'韩国' },
+  { code:'+65', flag:'🇸🇬', name:'新加坡' },
+  { code:'+60', flag:'🇲🇾', name:'马来西亚' },
+  { code:'+66', flag:'🇹🇭', name:'泰国' },
+  { code:'+84', flag:'🇻🇳', name:'越南' },
+  { code:'+62', flag:'🇮🇩', name:'印尼' },
+  { code:'+63', flag:'🇵🇭', name:'菲律宾' },
+  { code:'+91', flag:'🇮🇳', name:'印度' },
+  { code:'+1', flag:'🇺🇸', name:'美国' },
+];
+const REG_CONTACT_TYPES = ['Email','Mobile','Telegram','WhatsApp'];
+const REG_CONTACT_PH = { Email:'如：123@gmail.com', Mobile:'98xxx xxxxx', Telegram:'@telegram_id', WhatsApp:'98xxx xxxxx' };
+const REG_DIAL_CODES = [
+  { code:'+86', name:'中国' },
+  { code:'+886', name:'台湾' },
+  { code:'+852', name:'香港' },
+  { code:'+91', name:'印度' },
+  { code:'+81', name:'日本' },
+  { code:'+82', name:'韩国' },
+  { code:'+65', name:'新加坡' },
+  { code:'+60', name:'马来西亚' },
+  { code:'+66', name:'泰国' },
+  { code:'+84', name:'越南' },
+  { code:'+62', name:'印尼' },
+  { code:'+63', name:'菲律宾' },
+  { code:'+1', name:'美国' },
+];
+
+const REG_LANGS = ['繁体中文','简体中文','English','日本語','한국어','Bahasa Indonesia','Tiếng Việt','ภาษาไทย'];
+const REG_MESSENGERS = ['Telegram','WhatsApp','Skype','LINE','WeChat','Viber','Signal'];
+const REG_PAY = ['Skrill USD','Skrill EUR','Neteller USD','Neteller EUR','Neteller RUB','USDT (TRC20)','USDT (ERC20)','银行转账','支付宝','微信支付'];
+
+function RegStep({ cur, labels }) {
+  const { Icon } = window.UI;
+  return (
+    <div style={{ margin:'8px 0 18px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:0 }}>
+        {[1,2,3].map((n, i) => (
+          <React.Fragment key={n}>
+            <div style={{
+              width:22, height:22, borderRadius:'50%',
+              background: n < cur ? '#3b82f6' : n === cur ? '#fff' : '#fff',
+              border: n === cur ? '2px solid #3b82f6' : n < cur ? '2px solid #3b82f6' : '2px solid #cbd5e1',
+              display:'grid', placeItems:'center',
+              color: n < cur ? '#fff' : n === cur ? '#3b82f6' : '#cbd5e1',
+              fontSize:11, fontWeight:700,
+              flexShrink:0,
+            }}>{n < cur ? <Icon name="check" size={11}/> : null}</div>
+            {i < 2 && <div style={{ width:60, height:2, background: n < cur ? '#3b82f6' : '#e5e7eb' }}/>}
+          </React.Fragment>
+        ))}
+      </div>
+      {labels && (
+        <div style={{ display:'flex', justifyContent:'center', gap:0, marginTop:6 }}>
+          {labels.map((lbl, i) => (
+            <React.Fragment key={i}>
+              <div style={{
+                width:82, textAlign:'center',
+                fontSize:11.5, fontWeight: i === cur - 1 ? 600 : 500,
+                color: i < cur - 1 ? '#3b82f6' : i === cur - 1 ? '#0f172a' : '#94a3b8',
+                lineHeight:1.3,
+              }}>{lbl}</div>
+              {i < labels.length - 1 && <div style={{ width:0 }}/>}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RegField({ label, hint, children, full }) {
+  return (
+    <div style={{ gridColumn: full ? '1 / -1' : 'auto', display:'flex', flexDirection:'column', gap:6 }}>
+      <label style={{ fontSize:13, fontWeight:600, color:'#1e293b' }}>{label}</label>
+      {children}
+      {hint && <div style={{ fontSize:11.5, color:'#94a3b8' }}>{hint}</div>}
+    </div>
+  );
+}
+
+function RegInput(props) {
+  return <input {...props} style={{
+    width:'100%', padding:'11px 14px', borderRadius:8,
+    border:'1px solid #e5e7eb', background:'#f8fafc',
+    fontSize:13.5, outline:'none', transition:'.15s', ...(props.style || {}),
+  }}
+  onFocus={(e) => { e.target.style.borderColor='#3b82f6'; e.target.style.background='#fff'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.15)'; }}
+  onBlur={(e) => { e.target.style.borderColor='#e5e7eb'; e.target.style.background='#f8fafc'; e.target.style.boxShadow='none'; }}
+  />;
+}
+
+function RegSelect({ value, onChange, options, placeholder }) {
+  return (
+    <select value={value} onChange={onChange} style={{
+      width:'100%', padding:'11px 14px', borderRadius:8,
+      border:'1px solid #e5e7eb', background:'#f8fafc',
+      fontSize:13.5, outline:'none', cursor:'pointer',
+      appearance:'none',
+      backgroundImage:`url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>")`,
+      backgroundRepeat:'no-repeat', backgroundPosition:'right 12px center', backgroundSize:'14px',
+      paddingRight:36,
+    }}>
+      {placeholder && <option value="">{placeholder}</option>}
+      {options.map((o) => <option key={typeof o === 'string' ? o : o.value} value={typeof o === 'string' ? o : o.value}>{typeof o === 'string' ? o : o.label}</option>)}
+    </select>
+  );
+}
+
+function RegisterModal({ onClose, onSwitchLogin }) {
+  const { Icon } = window.UI;
+  const [lang] = window.useAgentLang();
+  const T = (k) => window.t(k);
+  const [step, setStep] = React.useState(1);
+  const [form, setForm] = React.useState({
+    applyName:'',
+    contacts:[
+      { type:'Email', value:'' },
+      { type:'Mobile', value:'', dial:'+86' },
+    ],
+    trafficUrls:[''],
+    payMethod:'UPI',
+    username:'', password:'', password2:'',
+    agreeTerms:false, agreeNews:false,
+  });
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const updateContact = (idx, key, val) => setForm((f) => {
+    const cs = [...f.contacts];
+    cs[idx] = { ...cs[idx], [key]: val };
+    return { ...f, contacts:cs };
+  });
+  const addContact = () => setForm((f) => ({ ...f, contacts:[...f.contacts, { type:'', value:'' }] }));
+  const removeContact = (idx) => setForm((f) => ({ ...f, contacts: f.contacts.filter((_,i)=>i!==idx) }));
+  // v3.0.13 流量来源链接 — 多个
+  const updateTraffic = (idx, val) => setForm((f) => {
+    const t = [...f.trafficUrls]; t[idx] = val; return { ...f, trafficUrls:t };
+  });
+  const addTraffic = () => setForm((f) => ({ ...f, trafficUrls:[...f.trafficUrls, ''] }));
+  const removeTraffic = (idx) => setForm((f) => ({ ...f, trafficUrls: f.trafficUrls.filter((_,i)=>i!==idx) }));
+
+  React.useEffect(() => {
+    const onEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onEsc);
+    return () => document.removeEventListener('keydown', onEsc);
+  }, [onClose]);
+
+  // 校验
+  const step1Valid = form.applyName.trim() && form.contacts[0]?.value && form.contacts[1]?.value;
+  const step2Valid = true; // v3.0.12 仅保留 UPI 收款 + 流量来源选填，始终可以下一页
+  const passChecks = {
+    notEmpty: form.password.length > 0,
+    minLen: form.password.length >= 8,
+    // v3.0.14 密码规则:8-50 字元 + 字母大小写 + 数字
+    pattern: form.password.length >= 8 && form.password.length <= 50 && /[A-Z]/.test(form.password) && /[a-z]/.test(form.password) && /[0-9]/.test(form.password),
+  };
+  const passMatch = form.password && form.password === form.password2;
+  const step3Valid = form.username && passChecks.notEmpty && passChecks.minLen && passChecks.pattern && passMatch && form.agreeTerms;
+
+  const phoneOpts = REG_COUNTRIES.map((c) => ({ value:c.code, label:`${c.flag} ${c.code}` }));
+  const countryOpts = REG_COUNTRIES.map((c) => c.name);
+
+  return (
+    <div className="aglp-mask" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="aglp-modal" style={{ maxWidth: step === 4 ? 480 : 680, padding:'28px 32px' }}>
+        <button className="aglp-modal-close" onClick={onClose} title="关闭"><Icon name="x" size={16}/></button>
+
+        {step < 4 ? (
+          <>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+              {step > 1 && (
+                <button onClick={() => setStep((s) => s - 1)} style={{
+                  position:'absolute', left:0, background:'transparent', border:'none', cursor:'pointer',
+                  color:'#64748b', padding:4, display:'grid', placeItems:'center',
+                }} title="上一步"><Icon name="chevronLeft" size={20}/></button>
+              )}
+              <h2 style={{ margin:0, fontSize:22, fontWeight:700, color:'#0f172a' }}>{T('reg.title')}</h2>
+            </div>
+
+            {/* v3.0.11 副标题移到标题下方 / 步骤之上 */}
+            <div style={{ textAlign:'center', fontSize:13, color:'#64748b', marginTop:8, marginBottom:4, minHeight:18 }}>
+              {step === 1 && T('reg.s1.welcome')}
+              {step === 2 && T('reg.s2.welcome')}
+              {step === 3 && ((form.applyName || T('reg.s3.you')) + T('reg.s3.welcome_b'))}
+            </div>
+
+            <RegStep cur={step} labels={[T('reg.step.basic'), T('reg.step.traffic'), T('reg.step.account')]}/>
+
+            {step === 1 && (
+              <>
+                <div style={{ marginBottom:18 }}>
+                  <label style={{ fontSize:13, fontWeight:600, color:'#1e293b', display:'block', marginBottom:6 }}>{T('reg.s1.applyName')} <span style={{ color:'#ef4444' }}>*</span></label>
+                  <RegInput placeholder={T('reg.s1.applyName.ph')} value={form.applyName} onChange={(e)=>set('applyName', e.target.value)}/>
+                </div>
+
+                {/* v3.0.12 联系方式:删除外标签 + 至少填写2项 hint;去掉外层 .contact-list 边框背景 */}
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:18 }}>
+                  {form.contacts.map((c, idx) => {
+                    const locked = idx < 2;
+                    const isPhone = c.type === 'Mobile' || c.type === 'WhatsApp';
+                    return (
+                      <div key={idx} className="contact-row" style={{ display:'grid', gridTemplateColumns:'130px 1fr 32px', gap:10, alignItems:'center' }}>
+                        <div className="contact-cell-type">
+                          {locked ? (
+                            <div style={{
+                              padding:'8px 12px', background:'#f3f4f6', border:'1px solid #e5e7eb',
+                              borderRadius:6, fontSize:13, fontWeight:600, color:'#1e293b',
+                            }}>{c.type}</div>
+                          ) : (
+                            <select value={c.type} onChange={(e)=>updateContact(idx,'type',e.target.value)} style={{
+                              width:'100%', padding:'8px 28px 8px 12px', borderRadius:6,
+                              border:'1px solid #e5e7eb', background:'#f8fafc', fontSize:13, outline:'none',
+                              appearance:'none', cursor:'pointer',
+                              backgroundImage:`url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>")`,
+                              backgroundRepeat:'no-repeat', backgroundPosition:'right 8px center', backgroundSize:'12px',
+                            }}>
+                              <option value="">{T('reg.s1.contacts.choose')}</option>
+                              {REG_CONTACT_TYPES.filter(tp => tp !== 'Email' && tp !== 'Mobile').map(tp => <option key={tp} value={tp}>{tp}</option>)}
+                            </select>
+                          )}
+                        </div>
+                        <div className="contact-cell-val">
+                          {isPhone ? (
+                            <div style={{ display:'flex', alignItems:'stretch', border:'1px solid #e5e7eb', borderRadius:6, overflow:'hidden', background:'#f8fafc' }}>
+                              <span style={{
+                                padding:'0 12px', background:'#f1f5f9', borderRight:'1px solid #e5e7eb',
+                                display:'flex', alignItems:'center', fontSize:13, fontWeight:600,
+                                color:'#1e293b', fontFamily:"'JetBrains Mono', monospace",
+                              }}>+91</span>
+                              <input placeholder={REG_CONTACT_PH[c.type] || ''} value={c.value} onChange={(e)=>updateContact(idx,'value',e.target.value)} style={{ flex:1, padding:'8px 12px', border:'none', outline:'none', background:'transparent', fontSize:13 }}/>
+                            </div>
+                          ) : (
+                            <input placeholder={REG_CONTACT_PH[c.type] || (lang === 'en' ? 'Enter value' : '请输入')} value={c.value} onChange={(e)=>updateContact(idx,'value',e.target.value)} style={{
+                              width:'100%', padding:'8px 12px', borderRadius:6,
+                              border:'1px solid #e5e7eb', background:'#f8fafc', fontSize:13, outline:'none',
+                            }}/>
+                          )}
+                        </div>
+                        <div className="contact-cell-act" style={{ display:'flex', justifyContent:'center' }}>
+                          {!locked && <button type="button" className="contact-remove" title={T('reg.s1.remove')} onClick={()=>removeContact(idx)}>−</button>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button type="button" className="contact-add-btn" onClick={addContact} style={{ marginTop:4 }}>{T('reg.s1.contacts.add')}</button>
+                </div>
+
+                <button onClick={() => setStep(2)} disabled={!step1Valid} style={{
+                  width:'100%', padding:13, borderRadius:8, border:'none',
+                  background: step1Valid ? 'linear-gradient(135deg,#3b82f6,#1e40af)' : '#e5e7eb',
+                  color: step1Valid ? '#fff' : '#94a3b8',
+                  fontSize:15, fontWeight:600, cursor: step1Valid ? 'pointer' : 'not-allowed', transition:'.15s',
+                }}>{T('reg.s1.next')}</button>
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:18 }}>
+                  <div>
+                    <label style={{ fontSize:13, fontWeight:600, color:'#1e293b', display:'block', marginBottom:6 }}>
+                      {T('reg.s2.url')}
+                      <span style={{ marginLeft:8, fontSize:12, fontWeight:500, color:'#94a3b8' }}>{T('reg.s2.url.channels','Youtube、Tiktok、Telegram、Facebook...')}</span>
+                    </label>
+                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      {form.trafficUrls.map((u, idx) => (
+                        <div key={idx} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          <div style={{ flex:1 }}>
+                            <RegInput placeholder={T('reg.s2.url.ph','https://domain.com')} value={u} onChange={(e)=>updateTraffic(idx, e.target.value)}/>
+                          </div>
+                          {form.trafficUrls.length > 1 && (
+                            <button type="button" className="contact-remove" title="移除" onClick={()=>removeTraffic(idx)}>−</button>
+                          )}
+                        </div>
+                      ))}
+                      <button type="button" className="contact-add-btn" onClick={addTraffic} style={{ marginTop:4 }}>{T('reg.s2.url.add','+ 新增流量来源链接')}</button>
+                    </div>
+                  </div>
+                  <RegField label={T('reg.s2.payway','收款方式')}>
+                    <div style={{
+                      padding:'11px 14px', borderRadius:8,
+                      border:'1px solid #e5e7eb', background:'#f3f4f6',
+                      fontSize:13.5, fontWeight:600, color:'#1e293b',
+                    }}>UPI</div>
+                  </RegField>
+                </div>
+                <button onClick={() => setStep(3)} disabled={!step2Valid} style={{
+                  width:'100%', padding:13, borderRadius:8, border:'none',
+                  background: step2Valid ? 'linear-gradient(135deg,#3b82f6,#1e40af)' : '#e5e7eb',
+                  color: step2Valid ? '#fff' : '#94a3b8',
+                  fontSize:15, fontWeight:600, cursor: step2Valid ? 'pointer' : 'not-allowed', transition:'.15s',
+                }}>{T('reg.s2.next')}</button>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
+                  <RegField label={T('reg.s3.username')} full>
+                    <RegInput value={form.username} onChange={(e)=>set('username',e.target.value.replace(/\s/g,''))}/>
+                  </RegField>
+                  <RegField label={T('reg.s3.password')}>
+                    <RegInput type="password" value={form.password} onChange={(e)=>set('password',e.target.value)}/>
+                  </RegField>
+                  <RegField label={T('reg.s3.password2')}>
+                    <RegInput type="password" value={form.password2} onChange={(e)=>set('password2',e.target.value)}/>
+                  </RegField>
+                </div>
+
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:18, fontSize:12, color:'#94a3b8' }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                    {[
+                      { ok: passChecks.notEmpty, t: T('reg.s3.pw.fill') },
+                      { ok: passChecks.minLen, t: T('reg.s3.pw.min') },
+                      { ok: passChecks.pattern, t: T('reg.s3.pw.pattern') },
+                    ].map((c, i) => (
+                      <div key={i} style={{ display:'flex', alignItems:'center', gap:6, color: c.ok ? '#22c55e' : '#94a3b8' }}>
+                        <Icon name={c.ok ? 'check' : 'x'} size={11}/>
+                        <span>{c.t}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, color: passMatch ? '#22c55e' : '#94a3b8' }}>
+                      <Icon name={passMatch ? 'check' : 'x'} size={11}/>
+                      <span>{form.password2 ? (passMatch ? T('reg.s3.pw.match') : T('reg.s3.pw.mismatch')) : T('reg.s3.pw.fill')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:18 }}>
+                  <label style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12.5, color:'#475569', cursor:'pointer' }}>
+                    <input type="checkbox" checked={form.agreeTerms} onChange={(e)=>set('agreeTerms',e.target.checked)} style={{ marginTop:2 }}/>
+                    <span>{T('reg.s3.agree.terms_a')}<a style={{ color:'#3b82f6', textDecoration:'underline' }}>{T('reg.s3.agree.terms_b')}</a>{T('reg.s3.agree.terms_c')}<a style={{ color:'#3b82f6', textDecoration:'underline' }}>{T('reg.s3.agree.privacy')}</a></span>
+                  </label>
+                  <label style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12.5, color:'#475569', cursor:'pointer' }}>
+                    <input type="checkbox" checked={form.agreeNews} onChange={(e)=>set('agreeNews',e.target.checked)} style={{ marginTop:2 }}/>
+                    <span>{T('reg.s3.agree.news_a')}<strong>Partners-MM</strong>{T('reg.s3.agree.news_b')}</span>
+                  </label>
+                </div>
+
+                <button onClick={() => setStep(4)} disabled={!step3Valid} style={{
+                  width:'100%', padding:13, borderRadius:8, border:'none',
+                  background: step3Valid ? 'linear-gradient(135deg,#3b82f6,#1e40af)' : '#e5e7eb',
+                  color: step3Valid ? '#fff' : '#94a3b8',
+                  fontSize:15, fontWeight:600, cursor: step3Valid ? 'pointer' : 'not-allowed', transition:'.15s',
+                }}>{T('reg.s3.complete')}</button>
+              </>
+            )}
+
+            <div className="aglp-modal-foot">{T('reg.foot.q')} <a onClick={() => { onClose(); onSwitchLogin && onSwitchLogin(); }}>{T('reg.foot.login')}</a></div>
+          </>
+        ) : (
+          // Step 4: 成功页
+          <div style={{ textAlign:'center', padding:'8px 4px 4px' }}>
+            <div style={{
+              width:64, height:64, margin:'0 auto 18px', borderRadius:'50%',
+              background:'linear-gradient(135deg,#dcfce7,#bbf7d0)', color:'#16a34a',
+              display:'grid', placeItems:'center',
+            }}><Icon name="check" size={32}/></div>
+            <h2 style={{ margin:'0 0 14px', fontSize:24, fontWeight:700, color:'#0f172a' }}>{T('reg.s4.title')}</h2>
+            <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p1')}</p>
+            <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p2')}</p>
+            <p style={{ margin:'0 0 22px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p3')}</p>
+            <button style={{
+              padding:'12px 36px', borderRadius:8, border:'none',
+              background:'linear-gradient(135deg,#3b82f6,#1e40af)',
+              color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer',
+              display:'inline-flex', alignItems:'center', gap:8,
+            }} onClick={onClose}>
+              <Icon name="send" size={15}/>
+              {T('reg.s4.subscribe')}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// i18n keys for reg.step labels added in v3.0.11
+(function() {
+  const ZH = window.APS_I18N && window.APS_I18N.zh;
+  const EN = window.APS_I18N && window.APS_I18N.en;
+  if (ZH && !ZH['reg.step.basic']) {
+    ZH['reg.step.basic'] = '基本资料';
+    ZH['reg.step.traffic'] = '流量来源与收款';
+    ZH['reg.step.account'] = '创建账户';
+  }
+  if (EN && !EN['reg.step.basic']) {
+    EN['reg.step.basic'] = 'Basic Info';
+    EN['reg.step.traffic'] = 'Traffic & Payment';
+    EN['reg.step.account'] = 'Create Account';
+  }
+  // v3.0.12 收款方式 / 流量来源 调整
+  if (ZH) {
+    ZH['reg.s2.payway'] = '收款方式';
+    ZH['reg.s2.url'] = '流量来源链接(选填)';
+    ZH['reg.s2.url.ph'] = 'https://domain.com';
+    ZH['reg.s2.url.channels'] = 'Youtube、Tiktok、Telegram、Facebook...';
+    ZH['reg.s2.url.add'] = '+ 新增流量来源链接';
+  }
+  if (EN) {
+    EN['reg.s2.payway'] = 'Payment Method';
+    EN['reg.s2.url'] = 'Traffic Source URL (optional)';
+    EN['reg.s2.url.ph'] = 'https://domain.com';
+    EN['reg.s2.url.channels'] = 'Youtube, Tiktok, Telegram, Facebook...';
+    EN['reg.s2.url.add'] = '+ Add Traffic Source';
+  }
+})();
+const LANDING_I18N = {
+  zh: {
+    nav: { fees:'费用', tools:'工具', dashboard:'仪表板', how:'如何运作', login:'登入', join:'成为合作伙伴' },
+    hero: {
+      eyebrow:'专业代理联盟计划',
+      title_a:'赢取现金', title_b:'一点也不', title_em:'麻烦', title_c:'哟',
+      sub_a:'与成功的博彩平台合作,获得高达公司净收入', sub_b:'的营收分享。一次推介,终身佣金。',
+      join:'成为合作伙伴', how:'如何运作?',
+      stats:[
+        { v:'15', s:'年', l:'在市场上' },
+        { v:'300', s:'万+', l:'每日玩家' },
+        { v:'62', s:'个国家', l:'覆盖位置' },
+        { v:'40', s:'%', l:'营收分享上限' },
+      ],
+      viz:{ c1:'本月佣金', c2:'推介玩家', c3:'营收分享 · 当前等级', c3hint:'距离 40% 上限还差 5%' },
+    },
+    benefits: {
+      eyebrow:'福利',
+      title:'在我们这里 · 一切都是快速、简单和透明',
+      sub:'从注册到首笔佣金提款,流程清晰、专属客户经理全程跟进。',
+      items:[
+        { ic:'zap', t:'快速注册', d:'我们尽可能简化注册和验证联盟账户的流程,立即获取你的第一个联盟链接。' },
+        { ic:'users', t:'指导与支持', d:'专属客户经理为你制定行销策略,解决你可能遇到的任何问题。' },
+        { ic:'image', t:'即用型素材', d:'广泛的高品质宣传材料,最大限度提高你的转化率。' },
+        { ic:'wallet', t:'付款快速便捷', d:'最低提款额仅 $30,200+ 种付款方式,等待时间缩到最低。' },
+        { ic:'shield', t:'透明数据', d:'实时统计 + 详细报告,所有数据公开可查,无任何隐藏条款。' },
+      ],
+    },
+    fees: {
+      eyebrow:'费用', title:'顶级条款',
+      sub:'三种合作模式,适配不同推广策略 — 营收分享、单付费 CPA、或两者结合。',
+      badge:'最受欢迎',
+      cards:[
+        { n:'CPA · 单付费分润', r:'$50', u:'起', h:'推介客户完成首存或达到指定条件时一次性获得佣金', f:['按用户行为结算,见效快','多档单价,达标自动结算','不依赖玩家长期表现'], cta:'联系我们' },
+        { n:'营收分享 · RevShare', r:'40', u:'%', h:'每位推介客户的终身净收入分润,起步 25%', f:['终身佣金,玩家不流失就一直分','5 级阶梯,玩家越多比例越高','用户损失基数 / 周期资产变动 两种计算口径'], cta:'加入我们' },
+        { n:'混合型 · Hybrid', r:'CPA', u:' + RevShare', h:'同时结合两种类型,稳定 + 长期双重收益', f:['新玩家立即拿 CPA','同时享受终身分润','按协议定制比例'], cta:'申请方案' },
+      ],
+    },
+    tools: {
+      eyebrow:'工具', title:'用户友好的行销工具',
+      sub:'从横幅到 S2S 整合,五大推广工具开箱即用,助你最大化转化。',
+      items:[
+        { ic:'image', t:'横幅 & 落地页', d:'定期更新的素材库,适配各种推广场景' },
+        { ic:'link', t:'Smart Link', d:'所有最佳优惠集中在一个链接里' },
+        { ic:'send', t:'JSON 推送', d:'从我们的服务器直接获取最佳产品' },
+        { ic:'code', t:'促销代码', d:'为你的受众提供独一无二的兑换码' },
+        { ic:'plug', t:'S2S 整合', d:'集成任何热门追踪器,转化数据实时回传' },
+      ],
+    },
+    dash: {
+      eyebrow:'联盟仪表板', title:'所有信息 · 集中一处',
+      sub:'登入后立即看到完整的代理控制台 — 业绩、玩家、佣金、提款,一目了然。',
+      feats:[
+        { ic:'layout', t:'我的账户', d:'实用的联盟仪表板,方便存取所有所需信息。' },
+        { ic:'bell', t:'实时统计', d:'关注每分钟更新的数据流,跟踪每位玩家的注册与首存。' },
+        { ic:'pie', t:'详细报告', d:'新建并查看一系列详细报表 — CPA、分润、玩家损益、结算单。' },
+      ],
+      kpis:{ commission:'本月佣金', cpa:'有效 CPA', players:'活跃玩家' },
+    },
+    how: {
+      eyebrow:'如何运作', title:'4 步骤 · 让你赚大钱',
+      sub:'从申请到提款,整个流程不超过 7 天 — 高效、透明、稳定。',
+      steps:[
+        { ic:'userPlus', t:'注册', d:'快速注册,商户审核后即可激活账户' },
+        { ic:'send', t:'发布广告', d:'在平台发布带有你专属代理链接的素材' },
+        { ic:'users', t:'推介新顾客', d:'通过你的链接注册的玩家永久归属于你' },
+        { ic:'wallet', t:'提款', d:'每月固定结算,200+ 种付款方式可选' },
+      ],
+    },
+    cta: {
+      title:'与身边值得信赖的合作伙伴一起赚钱',
+      sub:'现在就申请,享受业内顶级条款 · 全球已有 10 万 + 联盟代理与我们合作',
+      btn:'成为合作伙伴',
+    },
+    footer: { copy:'© 2026 Partners-MM · 专业代理后台 v3.0.0', links:['隐私权政策','条款与条件','联系我们'] },
+  },
+  en: {
+    nav: { fees:'Commissions', tools:'Tools', dashboard:'Dashboard', how:'How it Works', login:'Log In', join:'Become a Partner' },
+    hero: {
+      eyebrow:'Pro Affiliate Program',
+      title_a:'Earn Cash', title_b:'Without Any', title_em:'Hassle', title_c:'',
+      sub_a:'Partner with a winning iGaming platform and earn up to', sub_b:' of net company revenue. One referral, lifetime commission.',
+      join:'Become a Partner', how:'How it works?',
+      stats:[
+        { v:'15', s:'yrs', l:'In the market' },
+        { v:'3', s:'M+', l:'Daily players' },
+        { v:'62', s:'countries', l:'Locations covered' },
+        { v:'40', s:'%', l:'Max revenue share' },
+      ],
+      viz:{ c1:'This Month', c2:'Referrals', c3:'RevShare · Current Tier', c3hint:'5% to reach 40% cap' },
+    },
+    benefits: {
+      eyebrow:'Benefits',
+      title:'With us · Everything is fast, simple and transparent',
+      sub:'From signup to your first payout — clear process with a dedicated manager.',
+      items:[
+        { ic:'zap', t:'Quick Sign-Up', d:'We simplify registration and verification so you get your first link instantly.' },
+        { ic:'users', t:'Guidance & Support', d:'A dedicated manager builds your strategy and solves any issue you face.' },
+        { ic:'image', t:'Ready Creatives', d:'A wide library of high-quality promo materials to maximize conversion.' },
+        { ic:'wallet', t:'Fast & Easy Payouts', d:'Minimum payout from $30, 200+ payment methods, minimal wait time.' },
+        { ic:'shield', t:'Transparent Data', d:'Real-time stats + detailed reports, all open and audit-ready.' },
+      ],
+    },
+    fees: {
+      eyebrow:'Commissions', title:'Top-Tier Terms',
+      sub:'Three partnership models for any strategy — RevShare, CPA, or hybrid.',
+      badge:'Most Popular',
+      cards:[
+        { n:'CPA · Per-Player', r:'$50', u:'+', h:'One-off commission when a referral makes their first deposit or hits a target.', f:['Per-action payout, fast results','Tiered rates, auto-settled','No long-term retention risk'], cta:'Contact Us' },
+        { n:'RevShare', r:'40', u:'%', h:'Lifetime net revenue share per referral, starting from 25%.', f:['Lifetime commission as long as players stay','5-tier ladder, more players = higher rate','Loss-based or asset-change calculation'], cta:'Join Us' },
+        { n:'Hybrid', r:'CPA', u:' + RevShare', h:'Combine both — instant payout plus long-term residual.', f:['Instant CPA on new players','Plus lifetime revenue share','Custom split by agreement'], cta:'Apply Now' },
+      ],
+    },
+    tools: {
+      eyebrow:'Tools', title:'User-Friendly Marketing Toolkit',
+      sub:'From banners to S2S integration — five tools, ready to plug in.',
+      items:[
+        { ic:'image', t:'Banners & Landings', d:'Regularly updated creatives for every scenario.' },
+        { ic:'link', t:'Smart Link', d:'All best offers behind a single link.' },
+        { ic:'send', t:'JSON Push', d:'Pull the best products straight from our server.' },
+        { ic:'code', t:'Promo Codes', d:'Unique redeemable codes for your audience.' },
+        { ic:'plug', t:'S2S Integration', d:'Connect any popular tracker, real-time postbacks.' },
+      ],
+    },
+    dash: {
+      eyebrow:'Affiliate Dashboard', title:'Everything · In One Place',
+      sub:'Log in for the full control panel — performance, players, commissions, payouts at a glance.',
+      feats:[
+        { ic:'layout', t:'My Account', d:'A practical dashboard with everything you need to access.' },
+        { ic:'bell', t:'Real-Time Stats', d:'Watch live data flow and track every signup and first deposit.' },
+        { ic:'pie', t:'Detailed Reports', d:'Build CPA, RevShare, player P&L and settlement reports.' },
+      ],
+      kpis:{ commission:'This Month', cpa:'Valid CPA', players:'Active Players' },
+    },
+    how: {
+      eyebrow:'How it Works', title:'4 Steps · To Big Earnings',
+      sub:'From application to payout, the whole flow takes no more than 7 days.',
+      steps:[
+        { ic:'userPlus', t:'Register', d:'Quick signup, account activated after merchant review.' },
+        { ic:'send', t:'Publish Ads', d:'Publish your unique referral link with our creatives.' },
+        { ic:'users', t:'Refer Players', d:'Anyone signing up via your link is yours for life.' },
+        { ic:'wallet', t:'Cash Out', d:'Monthly settlements, 200+ payment methods to choose from.' },
+      ],
+    },
+    cta: {
+      title:'Earn with a trusted partner by your side',
+      sub:'Apply today and enjoy industry-leading terms · 100k+ affiliates already with us',
+      btn:'Become a Partner',
+    },
+    footer: { copy:'© 2026 Partners-MM · Affiliate Portal v3.0.0', links:['Privacy Policy','Terms & Conditions','Contact Us'] },
+  },
+};
+
+// ============ 招募营销页主模块 ============
+window.AgentLoginModule = function ({ onLogin }) {
+  const { Icon } = window.UI;
+  const [showLogin, setShowLogin] = React.useState(false);
+  const [showRegister, setShowRegister] = React.useState(false);
+  const [lang, setLang] = window.useAgentLang();
+  const t = LANDING_I18N[lang];
+
+  React.useEffect(() => { ensureLandingStyle(); }, []);
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  };
+
+  return (
+    <div className="aglp">
+      {/* 顶栏 */}
+      <header className="aglp-nav">
+        <div className="aglp-nav-inner">
+          <div className="aglp-brand">
+            <div className="aglp-brand-mark">MM</div>
+            <span>Partners-MM</span>
+          </div>
+          <nav className="aglp-nav-links">
+            <span className="aglp-nav-link" onClick={() => scrollTo('commissions')}>{t.nav.fees}</span>
+            <span className="aglp-nav-link" onClick={() => scrollTo('tools')}>{t.nav.tools}</span>
+            <span className="aglp-nav-link" onClick={() => scrollTo('dashboard')}>{t.nav.dashboard}</span>
+            <span className="aglp-nav-link" onClick={() => scrollTo('how-it-works')}>{t.nav.how}</span>
+          </nav>
+          <div className="aglp-nav-actions">
+            <window.AgentLangSwitch/>
+            <button className="aglp-btn ghost" onClick={() => setShowLogin(true)}>{t.nav.login}</button>
+            <button className="aglp-btn gold" onClick={() => setShowRegister(true)}>{t.nav.join}</button>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="aglp-hero">
+        <div className="aglp-wrap aglp-hero-grid">
+          <div>
+            <div className="aglp-hero-eyebrow">
+              <Icon name="star" size={12}/>
+              <span>{t.hero.eyebrow}</span>
+            </div>
+            <h1 className="aglp-hero-title">
+              {t.hero.title_a}<br/>
+              {t.hero.title_b}<em>{t.hero.title_em}</em>{t.hero.title_c}
+            </h1>
+            <p className="aglp-hero-sub">
+              {t.hero.sub_a} <strong style={{ color:'#fef3c7' }}>40%</strong>{t.hero.sub_b}
+            </p>
+            <div className="aglp-hero-actions">
+              <button className="aglp-btn gold lg" onClick={() => setShowRegister(true)}>{t.hero.join}</button>
+              <button className="aglp-btn lg" style={{ background:'rgba(255,255,255,.1)', color:'#fff', border:'1px solid rgba(255,255,255,.2)' }} onClick={() => scrollTo('how-it-works')}>
+                {t.hero.how}
+              </button>
+            </div>
+            <div className="aglp-hero-stats">
+              {t.hero.stats.map((s, i) => (
+                <div key={i} className="aglp-stat">
+                  <div className="aglp-stat-val">{s.v}<span className="small">{s.s}</span></div>
+                  <div className="aglp-stat-lbl">{s.l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hero 右侧 — 模拟仪表板浮层卡片 */}
+          <div className="aglp-hero-viz">
+            <div className="aglp-viz-card c1">
+              <div className="aglp-viz-card-label">{t.hero.viz.c1}</div>
+              <div className="aglp-viz-card-val">$<span className="gold">12,847</span></div>
+              <div className="aglp-viz-card-delta">+18.4% MoM</div>
+            </div>
+            <div className="aglp-viz-card c2">
+              <div className="aglp-viz-card-label">{t.hero.viz.c2}</div>
+              <div className="aglp-viz-card-val"><span className="accent">1,284</span></div>
+              <div className="aglp-viz-bars">
+                {[40,65,50,80,72,90,68,55,75,88,60,95].map((h,i)=>(
+                  <span key={i} style={{ height:h+'%' }}/>
+                ))}
+              </div>
+            </div>
+            <div className="aglp-viz-card c3">
+              <div className="aglp-viz-card-label">{t.hero.viz.c3}</div>
+              <div className="aglp-viz-card-val">35<span style={{ color:'#94a3b8', fontWeight:600 }}>%</span></div>
+              <div style={{ marginTop:8, height:4, background:'#e2e8f0', borderRadius:99, overflow:'hidden' }}>
+                <div style={{ width:'87%', height:'100%', background:'linear-gradient(90deg,#3b82f6,#fbbf24)' }}/>
+              </div>
+              <div style={{ marginTop:6, fontSize:11, color:'#64748b' }}>{t.hero.viz.c3hint}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 福利 */}
+      <section className="aglp-section">
+        <div className="aglp-wrap">
+          <div className="aglp-eyebrow">{t.benefits.eyebrow}</div>
+          <h2 className="aglp-section-title">{t.benefits.title}</h2>
+          <p className="aglp-section-sub">{t.benefits.sub}</p>
+          <div className="aglp-tools">
+            {t.benefits.items.map((b, i) => (
+              <div key={i} className="aglp-tool">
+                <div className="aglp-tool-ic"><Icon name={b.ic} size={20}/></div>
+                <div className="aglp-tool-name">{b.t}</div>
+                <div className="aglp-tool-desc">{b.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 费用 */}
+      <section className="aglp-section alt" id="commissions">
+        <div className="aglp-wrap">
+          <div className="aglp-eyebrow">{t.fees.eyebrow}</div>
+          <h2 className="aglp-section-title">{t.fees.title}</h2>
+          <p className="aglp-section-sub">{t.fees.sub}</p>
+          <div className="aglp-comm-grid">
+            {t.fees.cards.map((c, i) => (
+              <div key={i} className={'aglp-comm-card' + (i === 1 ? ' featured' : '')}>
+                {i === 1 && <div className="aglp-comm-badge">{t.fees.badge}</div>}
+                <div className="aglp-comm-name">{c.n}</div>
+                <div className="aglp-comm-rate">{c.r}<span className="unit">{c.u}</span></div>
+                <p className="aglp-comm-hint">{c.h}</p>
+                <ul className="aglp-comm-list">
+                  {c.f.map((line, j) => <li key={j}>{line}</li>)}
+                </ul>
+                <button className="aglp-comm-cta" onClick={() => setShowRegister(true)}>{c.cta}</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 工具 */}
+      <section className="aglp-section" id="tools">
+        <div className="aglp-wrap">
+          <div className="aglp-eyebrow">{t.tools.eyebrow}</div>
+          <h2 className="aglp-section-title">{t.tools.title}</h2>
+          <p className="aglp-section-sub">{t.tools.sub}</p>
+          <div className="aglp-tools">
+            {t.tools.items.map((b, i) => (
+              <div key={i} className="aglp-tool">
+                <div className="aglp-tool-ic"><Icon name={b.ic} size={20}/></div>
+                <div className="aglp-tool-name">{b.t}</div>
+                <div className="aglp-tool-desc">{b.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 联盟仪表板 */}
+      <section className="aglp-section alt" id="dashboard">
+        <div className="aglp-wrap aglp-dash">
+          <div>
+            <div className="aglp-eyebrow">{t.dash.eyebrow}</div>
+            <h2 className="aglp-section-title">{t.dash.title}</h2>
+            <p className="aglp-section-sub">{t.dash.sub}</p>
+            <div className="aglp-dash-features">
+              {t.dash.feats.map((b, i) => (
+                <div key={i} className="aglp-dash-feat">
+                  <div className="aglp-dash-feat-ic"><Icon name={b.ic} size={20}/></div>
+                  <div>
+                    <div className="aglp-dash-feat-t">{b.t}</div>
+                    <div className="aglp-dash-feat-d">{b.d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 仪表板预览 */}
+          <div className="aglp-dash-preview">
+            <div className="aglp-dash-bar">
+              <span style={{ background:'#ef4444' }}/><span style={{ background:'#f59e0b' }}/><span style={{ background:'#22c55e' }}/>
+              <div style={{ marginLeft:'auto', fontSize:10.5, color:'#94a3b8' }}>my.partners-mm.com</div>
+            </div>
+            <div className="aglp-dash-kpis">
+              <div className="aglp-dash-kpi">
+                <div className="aglp-dash-kpi-l">{t.dash.kpis.commission}</div>
+                <div className="aglp-dash-kpi-v gold">$12,847</div>
+              </div>
+              <div className="aglp-dash-kpi">
+                <div className="aglp-dash-kpi-l">{t.dash.kpis.cpa}</div>
+                <div className="aglp-dash-kpi-v accent">284</div>
+              </div>
+              <div className="aglp-dash-kpi">
+                <div className="aglp-dash-kpi-l">{t.dash.kpis.players}</div>
+                <div className="aglp-dash-kpi-v">1,284</div>
+              </div>
+            </div>
+            <div className="aglp-dash-chart">
+              <svg viewBox="0 0 300 100" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="aglp-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45"/>
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,80 L25,65 L50,72 L75,55 L100,60 L125,42 L150,48 L175,30 L200,38 L225,22 L250,28 L275,15 L300,20 L300,100 L0,100 Z" fill="url(#aglp-grad)"/>
+                <path d="M0,80 L25,65 L50,72 L75,55 L100,60 L125,42 L150,48 L175,30 L200,38 L225,22 L250,28 L275,15 L300,20" stroke="#3b82f6" strokeWidth="2" fill="none"/>
+                <circle cx="275" cy="15" r="4" fill="#fbbf24" stroke="#fff" strokeWidth="2"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 如何运作 */}
+      <section className="aglp-section" id="how-it-works">
+        <div className="aglp-wrap">
+          <div className="aglp-eyebrow">{t.how.eyebrow}</div>
+          <h2 className="aglp-section-title">{t.how.title}</h2>
+          <p className="aglp-section-sub">{t.how.sub}</p>
+          <div className="aglp-steps">
+            {t.how.steps.map((b, i) => (
+              <div key={i} className="aglp-step">
+                <div className="aglp-step-num">{i + 1}</div>
+                <div className="aglp-step-ic"><Icon name={b.ic} size={28}/></div>
+                <div className="aglp-step-t">{b.t}</div>
+                <div className="aglp-step-d">{b.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="aglp-cta">
+        <div className="aglp-wrap">
+          <h2 className="aglp-cta-title">{t.cta.title}</h2>
+          <p className="aglp-cta-sub">{t.cta.sub}</p>
+          <button className="aglp-btn gold lg" onClick={() => setShowRegister(true)}>{t.cta.btn}</button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="aglp-footer">
+        <div className="aglp-wrap aglp-footer-inner">
+          <div>{t.footer.copy}</div>
+          <div style={{ display:'flex', gap:18 }}>
+            {t.footer.links.map((l, i) => <span key={i} style={{ cursor:'pointer' }}>{l}</span>)}
+          </div>
+        </div>
+      </footer>
+
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLogin={onLogin} onSwitchRegister={() => setShowRegister(true)}/>}
+      {showRegister && <RegisterModal onClose={() => setShowRegister(false)} onSwitchLogin={() => setShowLogin(true)}/>}
+    </div>
+  );
 };

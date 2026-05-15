@@ -869,6 +869,18 @@ function AgentDetail({ agent, onClose }) {
   const [name, setName] = React.useState(agent.name);
   const [loginName, setLoginName] = React.useState(agent._appData?.loginName || (agent.name||'').replace(/[^A-Za-z]/g,'').toLowerCase() || 'agent');
   const [note, setNote] = React.useState(agent.note || '');
+  // v3.0.15 流量来源 + 收款方式
+  const _defaultTraffic = () => {
+    if (agent._traffic && agent._traffic.length) return [...agent._traffic];
+    // 默认 3 个示例频道
+    return [
+      'https://youtube.com/@' + (agent.name || 'agent').toLowerCase().replace(/\s/g,''),
+      'https://t.me/' + (agent.name || 'agent').toLowerCase().replace(/\s/g,'') + '_channel',
+    ];
+  };
+  const _defaultPayment = () => agent._payment || { method:'UPI', upiId: (agent._appData?.loginName || 'user') + '@paytm', holder: agent.name || '' };
+  const [traffic, setTraffic] = React.useState(_defaultTraffic());
+  const [payment, setPayment] = React.useState(_defaultPayment());
   React.useEffect(() => {
     setName(agent.name);
     setLoginName(agent._appData?.loginName || (agent.name||'').replace(/[^A-Za-z]/g,'').toLowerCase() || 'agent');
@@ -908,7 +920,7 @@ function AgentDetail({ agent, onClose }) {
   const [perms_unused, setPerms_unused] = React.useState({});
   // v2.4.37 保存编辑 + 取消
   const saveEdit = () => {
-    const labels = { basic:'基本资料', commission:'分润模式', perms:'权限配置' };
+    const labels = { basic:'基本资料', commission:'分润模式', perms:'权限配置', traffic:'流量来源', payment:'收款方式' };
     const sectionLabel = labels[tab] || tab;
     const nowStr = new Date().toISOString().slice(0,19).replace('T',' ');
     const log = { at: nowStr, by: '商户:管理员-randy', type: 'edit', note: '编辑:' + sectionLabel };
@@ -925,6 +937,10 @@ function AgentDetail({ agent, onClose }) {
             next._comm = comm;
           } else if (tab === 'perms') {
             next._perms = { ...perms };
+          } else if (tab === 'traffic') {
+            next._traffic = [...traffic];
+          } else if (tab === 'payment') {
+            next._payment = { ...payment };
           }
           return next;
         })
@@ -942,6 +958,8 @@ function AgentDetail({ agent, onClose }) {
       shareCode:true, viewPlayers:true, viewCommission:true, useApi:true, downloadMaterial:true,
       viewRisk:true, applyWithdraw:true, createSubAgent:false, viewSubAgent:false, viewCrossLayer:false,
     });
+    setTraffic(_defaultTraffic());
+    setPayment(_defaultPayment());
     setEditing(false);
   };
   const D = window.APS_DATA;
@@ -978,6 +996,8 @@ function AgentDetail({ agent, onClose }) {
           {k:'basic',l:'基本资料'},
           {k:'commission',l:'分润模式'},
           {k:'perms',l:'权限配置'},
+          {k:'traffic',l:'流量来源'},
+          {k:'payment',l:'收款方式'},
           {k:'logs',l:'操作记录'},
         ].map(t => (
           <div key={t.k} className={'ad-tab ' + (tab===t.k?'active':'')} onClick={()=>setTab(t.k)}>{t.l}</div>
@@ -1082,6 +1102,71 @@ function AgentDetail({ agent, onClose }) {
                   <Switch on={perms[k]} onChange={()=>setPerms({...perms,[k]:!perms[k]})}/>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {tab === 'traffic' && (
+          <div style={{padding:'4px 0'}}>
+            <div className="ad-section-title">流量来源链接</div>
+            <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:12}}>代理推广所使用的频道、平台账号或落地页(Youtube / Tiktok / Telegram / Facebook ...)</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {traffic.length === 0 && (
+                <div style={{padding:'14px',background:'#f8fafc',border:'1px dashed var(--line)',borderRadius:8,fontSize:13,color:'var(--text-3)',textAlign:'center'}}>(未填写流量来源)</div>
+              )}
+              {traffic.map((u, i) => (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontSize:12,color:'var(--text-3)',width:24,textAlign:'right'}}>{i+1}.</span>
+                  <input
+                    className="input"
+                    value={u}
+                    readOnly={!editing}
+                    onChange={e=>{ const t=[...traffic]; t[i]=e.target.value; setTraffic(t); }}
+                    placeholder="https://..."
+                    style={{flex:1,background: editing ? '#fff' : '#f8fafc',fontFamily:'JetBrains Mono'}}
+                  />
+                  {editing && traffic.length > 0 && (
+                    <button type="button" className="contact-remove" title="移除" onClick={()=>setTraffic(traffic.filter((_,k)=>k!==i))}>−</button>
+                  )}
+                </div>
+              ))}
+              {editing && (
+                <button type="button" className="contact-add-btn" onClick={()=>setTraffic([...traffic,''])} style={{marginTop:4}}>+ 新增流量来源链接</button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab === 'payment' && (
+          <div style={{padding:'4px 0'}}>
+            <div className="ad-section-title">收款方式</div>
+            <div className="ad-info-card">
+              <div className="ad-info-grid">
+                <div>
+                  <span className="ad-k">付款方式:</span>
+                  <span className="ad-v">
+                    <span style={{padding:'2px 10px',background:'#dbeafe',color:'#1e40af',borderRadius:99,fontSize:12,fontWeight:600}}>UPI</span>
+                  </span>
+                </div>
+                <div></div>
+                <div>
+                  <span className="ad-k">UPI ID:</span>
+                  {editing
+                    ? <input className="input sm" value={payment.upiId || ''} onChange={e=>setPayment({...payment,upiId:e.target.value})} placeholder="example@paytm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',fontFamily:'JetBrains Mono'}}/>
+                    : <span className="ad-v text-mono">{payment.upiId || '-'}</span>}
+                </div>
+                <div></div>
+                <div>
+                  <span className="ad-k">收款人姓名:</span>
+                  {editing
+                    ? <input className="input sm" value={payment.holder || ''} onChange={e=>setPayment({...payment,holder:e.target.value})} placeholder="持卡人姓名" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%'}}/>
+                    : <span className="ad-v">{payment.holder || '-'}</span>}
+                </div>
+                <div></div>
+              </div>
+            </div>
+            <div style={{marginTop:12,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
+              <Icon name="info" size={12}/> 当前阶段仅支持 UPI 付款,后续如开放其他渠道(银行 / USDT / Skrill 等)会在此处增加选项
             </div>
           </div>
         )}
