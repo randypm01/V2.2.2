@@ -2,9 +2,84 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.0.21',
+    date: '2026-05-18',
+    current: true,
+    changes: [
+      { type: 'feat', text: '响应式 Phase 5 / 5 完结 — 抽屉 / 弹窗 / 详情 tabs / Tweaks 面板小屏适配,仅改 styles.css(~60 行)' },
+      { type: 'add', text: '<1024px:.drawer 宽 640→560,.drawer.wide 920→720,max-width 92vw 兜底' },
+      { type: 'add', text: '<768px:.drawer / .drawer.wide 强制 100% 全屏(去掉左侧 border);head/foot padding 收紧到 12-14px;drawer-foot 按钮 flex 50% 两两换行;弹窗 .modal 升到 96vw/92vh' },
+      { type: 'add', text: '<768px:.agent-detail-tabs(代理详情 9 个 tab)启用横向滚动 + 隐藏滚动条;抽屉内 .ad-contact-tbl / .ad-log-tbl 也加 overflow-x:auto' },
+      { type: 'add', text: '<480px:Tweaks 面板从右下 280px 改为 left:8/right:8/bottom:8 全宽贴底,max-height 60vh,避免小屏遮挡内容' },
+      { type: 'add', text: '<480px:.drawer-head / .drawer-foot padding 进一步收到 12px' },
+      { type: 'modify', text: '至此 5 个 Phase 全部完成,商户后台 + 代理后台 完整支持 ≥375px 屏宽 — 桌面端零回归(全部 max-width media query)' },
+    ],
+  },
+  {
+    ver: 'v3.0.20',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '响应式 Phase 4 / 5(登录页) — 仅改 styles.css,新增 ~70 行;覆盖代理后台 al2-* 2 栏式登录 + 旧 al-* 三栏兼容样式(商户后台无登录页,跳过)' },
+      { type: 'add', text: '<1024px:左右两栏由 1.5:1 改为 1:1;.al2-left padding 36/60 → 28/36;.al2-illu SVG 限制最大宽 280px 避免溢出' },
+      { type: 'add', text: '<768px:.al2-page 由 grid 改 flex column;左侧品牌区压缩成顶部 banner(隐藏 illustration,tagline 左对齐缩小);右侧表单区 max-width 100%,padding 18px,从居中改成顶部对齐' },
+      { type: 'add', text: '<768px:logo ring 84→64px;welcome-sub 字号 15→12.5px;quick-btn / quick-row padding 整体收紧;头像 44→38px' },
+      { type: 'add', text: '<768px:旧 al-* 三栏式也同步降级(.al-page 单列,.al-brand-art 隐藏,.al-accounts-list max-height 200px)' },
+      { type: 'add', text: '<480px:tagline 字号再压一档(16px);quick-cred 内长字符串 mono 字段 word-break:break-all,避免 UPI ID / Email 撑破布局' },
+    ],
+  },
+  {
+    ver: 'v3.0.19',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '响应式 Phase 3 / 5(数据列表) — 仅改 styles.css,新增 ~80 行;通用 .toolbar / .tabs / .tbl-wrap / .pg 全部受益,所有列表页(agents / players / cpa / revshare / settlement / wallet / logs / my_*)一次性适配' },
+      { type: 'add', text: '<768px 工具栏改为多行流式:搜索框占满 100%,筛选 select 每个占 50%;原本撑开间距的 span[style*="flex:1"] 转成强制换行;批量操作按钮跑到第二行' },
+      { type: 'add', text: '<768px Tabs(全部/已启用/待激活...)允许横向滚动,不换行不挤压,移动端可滑动切换' },
+      { type: 'add', text: '<768px 表格保持横向滚动(用户要求),给 .tbl-wrap 加左右渐变阴影 + radial 提示线,告诉用户「右侧还有内容可滑」;表头字号 12→10.5px,行字号 12→11.5px,信息密度更友好' },
+      { type: 'add', text: '<768px 分页栏 .pg / .pagination 允许换行,小屏居中显示;页码按钮也允许换行' },
+      { type: 'add', text: '<480px 筛选 select 改为占满 100%(2 列在超窄屏太挤);表头表体 padding 进一步收紧' },
+      { type: 'add', text: '<1024px .filter-select 移除 max-width:150 限制,允许占据可用空间' },
+    ],
+  },
+  {
+    ver: 'v3.0.18',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '响应式 Phase 2 / 5(首页 + Dashboard + 通用网格) — 仅改 styles.css,新增 ~60 行' },
+      { type: 'add', text: '<1024px:.kpi-grid 4→3 列;.grid-3 / .grid-4 → 2 列;首页 home-grid / folder-grid minmax 由 280 改 240,排得下更多列' },
+      { type: 'add', text: '<768px:.kpi-grid → 2 列(数字字号 → 18px);.grid-2 / .grid-3 / .grid-4 全部 → 单列(用属性选择器 [style*="grid-template-columns"] 覆盖 Dashboard 内联 style);.home-grid / .folder-grid → 单列;.card-head 允许 flex-wrap;.page-head 标题与按钮纵向堆叠' },
+      { type: 'add', text: '<768px:.funnel-row(转化漏斗)用 grid-template-areas 重排为「名称占满一行,bar + 比例 + 等级 第二行」;.form-row / .form-grid / .ad-info-grid 强制单列' },
+      { type: 'add', text: '<480px:.kpi-grid 保持 2 列(避免单列过高);funnel-row 隐藏第 4 列「健康/中等/偏低」等级标签,只剩名称 + bar + 百分比' },
+      { type: 'modify', text: '.page padding 桌面 18/22 → 平板 16/16 → 手机 12/12,小屏可视面积明显加大' },
+    ],
+  },
+  {
+    ver: 'v3.0.17',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '响应式 Phase 1 / 5(基础架构) — 商户后台 + 代理后台 加入桌面 / 平板 / 手机三段式适配,首批落地侧栏 + 顶栏 + 面包屑' },
+      { type: 'add', text: '路径栏左侧新增「汉堡」按钮(menu icon),位置在返回按钮左侧;<1024px 时可见,点击切换侧栏抽屉开合' },
+      { type: 'add', text: '<1024px 侧栏改为 fixed 左侧抽屉(translateX 滑入),配半透明 backdrop 遮罩,点击遮罩或菜单项后自动收起(setRoute 内 window.innerWidth<1024 时关闭)' },
+      { type: 'add', text: '<768px 顶栏精简 — 隐藏搜索框、铃铛、设置 icon、用户名文字,仅保留 logo + 用户头像;backend 三 tab 改为可横向滚动,padding 收紧' },
+      { type: 'add', text: 'ui.jsx 新增 menu icon(三横线)' },
+      { type: 'add', text: '断点:1023px(侧栏抽屉化) / 767px(顶栏精简) / 479px(超窄屏再压一档)' },
+      { type: 'modify', text: 'app.jsx 新增 sidebarOpen state;根 div 增加 sidebar-open class;两处 content-crumbs(PRD + 商户/代理)同步插入汉堡按钮 + backdrop 元素' },
+      { type: 'modify', text: 'styles.css 末尾新增 ~90 行响应式区块,只用 max-width media query,桌面默认形态完全不受影响' },
+    ],
+  },
+  {
+    ver: 'v3.0.16',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '商户后台侧栏删除「风控与配置」整个大项(原仅 1 个子项「玩家风控管理」P0-10) — 简化版不再承载风控模块' },
+      { type: 'remove', text: '删除 modules/risk.jsx 文件;app.jsx NAV 移除 风控与配置 section;路由分发删除 risk 分支;exclude 名单移除 risk;openSections 默认值同步移除 风控与配置' },
+      { type: 'remove', text: 'index.html 移除 <script src="modules/risk.jsx">' },
+      { type: 'modify', text: 'PRD P0-10「风控玩家名单」状态 done → removed,side 改「已移除」,mapping 清空,why 改为简化版移除说明(参照 P0-12 的处理方式);PRD 视图、首页 alert 红点(原 6 条)同步消失' },
+      { type: 'modify', text: '保留 modules/dashboard.jsx「风控提醒」卡片不动 — 该卡片是仪表盘的静态展示组件,未指向 risk 模块路由,后续如需移除请单独提出' },
+    ],
+  },
+  {
     ver: 'v3.0.15',
     date: '2026-05-15',
-    current: true,
     changes: [
       { type: 'add', text: '商户后台 → 已创建代理 → 查看&配置 详情抽屉新增两个 Tab(权限配置 后面):「流量来源」「收款方式」,商户创建代理 + 自行申请代理 都生效' },
       { type: 'add', text: '流量来源 Tab:列表展示代理推广所使用的频道/平台账号/落地页 URL;无数据时显示「(未填写流量来源)」;编辑模式下可改输入框、移除单条、新增多条' },

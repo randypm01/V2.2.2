@@ -94,12 +94,10 @@ const PRD_FEATURES = {
       why:'代理可见的资金账户 — 余额 / 流水 / 提款一体化',
       scope:['可提款 / 待结算 / 冻结 / 提款中余额','钱包流水(入账 / 提款 / 调整 / 风控扣除)','提款申请(USDT / 银行 / PIX / UPI)','提款审核与付款执行','付款凭证留档'],
       deps:['P0-8 结算管理'] },
-    { id:'P0-10', name:'风控玩家名单', week:'W5-W6', dev:8, status:'done',
-      side:'共用',
-      mapping:[
-        { backend:'merchant', mod:'risk', path:'风控与配置 → 风控管理' }
-      ],
-      why:'防止套利与欺诈 — 平台生死线,P0 必须有最小可用风控',
+    { id:'P0-10', name:'风控玩家名单', week:'W5-W6', dev:8, status:'removed',
+      side:'已移除',
+      mapping:[],
+      why:'v3.0.16 简化版移除 — 商户后台侧栏「风控与配置 → 玩家风控管理」已下线,风控相关动作后续由其他系统统一处理',
       scope:['风控玩家列表(原因 / 等级 / 处理状态)','CPA 风控审核(同 IP / 同设备 / 多账号 / 投注 / 提款)','是否计入 CPA / RevShare / 是否冻结佣金','人工标注与申诉','加入黑名单'],
       deps:['P0-4 玩家管理'] },
     { id:'P0-11', name:'仪表盘', week:'W6', dev:5, status:'done',

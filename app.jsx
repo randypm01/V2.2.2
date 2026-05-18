@@ -20,6 +20,8 @@ function App() {
   // v2.3.28 专业代理后台登入态
   const [loggedInAgent, setLoggedInAgent] = useState(null);
   const [agentUserMenuOpen, setAgentUserMenuOpen] = useState(false);
+  // v3.0.16 响应式 — 侧栏抽屉开关(仅低于 1024px 生效;桌面忘取此 state)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const route = backend === 'prd' ? prdRoute
               : backend === 'agent' ? agentRoute
               : backend === 'frontend' ? frontendRoute
@@ -29,13 +31,15 @@ function App() {
     else if (backend === 'agent') setAgentRoute(r);
     else if (backend === 'frontend') setFrontendRoute(r);
     else setMerchantRoute(r);
+    // v3.0.16 小屏选完自动收起抽屉(>=1024px 时 backdrop 隐藏,close 也无副作用)
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   // v2.4.43 暴露到 window,供创建代理弹窗「分润管理」链接跳转
   React.useEffect(() => { window.goRoute = setRoute; }, [backend]);
 
   const [openSections, setOpenSections] = useState({
-    '运营': true, '收益': true, '报表': true, '风控与配置': true,
+    '运营': true, '收益': true, '报表': true,
   });
   const [openPhases, setOpenPhases] = useState({ P0:true });
 
@@ -59,9 +63,6 @@ function App() {
       { k:'agent_revenue', l:'代理收益', icon:'wallet' },
       { k:'codes', l:'代理推广链接', icon:'link', prd:'P0-3' },
       { k:'players', l:'玩家损益', icon:'user', prd:'P0-4' },
-    ]},
-    { section: '风控与配置', icon:'shield', items: [
-      { k:'risk', l:'玩家风控管理', icon:'shield', alert: 6, prd:'P0-10' },
     ]},
   ];
 
@@ -167,7 +168,9 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={'app ' + (sidebarOpen ? 'sidebar-open' : '')}>
+      {/* v3.0.16 响应式侧栏遮罩 — 仅在 sidebar-open 且小屏 CSS 激活时可见 */}
+      <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)}></div>
       {/* ========= 第一行:后台分页 ========= */}
       <div className="backend-row">
         <div className={'backend-tab ' + (backend==='prd'?'active':'')} onClick={()=>setBackend('prd')}>
@@ -333,6 +336,9 @@ function App() {
           </aside>
           <main className="main">
             <div className="content-crumbs">
+              <button className="btn ghost icon-only sm menu-toggle" onClick={() => setSidebarOpen(v => !v)} title="展开/收起侧栏">
+                <Icon name="menu" size={15}/>
+              </button>
               {r.kind !== 'home' && (
                 <button className="btn ghost icon-only sm" onClick={goBack} title="返回上一层">
                   <Icon name="chevronLeft" size={14}/>
@@ -494,6 +500,9 @@ function App() {
         <main className="main">
           {/* 面包屑 + 返回:首页不显示返回按钮 */}
           <div className="content-crumbs">
+            <button className="btn ghost icon-only sm menu-toggle" onClick={() => setSidebarOpen(v => !v)} title="展开/收起侧栏">
+              <Icon name="menu" size={15}/>
+            </button>
             {r.kind !== 'home' && (
               <button className="btn ghost icon-only sm" onClick={goBack} title="返回上一层">
                 <Icon name="chevronLeft" size={14}/>
@@ -544,7 +553,6 @@ function App() {
             {r.kind === 'mod' && r.k === 'revshare' && <RevShareModule/>}
             {r.kind === 'mod' && r.k === 'agent_levels' && <window.AgentLevelsModule/>}
             {r.kind === 'mod' && r.k === 'agent_revenue' && <window.AgentRevenueModule/>}
-            {r.kind === 'mod' && r.k === 'risk' && <RiskModule/>}
             {r.kind === 'mod' && r.k === 'subs' && <window.SubsModule/>}
             {r.kind === 'mod' && r.k === 'revshare_detail' && <window.RevShareDetailModule/>}
             {r.kind === 'mod' && r.k === 'hybrid' && <window.HybridModule/>}
@@ -565,7 +573,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'multi_currency' && <window.MultiCurrencyModule/>}
             {r.kind === 'mod' && r.k === 'ad_network' && <window.AdNetworkModule/>}
             {r.kind === 'mod' && r.k === 'bi' && <window.BiModule/>}
-            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','agent_revenue','settlement','wallet','risk','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
+            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','agent_revenue','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
               const sec = NAV.find(s => s.items.some(i => i.k === r.k));
               const it = sec?.items.find(i => i.k === r.k);
               if (!it) return null;
