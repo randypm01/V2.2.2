@@ -1288,7 +1288,7 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
 
   return (
     <div className="card">
-      <div style={{display:'flex',gap:0,padding:'0 16px',borderBottom:'1px solid var(--line)',alignItems:'center'}}>
+      <div className="self-app-tabs" style={{display:'flex',gap:0,padding:'0 16px',borderBottom:'1px solid var(--line)',alignItems:'center'}}>
         {tabs.map(t => (
           <div key={t.k} onClick={()=>setStateFilter(t.k)} style={{
             padding:'10px 14px',cursor:'pointer',fontSize:13,
@@ -1360,8 +1360,8 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
       </div>
 
       {detail && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.32)',zIndex:120}} onClick={()=>setDetail(null)}>
-          <div className="agent-detail" style={{position:'absolute',right:0,top:0,height:'100vh',width:680,boxShadow:'-8px 0 32px rgba(0,0,0,.12)'}} onClick={e=>e.stopPropagation()}>
+        <div className="self-app-detail-mask" style={{position:'fixed',inset:0,background:'rgba(0,0,0,.32)',zIndex:120}} onClick={()=>setDetail(null)}>
+          <div className="agent-detail self-app-detail-panel" style={{position:'absolute',right:0,top:0,height:'100vh',width:680,boxShadow:'-8px 0 32px rgba(0,0,0,.12)'}} onClick={e=>e.stopPropagation()}>
             <div className="agent-detail-head">
               <div style={{display:'flex',gap:14,alignItems:'center',flex:1}}>
                 <div className="agent-detail-avatar" style={{background:'#10b981'}}>AP</div>

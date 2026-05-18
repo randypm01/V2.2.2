@@ -2,9 +2,150 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.0.22',
+    ver: 'v3.0.36',
     date: '2026-05-18',
     current: true,
+    changes: [
+      { type: 'fix', text: '🐛 注册弹窗手机模式 内容超出屏幕高度后无法滑动 / 看不到「下一步」「提交」按钮 — 原因:.aglp-modal 设置了 min-height:100vh + overflow-y:auto 让 modal 内部滚动,但 iframe 内的手指滑动事件被父层 mobile-preview-overlay 截走,导致 modal 内部无法响应 touch scroll' },
+      { type: 'modify', text: '改为「整个 mask 滚动」方案 — .aglp-mask 加 overflow-y:auto + -webkit-overflow-scrolling:touch;.aglp-modal min-height:auto + height:auto + overflow:visible,让内容自然撑高 mask 容器,滚动条在 mask 而非 modal 内' },
+      { type: 'add', text: '.aglp-modal 底部 padding 增加到 80px,为底部按钮留出充足空间,避免被遮挡' },
+    ],
+  },
+  {
+    ver: 'v3.0.35',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 注册弹窗手机模式 输入框宽度异常右侧空一截 — 修法:① mask 改 align-items:flex-start + place-items:stretch 让 modal 顶到边;② .aglp-modal * { box-sizing:border-box } 兜底;③ .aglp-modal input/select/textarea 强制 width:100% !important + max-width:100% + min-width:0 — 不管 React 渲染时给了什么 inline width 都被压住' },
+      { type: 'fix', text: '🐛 同意条款复选框被全局 input 样式吃掉显示成细圆环 — 复选框强制 width/height:16px + appearance:auto + accent-color:#3b82f6,标准方框样式' },
+      { type: 'fix', text: '🐛 第 3 步「我同意条款 / 接收营销信息」两栏并排 — 加 [style*="grid-template-columns: 1fr 1fr"] 属性选择器强制 grid-template-columns:1fr 改成单栏堆叠(同步覆盖 React render 后的横线版本 grid-template-columns 和驼峰 gridTemplateColumns 两种写法)' },
+      { type: 'modify', text: 'contact-row grid 90/1fr/28 → 86/1fr/26 再省 6px;modal padding 18/16 → 16/14 让出更多内容空间' },
+    ],
+  },
+  {
+    ver: 'v3.0.34',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 注册弹窗手机模式仍然右侧被裁切 — 之前用 .aglp-modal[style*="maxWidth"] 选择器没匹配上,因为浏览器把 React 的 maxWidth 转成 style="max-width:680px"(连字符版本)' },
+      { type: 'modify', text: '改用 .aglp-modal[style] 通用属性选择器,任何带内联 style 的实例都强制 max-width:100vw + width:100% + box-sizing:border-box,彻底消除溢出' },
+      { type: 'add', text: '所有 input/select 加 box-sizing:border-box 防 padding 撑出容器' },
+    ],
+  },
+  {
+    ver: 'v3.0.33',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 着陆页手机模式 navbar — 按钮+汉堡未贴右,中间空了一大块。原因:.aglp-nav-inner 用 grid auto/1fr/auto,1fr 空列吃掉中间空间。改为 display:flex + justify-content:space-between + nav-actions margin-left:auto,真正贴右' },
+      { type: 'fix', text: '🐛 注册弹窗手机模式无响应式适配 — 用户名 / 联系方式 / 流量来源等输入框右侧溢出。原因:.aglp-modal 内联 maxWidth:680px + padding:32px + 联系方式 grid 130|1fr|32 这些固定值在 390px 视口下挤爆' },
+      { type: 'modify', text: '<768px:.aglp-mask padding 20 → 0;.aglp-modal 强制 max-width:100vw + width:100% + min-height:100vh + border-radius:0 + padding 18/16 → 弹窗变全屏 sheet(包含内联 maxWidth 的也覆盖)' },
+      { type: 'modify', text: '<768px:.contact-row grid 130|1fr|32 → 90|1fr|28;input min-width:0 防溢出;步骤指示器圆圈移除 minWidth' },
+    ],
+  },
+  {
+    ver: 'v3.0.32',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '专业代理后台 着陆页 navbar 手机模式调整 — ① 隐藏 BEANS 字标(只保留豆子图标);② Log In + Become a Partner 按钮从下拉菜单移回顶栏右侧(在汉堡左边可见,缩小到 padding 6/10、font 12px);③ 汉堡按钮自然在最右边' },
+      { type: 'modify', text: '下拉菜单内容精简为:4 个滚动锚点 + 语言切换(Log In / Become a Partner 移除,避免重复)' },
+      { type: 'modify', text: '.aglp-nav-inner 手机 padding 14/10 → 10/14;gap 32 → 8;.aglp-nav-actions gap 10 → 6' },
+    ],
+  },
+  {
+    ver: 'v3.0.31',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 商户后台 → 代理账户管理 → 自行申请代理 状态 tab 条(全部进度 / 待审核 / 要求补件 / 已补件待审核 / 拒绝 / 通过)手机模式下中文逐字换行成竖排 — 原因:tab 是 inline style 写的 flex 容器没声明 white-space,小屏宽度不够时浏览器允许中文字符级换行' },
+      { type: 'modify', text: 'modules/agents.jsx tab 外层加 className=self-app-tabs;styles.css 加 .self-app-tabs > div { white-space:nowrap; flex-shrink:0 } 强制单行;<768px 整条横向滚动 + 隐藏滚动条 + padding 收紧到 10×10' },
+    ],
+  },
+  {
+    ver: 'v3.0.30',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 商户后台 → 创建专业代理弹窗 手机模式输入框右侧显示不全 — Modal 内的 padding 太大(22px) + 步骤指示器固定宽度 80×3 + 输入框未强制 100% 宽,共同导致内容被裁切' },
+      { type: 'modify', text: '<768px:.modal 内层 padding 22 → 14;输入框 / select / textarea 强制 width:100% + min-width:0;.form-grid 子项 min-width:0(允许收缩);步骤指示器圆圈 minWidth 80 → 强制 0 + flex:0 1 auto;drawer-foot 加 flex-wrap' },
+      { type: 'modify', text: '专业代理后台着陆页 navbar 手机模式 — 恢复显示 beans 图标(原 display:none 改回 display:grid)+ 缩小到 34×34;BEANS wordmark 高度 22px' },
+      { type: 'modify', text: '专业代理后台着陆页 navbar 手机模式 — 隐藏顶部语言切换按钮(.aps-lang-wrap),把语言切换移到汉堡菜单底部(新增 .aglp-mobile-menu-lang 分组,与登录/注册按钮通过 divider 分割)' },
+      { type: 'add', text: 'assets/beans-logo.png 替换为用户最新提供的图(同名覆盖)' },
+    ],
+  },
+  {
+    ver: 'v3.0.29',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 PC 上的「📱手机预览模式」实际没显示响应式 — 之前只是把 body width 缩成 390px,但 @media (max-width: 767px) 是基于 viewport 宽度 而非 body 宽度,viewport 还是 1920,所有响应式规则不触发,显示出来仍是桌面布局' },
+      { type: 'feat', text: '🆕 改用 iframe 实现 — 真正给 viewport 一个 390px 的尺寸,所有 @media 查询正常触发,展示出与 iPhone 完全一致的响应式版面' },
+      { type: 'add', text: 'app.jsx App 顶部读 URL 参数 ?embed=mobile,若有则给 <html> 加 embed-mobile 类(隐藏顶部 PC/手机切换按钮避免递归)' },
+      { type: 'add', text: '当 viewMode==="mobile" 且非 embed 态:渲染 .mobile-preview-overlay → 中央 390×844 iPhone 外观框(深色背景 + 大圆角 + 顶部刘海 + 阴影)+ iframe src=同一页面&embed=mobile + 顶部胶囊提示 + 右上「退出预览」按钮' },
+      { type: 'remove', text: '废弃 force-mobile-view 旧实现(CSS 仍保留但不再使用,可后续清理)' },
+    ],
+  },
+  {
+    ver: 'v3.0.28',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '🆕 PC 上点📱可预览手机模式 — 在屏幕中央显示一个 390×844 的 iPhone 14 Pro 外观手机框,深色背景烘托,黑色边框 + 大圆角 + 阴影 + 顶部胶囊提示「📱 手机预览模式 · 390×844」' },
+      { type: 'modify', text: 'viewMode 增加第 3 个状态:auto / pc / mobile;按钮 📱 → mobile 模式;按钮 🖥️ → pc / auto(两者都高亮)' },
+      { type: 'modify', text: 'CSS html.force-mobile-view → 给 body 套 width:390px + margin:0 auto + box-shadow + border-radius + 黑色外框;html 改深灰背景 #1f2937' },
+      { type: 'fix', text: '修正按钮 active class 判断 JS 错误(三元链优先级问题)' },
+      { type: 'add', text: '说明:iPhone 实机切到 PC 模式 → 1440 宽横向滚动;PC 浏览器切到 📱 模式 → 中央 390 px 框预览手机版面' },
+    ],
+  },
+  {
+    ver: 'v3.0.27',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: 'PC / 手机 浏览模式切换按钮 从顶栏最右侧 移到 最左侧(在「PRD 规划」tab 左边)' },
+      { type: 'add', text: '🆕 后台 4 个 tab(PRD规划 / 商户后台 / 专业代理 / 网站前台)在小屏可横向滑动 — 新增 .backend-tabs-scroll 包装层,overflow-x:auto + 隐藏滚动条,iPhone 横屏不再挤' },
+      { type: 'fix', text: '🐛 PC 模式切换不生效 — 仅改 viewport meta 在 iOS Safari 上不可靠,且 iframe 预览环境完全无效。改成双重保险:① viewport meta 改成 width=1440,initial-scale=0.3 ② 给 <html> 加 force-pc-view 类,强制 html / body min-width:1440px + overflow-x:auto。iPhone 切到 PC 模式后会缩放显示桌面布局并允许横向滚动' },
+    ],
+  },
+  {
+    ver: 'v3.0.26',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '🆕 着陆页(网站前台 / 代理后台未登录)navbar 加汉堡菜单 — <980px 隐藏中间「Commissions / Tools / Dashboard / How it Works」+ 右侧 Log In / Become a Partner;改为右侧汉堡按钮,点击弹下拉菜单包含所有 6 个入口' },
+      { type: 'add', text: '.aglp-burger(36×36 圆角方块,activated 蓝色描边)+ .aglp-mobile-menu(右上角浮层,12px 圆角,带分割线分组)+ aglpMenuFade 动画' },
+      { type: 'modify', text: 'scrollTo 函数追加 setMobileMenu(false),点击菜单项自动收起;遮罩点击外部也关闭' },
+      { type: 'add', text: '🆕 顶部 backend-row 右侧加 PC / 手机 浏览模式切换 — 一对 26×22px 圆角按钮(手机 icon 默认 / PC icon 切换)' },
+      { type: 'add', text: '切换原理:动态改 <meta name=viewport> content — auto:width=device-width 响应式(默认);pc:width=1440 强制桌面布局,手机用户横向滚动查看' },
+      { type: 'add', text: '状态持久化到 localStorage.APS_VIEW_MODE,刷新后保留' },
+      { type: 'add', text: 'ui.jsx 新增 monitor / smartphone 两个图标' },
+    ],
+  },
+  {
+    ver: 'v3.0.25',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 代理后台顶栏「语言切换按钮」内的「中」字 + globe icon 不居中 — line-height 默认值导致 CJK 文字基线偏移' },
+      { type: 'modify', text: '.aps-lang-btn 加 line-height:1;内部 svg display:block + flex-shrink:0;span 加 line-height:1 + display:inline-block,让 icon / 文字 / chev 三者在同一基线' },
+      { type: 'remove', text: '关于「我的分享 Code 与链接」页手机白屏 — 当前代码看不出明显抛错点。请提供:① iPhone 上具体白屏的截图;② 如能在 Safari 上长按「页面 → 检查器」看到 console 错误请截图给我。我会针对性修复' },
+    ],
+  },
+  {
+    ver: 'v3.0.24',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '专业代理后台「网站前台」着陆页 navbar 品牌区改造 — 蓝色「MM」方块 logo → 黄色 beans 图标(assets/beans-logo.png);文字「Partners-MM」→ BEANS wordmark 图片(assets/beans-wordmark.png)' },
+      { type: 'add', text: 'assets/ 新增 beans-logo.png + beans-wordmark.png(从 uploads 复制)' },
+      { type: 'modify', text: '.aglp-brand-mark 从渐变蓝方块 + 文字 改为 38×38 图片容器(透明背景);.aglp-brand-wordmark 新增,高度 24px 自适应宽度' },
+      { type: 'add', text: '<768px 手机模式 隐藏 logo 图标(.aglp-brand-mark display:none),只保留 BEANS wordmark 文字图(高度压到 22px)' },
+      { type: 'fix', text: '编辑过程中遗留的 -spacing:0.5px; 垃圾代码已清除' },
+    ],
+  },
+  {
+    ver: 'v3.0.23',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '顶栏右上角文案「v2.6.0 · xxx视角」整段删除(app.jsx 第 192-198 行 backend-meta div 移除) — 与左侧后台版本号「v1.0」冲突,且 v2.6.0 也已过期' },
+      { type: 'fix', text: '🐛 「自行申请代理 → 查看&审核」抽屉响应式失效 — 该抽屉是手写 inline style(width:680px),没走 .drawer 类,Phase 5 的样式覆盖不到导致 iPhone 上左半部分被截掉只剩右半' },
+      { type: 'fix', text: 'modules/agents.jsx 第 1362-1364 行给外层加 className=self-app-detail-mask,内层加 self-app-detail-panel(原 className 仍保留 agent-detail)' },
+      { type: 'add', text: 'styles.css 新增 .self-app-detail-panel 响应式 — <1024px 收到 560px;<768px 强制 100% 全屏 + 底部按钮换行 + .app-act-btn flex:1 等宽' },
+      { type: 'add', text: '用 !important 提权,因为内联 width:680 优先级高于普通 CSS' },
+    ],
+  },
+  {
+    ver: 'v3.0.22',
+    date: '2026-05-18',
     changes: [
       { type: 'fix', text: '🐛 关键修复 — index.html 的 viewport meta 由 width=1440 改为 width=device-width, initial-scale=1。此前 Phase 1-5 写的所有 @media (max-width: …) 全部失效,因为浏览器被强制按 1440 渲染再缩小到屏宽,媒体查询永远不触发' },
       { type: 'fix', text: '现象:netlify 部署后 iPhone 打开是「缩小到屏宽的桌面版」而非响应式版面(用户上传截图确认)' },

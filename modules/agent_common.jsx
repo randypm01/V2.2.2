@@ -178,7 +178,9 @@ function ensureLangSwitchStyle() {
   s.id = 'aps-lang-style';
   s.textContent = `
 .aps-lang-wrap { position:relative; display:inline-block; }
-.aps-lang-btn { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:99px; background:#fff; border:1px solid #e5e7eb; color:#1e293b; font-size:13px; font-weight:600; cursor:pointer; transition:.15s; font-family:inherit; }
+.aps-lang-btn { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:99px; background:#fff; border:1px solid #e5e7eb; color:#1e293b; font-size:13px; font-weight:600; cursor:pointer; transition:.15s; font-family:inherit; line-height:1; }
+.aps-lang-btn > svg { display:block; flex-shrink:0; }
+.aps-lang-btn > span { display:inline-block; line-height:1; }
 .aps-lang-btn:hover { border-color:#3b82f6; color:#1e40af; background:#f8fafc; }
 .aps-lang-btn.dark { background:rgba(255,255,255,.15); border-color:rgba(255,255,255,.25); color:#fff; backdrop-filter:blur(4px); }
 .aps-lang-btn.dark:hover { background:rgba(255,255,255,.25); border-color:rgba(255,255,255,.4); color:#fff; }

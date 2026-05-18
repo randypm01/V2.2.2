@@ -2,6 +2,12 @@
 const { useState, useEffect } = React;
 
 function App() {
+  // v3.0.29 嵌入预览模式 — 通过 ?embed=mobile URL 参数标记,被外层 iframe 加载
+  const isEmbed = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === 'mobile';
+  React.useEffect(() => {
+    if (isEmbed) document.documentElement.classList.add('embed-mobile');
+  }, [isEmbed]);
+
   // v3.0.8 订阅全局语言状态，使 App 在切语言时重新渲染
   const [_aglang] = window.useAgentLang ? window.useAgentLang() : ['zh'];
   const T = (k, fb) => window.t ? window.t(k, fb) : fb;
@@ -22,6 +28,22 @@ function App() {
   const [agentUserMenuOpen, setAgentUserMenuOpen] = useState(false);
   // v3.0.16 响应式 — 侧栏抽屉开关(仅低于 1024px 生效;桌面忘取此 state)
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // v3.0.26 PC / 手机 浏览模式切换(动态改 viewport meta)
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('APS_VIEW_MODE') || 'auto');
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    const html = document.documentElement;
+    html.classList.remove('force-pc-view', 'force-mobile-view');
+    if (viewMode === 'pc') {
+      // iPhone 上切到 PC:强制 1440px 横向滚动
+      if (meta) meta.setAttribute('content', 'width=1440, initial-scale=0.3');
+      html.classList.add('force-pc-view');
+    } else {
+      // auto / mobile:跟随设备(mobile 通过 iframe 实现,详见下方 mobile-preview-frame 渲染)
+      if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+    }
+    localStorage.setItem('APS_VIEW_MODE', viewMode);
+  }, [viewMode]);
   const route = backend === 'prd' ? prdRoute
               : backend === 'agent' ? agentRoute
               : backend === 'frontend' ? frontendRoute
@@ -169,10 +191,45 @@ function App() {
 
   return (
     <div className={'app ' + (sidebarOpen ? 'sidebar-open' : '')}>
+      {/* v3.0.29 手机预览模式 — 用 iframe 嵌入同一页面 + ?embed=mobile,iframe 宽 390,获得真实手机 viewport */}
+      {viewMode === 'mobile' && !isEmbed && (
+        <div className="mobile-preview-overlay">
+          <div className="mpo-frame">
+            <div className="mpo-notch"/>
+            <iframe
+              className="mpo-iframe"
+              src={(window.location.pathname || '/') + '?embed=mobile'}
+              title="Mobile Preview"
+            />
+          </div>
+          <div className="mpo-hint">📱 手机预览模式 · 390×844 · 真实响应式</div>
+          <button className="mpo-close" onClick={() => setViewMode('auto')} title="退出手机预览">
+            <Icon name="x" size={16}/> 退出预览
+          </button>
+        </div>
+      )}
       {/* v3.0.16 响应式侧栏遮罩 — 仅在 sidebar-open 且小屏 CSS 激活时可见 */}
       <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)}></div>
       {/* ========= 第一行:后台分页 ========= */}
       <div className="backend-row">
+        {/* v3.0.27 PC / 手机 浏览模式切换 — 移到最左侧 */}
+        <div className="view-mode-toggle" title="切换 PC / 手机 浏览模式">
+          <button
+            className={'vmt-btn ' + (viewMode === 'mobile' ? 'active' : '')}
+            onClick={() => setViewMode('mobile')}
+            aria-label="手机预览模式"
+          >
+            <Icon name="smartphone" size={13}/>
+          </button>
+          <button
+            className={'vmt-btn ' + ((viewMode === 'pc' || viewMode === 'auto') ? 'active' : '')}
+            onClick={() => setViewMode('pc')}
+            aria-label="PC 模式"
+          >
+            <Icon name="monitor" size={13}/>
+          </button>
+        </div>
+        <div className="backend-tabs-scroll">
         <div className={'backend-tab ' + (backend==='prd'?'active':'')} onClick={()=>setBackend('prd')}>
           <Icon name="flag" size={14}/>
           <span>PRD 规划</span>
@@ -189,13 +246,8 @@ function App() {
           <Icon name="globe" size={14}/>
           <span>网站前台</span>
         </div>
+        </div>
         <div style={{flex:1}}/>
-        <div className="backend-meta">v2.6.0 · {
-          backend==='merchant'?'商户视角 · 管理专业代理':
-          backend==='agent'?'代理视角 · 代理自助':
-          backend==='frontend'?'玩家视角 · 申请成为代理':
-          '产品规划 · 阶段路线图'
-        }</div>
       </div>
 
       {/* ========= 网站前台:全宽渲染,跳过侧栏与商户 chrome ========= */}

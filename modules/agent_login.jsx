@@ -56,10 +56,101 @@ function ensureLandingStyle() {
 .aglp-nav { position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92); backdrop-filter:blur(10px); border-bottom:1px solid #e5e7eb; }
 .aglp-nav-inner { max-width:none; margin:0; padding:14px 40px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:32px; }
 .aglp-brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; }
-.aglp-brand-mark { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#3b82f6,#1e40af); color:#fff; display:grid; place-items:center; font-weight:800; font-size:13px; letter-spacing:0.5px; }
+.aglp-brand-mark { width:38px; height:38px; border-radius:0; background:transparent; display:grid; place-items:center; }
+.aglp-brand-mark img { width:100%; height:100%; object-fit:contain; display:block; }
+.aglp-brand-wordmark { height:24px; width:auto; display:block; }
+/* v3.0.32 手机 navbar: 隐藏 BEANS 文字logo / 保留 Log In + Become a Partner 在顶栏 / 汉堡到右边 / 语言切换仍在下拉 */
+@media (max-width: 767px) {
+  .aglp-brand-mark { display:grid !important; }
+  .aglp-brand-mark { width:34px; height:34px; }
+  .aglp-brand-wordmark { display:none !important; }
+  /* 顶栏隐藏语言切换(进菜单);Log In + Become a Partner 保留在顶栏,缩小 */
+  .aglp-nav-actions > .aps-lang-wrap { display: none !important; }
+  .aglp-nav-actions .aglp-btn {
+    display: inline-flex !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+  /* v3.0.33 顶栏紧凑:取消 grid 中间 1fr 留空(改成 flex justify-content space-between),buttons 真正贴右 */
+  .aglp-nav-inner {
+    display: flex !important;
+    justify-content: space-between !important;
+    padding: 10px 12px !important;
+    gap: 0 !important;
+  }
+  .aglp-nav-links { display:none !important; }
+  .aglp-nav-actions { gap: 6px !important; margin-left: auto; }
+  .aglp-burger { width:34px; height:34px; margin-left: 4px; }
+}
+
+/* v3.0.34 注册 / 登录弹窗 手机模式 — 强制全屏 sheet,覆盖内联 max-width:680px / 480px */
+@media (max-width: 767px) {
+  /* v3.0.36 让整个 mask 滚动,而不是 modal 内部滚动 — 修复 iframe 内手指滑不动 */
+  .aglp-mask {
+    padding: 0 !important;
+    place-items: stretch !important;
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .aglp-modal,
+  .aglp-modal[style] {
+    max-width: 100vw !important;
+    width: 100vw !important;
+    min-height: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    padding: 16px 14px 80px !important;  /* 底部留 80 给 fixed footer 不挡 */
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+  /* v3.0.35 弹窗内所有元素强制 box-sizing 兜底,所有 input/select/textarea 强制 100% 宽度 */
+  .aglp-modal * { box-sizing: border-box !important; }
+  .aglp-modal input,
+  .aglp-modal select,
+  .aglp-modal textarea {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  /* 联系方式 grid: 130|1fr|32 → 86|1fr|26 */
+  .aglp-modal .contact-row {
+    grid-template-columns: 86px 1fr 26px !important;
+    gap: 6px !important;
+  }
+  /* 步骤指示器圆圈不再固定宽度 */
+  .aglp-modal > div[style*="text-align:center"] > div[style*="display:flex"] > div { min-width: 0 !important; }
+
+  /* v3.0.35 复选框 — 强制 16×16 标准方框,避免被 input 全局样式吃掉 */
+  .aglp-modal input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    appearance: auto !important;
+    -webkit-appearance: checkbox !important;
+    flex-shrink: 0;
+    accent-color: #3b82f6;
+  }
+
+  /* v3.0.35 step3 同意条款两栏 1fr 1fr → 单栏堆叠 */
+  .aglp-modal div[style*="grid-template-columns: 1fr 1fr"],
+  .aglp-modal div[style*="grid-template-columns:1fr 1fr"],
+  .aglp-modal div[style*="gridTemplateColumns:'1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+}
 .aglp-nav-links { display:flex; gap:32px; justify-content:center; }
 .aglp-nav-link { color:#475569; font-size:14px; cursor:pointer; padding:6px 0; border-bottom:2px solid transparent; transition:.15s; }
 .aglp-nav-link:hover { color:#1e40af; border-bottom-color:#3b82f6; }
+/* v3.0.26 手机汉堡按钮 + 下拉菜单 */
+.aglp-burger { display:none; appearance:none; border:1px solid #e2e8f0; background:#fff; width:36px; height:36px; border-radius:8px; align-items:center; justify-content:center; cursor:pointer; color:#1e293b; transition:.15s; padding:0; }
+.aglp-burger:hover { border-color:#3b82f6; color:#1e40af; }
+.aglp-burger.open { background:#eff6ff; border-color:#3b82f6; color:#1e40af; }
+.aglp-mobile-menu { position:absolute; top:100%; right:16px; margin-top:8px; min-width:200px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 16px 40px -8px rgba(15,23,42,.2); padding:8px; z-index:100; animation:aglpMenuFade .15s ease; }
+@keyframes aglpMenuFade { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.aglp-mobile-menu-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; color:#1e293b; font-size:14px; font-weight:500; cursor:pointer; transition:.1s; }
+.aglp-mobile-menu-item:hover { background:#f1f5f9; color:#1e40af; }
+.aglp-mobile-menu-divider { height:1px; background:#e5e7eb; margin:6px 4px; }
+.aglp-mobile-menu-lang { padding:6px 10px; display:flex; justify-content:center; }
 .aglp-nav-actions { display:flex; gap:10px; align-items:center; }
 .aglp-btn { padding:9px 18px; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; border:1px solid transparent; transition:.15s; display:inline-flex; align-items:center; gap:6px; }
 .aglp-btn.ghost { background:transparent; border-color:#cbd5e1; color:#1e293b; }
@@ -236,6 +327,9 @@ function ensureLandingStyle() {
   .aglp-steps { grid-template-columns:repeat(2,1fr); }
   .aglp-dash { grid-template-columns:1fr; }
   .aglp-nav-links { display:none; }
+  .aglp-burger { display:inline-flex; }
+  /* 手机模式下只保留 语言切换 + 汉堡菜单 — 隐藏 Log In / Become a Partner 按钮(进菜单) */
+  .aglp-nav-actions .aglp-btn { display:none; }
   .aglp-section { padding:56px 0; }
   .aglp-section-title { font-size:28px; }
 }
@@ -932,6 +1026,7 @@ window.AgentLoginModule = function ({ onLogin }) {
   const { Icon } = window.UI;
   const [showLogin, setShowLogin] = React.useState(false);
   const [showRegister, setShowRegister] = React.useState(false);
+  const [mobileMenu, setMobileMenu] = React.useState(false);
   const [lang, setLang] = window.useAgentLang();
   const t = LANDING_I18N[lang];
 
@@ -940,6 +1035,7 @@ window.AgentLoginModule = function ({ onLogin }) {
   const scrollTo = (id) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    setMobileMenu(false);
   };
 
   return (
@@ -948,8 +1044,8 @@ window.AgentLoginModule = function ({ onLogin }) {
       <header className="aglp-nav">
         <div className="aglp-nav-inner">
           <div className="aglp-brand">
-            <div className="aglp-brand-mark">MM</div>
-            <span>Partners-MM</span>
+            <div className="aglp-brand-mark"><img src="assets/beans-logo.png" alt="BEANS"/></div>
+            <img className="aglp-brand-wordmark" src="assets/beans-wordmark.png" alt="BEANS"/>
           </div>
           <nav className="aglp-nav-links">
             <span className="aglp-nav-link" onClick={() => scrollTo('commissions')}>{t.nav.fees}</span>
@@ -961,7 +1057,26 @@ window.AgentLoginModule = function ({ onLogin }) {
             <window.AgentLangSwitch/>
             <button className="aglp-btn ghost" onClick={() => setShowLogin(true)}>{t.nav.login}</button>
             <button className="aglp-btn gold" onClick={() => setShowRegister(true)}>{t.nav.join}</button>
+            <button className={'aglp-burger ' + (mobileMenu ? 'open' : '')} onClick={() => setMobileMenu(v => !v)} aria-label="Menu">
+              <Icon name={mobileMenu ? 'x' : 'menu'} size={18}/>
+            </button>
           </div>
+          {mobileMenu && (
+            <>
+              <div style={{position:'fixed', inset:0, zIndex:90}} onClick={() => setMobileMenu(false)}/>
+              <div className="aglp-mobile-menu">
+                <div className="aglp-mobile-menu-item" onClick={() => scrollTo('commissions')}>{t.nav.fees}</div>
+                <div className="aglp-mobile-menu-item" onClick={() => scrollTo('tools')}>{t.nav.tools}</div>
+                <div className="aglp-mobile-menu-item" onClick={() => scrollTo('dashboard')}>{t.nav.dashboard}</div>
+                <div className="aglp-mobile-menu-item" onClick={() => scrollTo('how-it-works')}>{t.nav.how}</div>
+                <div className="aglp-mobile-menu-divider"/>
+                {/* v3.0.32 语言切换 (Log In / Become a Partner 已在顶栏可见,不再重复) */}
+                <div className="aglp-mobile-menu-lang" onClick={(e) => e.stopPropagation()}>
+                  <window.AgentLangSwitch/>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
