@@ -309,20 +309,10 @@ function FrontendModule() {
               <Icon name="phone" size={14} /> {t.btn_talk}
             </button>
             <button className="fe-recruit-btn primary" onClick={() => {
-              // v2.3.17 兜底:从 store 反查当前用户最新申请记录,避免 userStates 槽未写入时误开申请表单
-              let st = applyState;
-              let appId = submittedAppId;
-              // v2.3.20 每次点击都从 store 重拉最新状态,避免缓存的 reviewing 覆盖商户后台已改的 supplement/failed/passed
-              if (window.APS_APPS_STORE && currentUserId) {
-                const list = window.APS_APPS_STORE.list || [];
-                const rec = (appId && list.find(a => a.id === appId)) || list.find(a => a.userId === currentUserId);
-                if (rec) {
-                  st = rec.state || st || 'reviewing';
-                  appId = rec.id;
-                  patchUserState({ applyState: st, submittedAppId: appId, failReason: rec.failReason || '' });
-                }
+              // v3.0.70 申请代理按钮 → 直接跳到「专业代理后台」分页,删除原 用户ID 反查申请状态 / 弹申请表单 流程
+              if (window.APS_SWITCH_BACKEND) {
+                window.APS_SWITCH_BACKEND('agent');
               }
-              if (st && st !== 'idle') { setShowSuccess(true); } else { setShowApply(true); }
             }}>
               {t.btn_apply} <Icon name="chevronRight" size={14} />
             </button>

@@ -40,7 +40,8 @@ function App() {
       html.classList.add('force-pc-view');
     } else {
       // auto / mobile:跟随设备(mobile 通过 iframe 实现,详见下方 mobile-preview-frame 渲染)
-      if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+      // maximum-scale=1 + user-scalable=no 防止 iOS Safari 在 input 聚焦时自动放大且不复原
+      if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
     }
     localStorage.setItem('APS_VIEW_MODE', viewMode);
   }, [viewMode]);
@@ -59,6 +60,8 @@ function App() {
 
   // v2.4.43 暴露到 window,供创建代理弹窗「分润管理」链接跳转
   React.useEffect(() => { window.goRoute = setRoute; }, [backend]);
+  // v3.0.70 暴露 setBackend 给 frontend.jsx 的「申请代理」按钮:点击直接跳到代理后台分页
+  React.useEffect(() => { window.APS_SWITCH_BACKEND = setBackend; }, []);
 
   const [openSections, setOpenSections] = useState({
     '运营': true, '收益': true, '报表': true,

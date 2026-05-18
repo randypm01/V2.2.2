@@ -2,9 +2,391 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.0.36',
+    ver: 'v3.0.78',
     date: '2026-05-18',
     current: true,
+    changes: [
+      { type: 'fix', text: 'AC100005 帐户状态仍显「已启用」根因再修复 — v3.0.75 把 localStorage 清理放在 ensureMerchantAgentsStore 初始化代码块内,只第一次调用时执行;后续 AgentsModule 重新挂载时 flip() 仍会用旧的 set 状态把 pending → active' },
+      { type: 'modify', text: '把 AC100005 的 localStorage 清理移到函数顶部、每次调用都执行 — 切换 tab、刷新、重新 mount 都会保证 set 内没有 AC100005,flip() 跳过' },
+    ],
+  },
+  {
+    ver: 'v3.0.77',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '自行申请代理列表补 AC100006/AC100007/AC100008 三条 state="passed" 记录,与「已创建代理」AC範例6/7/8 数据一致(同一申请审核通过后衍生);筛选「通过」可看到 AC100005~AC100008 共 4 条' },
+    ],
+  },
+  {
+    ver: 'v3.0.76',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '已创建代理列表 删除「代理类型」列 + 「风险等级」列;同时删除工具栏的「全部代理类型」「全部风险等级」筛选下拉' },
+      { type: 'remove', text: '自行申请代理列表 删除「代理类型」列 + 「用户ID」列;同时删除工具栏的「全部代理类型」筛选下拉' },
+      { type: 'modify', text: '空状态 colSpan 由 9 改为 7;表格头部/正文同步精简' },
+    ],
+  },
+  {
+    ver: 'v3.0.75',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: 'AC100005 初始账户状态错显为「已启用」 — 在 ACSamples 列表里显式加入 AC100005 一条 status:"pending"(未启用)的样本;v3.0.65 自动同步逻辑会因 id 重复 dedup 跳过,以 ACSamples 的状态为准' },
+    ],
+  },
+  {
+    ver: 'v3.0.74',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '帐户状态为「已停用」的代理 — 登入专业代理后台时弹「帐户已停用」红色提示弹窗 + 显示停用原因 + 代理ID/登录账号,点「我知道了」关闭弹窗,不允许进入后台' },
+      { type: 'modify', text: 'LoginModal handleLogin — 匹配到正式账户后,检查 APS_MERCHANT_AGENTS_STORE 中对应 agent 的 status,若 status==="suspended" 则 setSuspendedAcc 弹提示,不再调 onLogin' },
+      { type: 'add', text: '停用原因优先读 agent._appData.suspendReason,缺省「账户已被停用」' },
+    ],
+  },
+  {
+    ver: 'v3.0.73',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '创建专业代理弹窗 手机国码 +91 显示异常 — 之前 contact-phone-input 没有 CSS class 定义,导致 dial 和 input 各有独立边框;改为 inline flex 容器 + 共用外层 border,内部 input border:0 + radius:0,visual 合并成一个胶囊' },
+    ],
+  },
+  {
+    ver: 'v3.0.72',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '已创建代理工具栏 删除「批量导入」「导出」按钮' },
+      { type: 'remove', text: '自行申请代理工具栏 删除「导出」按钮(保留「全局配置」和「说明」)' },
+    ],
+  },
+  {
+    ver: 'v3.0.71',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '商户后台「已创建代理」工具栏删除「创建专业代理」按钮' },
+      { type: 'remove', text: '删除商户主动创建专业代理对应的 CreateAgentModal 调用块(含 AG ID 自动生成 / 登录账户 push 等约 55 行代码);CreateAgentModal 组件代码本身保留,继续为「自行申请代理 → 审核通过 → 复核创建」流程服务' },
+      { type: 'modify', text: 'showCreate state 保留(惰性引用),不再有任何入口触发' },
+    ],
+  },
+  {
+    ver: 'v3.0.70',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '网站前台「申请代理」按钮删除原流程(用户ID 反查申请状态 / 弹申请进度弹窗 / 弹申请表单)' },
+      { type: 'modify', text: '改为直接调用 window.APS_SWITCH_BACKEND("agent") 跳转到「专业代理后台」分页,后续注册流程统一在专业代理后台 Become a Partner 完成' },
+      { type: 'add', text: 'app.jsx 暴露 setBackend 到 window.APS_SWITCH_BACKEND 供 frontend.jsx 调用' },
+      { type: 'modify', text: '保留 申请弹窗 / 申请进度弹窗 等组件代码不动,但 申请代理 按钮不再触发(仅可能被旧路径调用,实际已无入口)' },
+    ],
+  },
+  {
+    ver: 'v3.0.69',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '已创建代理列表删除 AG100001~AG100004 (商户创建代理) + AP200006 (用户自行申请) 共 5 条示例,只保留 AC 系列代理后台自行申请示例' },
+      { type: 'modify', text: 'ensureMerchantAgentsStore initial 数组由 D.agents.slice(0,5) 改为 D.agents.slice(0,0)(空数组),不再种入这 5 条初始数据' },
+    ],
+  },
+  {
+    ver: 'v3.0.68',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '已创建代理说明弹窗 — 移除商户创建代理(AG1xxxxx)及用户自行申请(AP2xxxxx)相关内容,仅保留代理后台自行申请(AC1xxxxx)' },
+      { type: 'modify', text: '代理ID 编号规则:删除 AG1xxxxx 行,只剩 AC1xxxxx;AC1xxxxx 描述末尾去掉「与 AG 不冲突」字样' },
+      { type: 'modify', text: '专业代理账户·创建流程:删除「商户直接创建 → 未启用」「用户自行申请 → 管理员手动创建账户 → 未启用」两行,只保留「代理后台自行申请 → 商户审核·通过 → 自动创建账户 → 未启用」' },
+      { type: 'modify', text: '操作记录·规则(已创建代理 tab):「创建专业代理帐户」「首次登入」描述只保留代理后台申请路径;「日志继承」条目只提代理后台申请,不再写「商户创建」「AP」' },
+      { type: 'modify', text: '风险等级 / 账户状态 / 账户状态·流转关系 这 3 个章节内容本身是通用的,无需修改' },
+    ],
+  },
+  {
+    ver: 'v3.0.67',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '已创建代理说明弹窗 — 补充代理后台申请(AC1xxxxx)相关内容' },
+      { type: 'add', text: '专业代理账户·创建流程:新增「代理后台自行申请 → 商户审核通过 → 自动创建账户(用注册账号密码)→ 未启用」行;原「自行申请代理」绿色 chip 拆分为「用户自行申请」绿色 + 「代理后台自行申请」黄色两行' },
+      { type: 'add', text: '操作记录·规则(已创建代理 tab):创建专业代理帐户/首次登入说明 增加代理后台自行申请的特殊路径(自动创建账户、可直接用注册密码登入激活);最后一条注明继承日志含 AP 和 AC 两种来源' },
+      { type: 'modify', text: '代理ID 编号规则 / 风险等级 / 账户状态 / 账户状态·流转关系 — 已存在的章节内容与代理后台申请兼容,无需修改' },
+    ],
+  },
+  {
+    ver: 'v3.0.66',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '已创建代理列表新增 AC100006 / AC100007 / AC100008 三条代理后台自行申请已通过示例,分别覆盖 已启用 / 已冻结 / 已停用 三种账户状态' },
+      { type: 'add', text: '每条示例自带 _appData(申请资料) + _logs(submit/pass/create/login + freeze/suspend 的完整时间线) + 玩家数 + 佣金等真实业务数据;同时同步到 APS_AGENT_ACCOUNTS 可用对应账号登入' },
+      { type: 'modify', text: 'AC範例6 (rajeshmedia / Test@1234) - 已启用 142 玩家 $18.5k 佣金;AC範例7 (meena_promo / Test@1234) - 已冻结 + 冻结原因;AC範例8 (fakeaff_x / Test@1234) - 已停用 + 停用原因' },
+    ],
+  },
+  {
+    ver: 'v3.0.65',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '🆕 代理后台自行申请 通过审核后 自动建立专业代理后台登录账户 + 推入「已创建代理」列表;用户可直接用注册的账号密码登入,不再弹「申请已通过」状态弹窗' },
+      { type: 'modify', text: 'LoginModal handleLogin — 匹配到 _channel=agentportal & state=passed 的申请时,自动 push 到 APS_AGENT_ACCOUNTS 并 onLogin 进入后台' },
+      { type: 'modify', text: 'ensureMerchantAgentsStore 初始化 — 启动时扫描 APS_APPS_STORE 里 state=passed 的 AC 申请,自动 unshift 一条对应代理到「已创建代理」列表(含完整 _logs / _appData / _formSnapshot),同时补到 APS_AGENT_ACCOUNTS' },
+      { type: 'add', text: 'AC100005(passed 示例)现在可直接用 arjunaff / Test@1234 登入代理后台,无中间弹窗;同时商户后台「已创建代理」第一条会看到 AC100005' },
+    ],
+  },
+  {
+    ver: 'v3.0.64',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '自行申请代理说明弹窗 — 移除所有与网站前台用户自行申请(AP2xxxxx)相关的内容,仅保留代理后台自行申请(AC1xxxxx)' },
+      { type: 'modify', text: '代理ID 编号规则:只保留 AG1xxxxx(商户创建)+ AC1xxxxx(代理后台申请)两行' },
+      { type: 'modify', text: '申请进度·流程关系:首行只显示「代理后台」chip,不再并列「网站前台/代理后台」' },
+      { type: 'modify', text: '操作记录·规则:「申请专业代理」说明只提专业代理后台 Become a Partner 入口' },
+    ],
+  },
+  {
+    ver: 'v3.0.63',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '自行申请代理 → 说明弹窗 4 个章节补充「专业代理后台申请(AC1xxxxx)」说明' },
+      { type: 'add', text: '代理ID 编号规则 — 新增 AC1xxxxx 行(黄色 chip),来源:专业代理后台 Become a Partner 注册' },
+      { type: 'modify', text: '申请进度·流程关系 — 首行「用户提交」改为「申请提交」+ 两个 chip(网站前台/代理后台)并列展示双渠道入口' },
+      { type: 'modify', text: '操作记录·规则 — 「申请专业代理」项说明扩展为同时覆盖网站前台 + 代理后台;新增条目说明「代理后台申请的用户可用注册账号密码登入查看进度/立即补件」' },
+      { type: 'modify', text: '申请进度 5 种状态(待审核/要求补件/已补件待审核/拒绝/通过)本身不变,两种渠道共用同一状态机' },
+    ],
+  },
+  {
+    ver: 'v3.0.62',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '自行申请代理示例数据 — 删除 AP200001~AP200005 共 5 条网站前台来源的示例,仅保留 AC100001~AC100005 五条专业代理后台来源' },
+    ],
+  },
+  {
+    ver: 'v3.0.61',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '自行申请代理示例数据 — 新增 AC100002~AC100005 共 4 条专业代理后台申请示例,覆盖 5 种状态:AC100001 reviewing / AC100002 supplement(含补件说明) / AC100003 supplemented / AC100004 failed(含拒绝原因) / AC100005 passed' },
+      { type: 'modify', text: '5 条 AC 示例各带 loginName + Test@1234 密码,可直接用对应账号登入测试 5 种状态弹窗' },
+      { type: 'modify', text: 'AC 来源不属于既有玩家,userId 留空(后续由商户审核通过后分配)' },
+    ],
+  },
+  {
+    ver: 'v3.0.60',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '自行申请代理「查看&审核」基本资料 — 新增「登入帐号」(detail.loginName)和「登入密码」(掩码 ••••••••);未填则显示「—」' },
+    ],
+  },
+  {
+    ver: 'v3.0.59',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '已创建代理详情(查看&配置)— 头像 / 联系方式 / 流量来源 / 收款方式 全部用申请时填的真实数据,而不是硬编码示例' },
+      { type: 'modify', text: 'AgentDetail 头像 — 代理后台自行申请(_channel=agentportal)显示「AC」+ 黄色 #f59e0b;用户自行申请显示「AP」+ 绿色;商户创建显示「AG」+ 蓝色' },
+      { type: 'modify', text: 'AgentDetail 联系方式表 — 删除硬编码 123@gmail.com / +91 1234567890 / @123ksjdla;改为读 agent._appData._formSnapshot.contacts(优先)→ agent._appData.contacts(后备)→ 「—」占位;手机类型自动加 dial 前缀' },
+      { type: 'modify', text: '_defaultTraffic — 优先用 agent._appData._formSnapshot.trafficUrls(申请时填的)' },
+      { type: 'modify', text: '_defaultPayment — 优先用 _formSnapshot.upiId / holder;没填则为空(不再自动拼 user@paytm)' },
+      { type: 'add', text: 'APS_addApplication 创建申请时即生成第一条 submit 日志(by: 用户:loginName / 用户:userId 区分渠道);通过审核后 inheritedLogs 自动包含完整审核历史,「已创建代理」操作记录不再只剩单条「创建专业代理帐户」' },
+      { type: 'modify', text: 'onCreateAgent _appData 增加 _formSnapshot 字段(整张申请快照),供 AgentDetail 各 tab 读取' },
+    ],
+  },
+  {
+    ver: 'v3.0.58',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '自行申请代理「查看&审核 → 收款方式」 UPI ID / 收款人姓名 — 之前是用 loginName+@paytm / detail.name 自动生成,导致用户没填也显示假数据;改为只读 _formSnapshot.upiId / _formSnapshot.holder,没填则显示「—」' },
+    ],
+  },
+  {
+    ver: 'v3.0.57',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 商户后台「自行申请代理 → 查看&审核 / 通过 → 创建代理」联系方式显示硬编码示例(123@gmail.com / +91 1234567890 / @123ksjdla)而不是用户实际填写的内容' },
+      { type: 'modify', text: 'CreateAgentModal prefill 联系方式 — 优先用 prefill._formSnapshot.contacts 回填(Mobile → 手机);否则根据 prefill.contact(单字段)判断 email/phone 重建;再否则用空占位行' },
+      { type: 'modify', text: 'SelfApplications 查看&审核抽屉 联系方式表 — 改为遍历 detail._formSnapshot.contacts 渲染(手机类型加 dial 前缀);无快照时显示「—」占位' },
+    ],
+  },
+  {
+    ver: 'v3.0.56',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '补件重提交成功后 step4 成功页 — 不再显示「很高兴你加入我们/账户正在审查」(那是首次注册文案);改为橙色 chevron 主题「已补件,等待复核」+ 文案描述 + 「我知道了」按钮' },
+      { type: 'add', text: '通过 prefill.appId 判断是否补件流程;无则显示原首次注册成功页(完全向后兼容)' },
+    ],
+  },
+  {
+    ver: 'v3.0.55',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛「立即补件」按钮打开的注册弹窗 表单空白未回填 — 原因:示例申请数据(AC100001 等)没有 _formSnapshot 完整快照,prefill 拿不到东西。改:onSupplement 时若 _formSnapshot 不存在,用 app 字段(name/contact/channels/password)重建 fallback formSnapshot(自动判断 Email/手机、按「·」拆 trafficUrls、回填密码、勾选同意条款)' },
+    ],
+  },
+  {
+    ver: 'v3.0.54',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '申请进度弹窗 — 补件状态(supplement)下移除 tip 文案「请根据下方说明补充材料,然后通过原注册入口重新提交。」' },
+      { type: 'modify', text: '申请进度弹窗 — 补件状态(supplement)按钮文案 由「我知道了」改为「立即补件」,点击后关闭进度弹窗 + 登入弹窗,直接打开注册弹窗并回填原表单数据' },
+      { type: 'add', text: 'ApplicationProgressModal 增加 onSupplement 回调,LoginModal 转传到 AgentLoginModule,触发 setRegisterPrefill({appId, formSnapshot}) 打开 RegisterModal' },
+      { type: 'modify', text: 'RegisterModal 接受 prefill prop;若提供 formSnapshot,useEffect 中回填整个 form;若提供 appId,step3 提交按钮走 UPSERT 流程(直接更新 APS_APPS_STORE.list 原记录,state→supplemented + clear failReason + 新增「用户已补件」日志条目)而非创建新申请' },
+      { type: 'add', text: 'AgentLoginModule 新增 registerPrefill state,onClose 时同步清空 prefill;其他入口(Become a Partner / Hero / CTA 按钮)依旧 setRegisterPrefill(null) 走全新注册' },
+    ],
+  },
+  {
+    ver: 'v3.0.53',
+    date: '2026-05-18',
+    changes: [
+      { type: 'add', text: '🆕 登入弹窗「快速选择已创建账户」列表 — 同时合并 APS_AGENT_ACCOUNTS(已审核通过)+ APS_APPS_STORE(代理后台自行申请未通过)两个来源。注册提交后立刻就能在快速选择里看到自己的申请条目,点击直接填入账号密码,登入时会弹出对应申请进度弹窗' },
+      { type: 'modify', text: '快速选择条目 — 头像 AC 黄色(agentportal)/ AP 绿色(网站前台已通过)/ AG 蓝色(商户创建);右侧 chip 显示申请状态标签(审核中 / 待补件 / 待复核 / 已拒绝 / 已通过),已通过的账户不显示标签' },
+      { type: 'modify', text: '右上角数字徽标 由 accounts.length 改为 quickList.length(包含申请记录)' },
+    ],
+  },
+  {
+    ver: 'v3.0.52',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 专业代理后台「分享 Code 与链接」页白屏报错 — data.js 的 D.codes 没有 withdraw 字段,my_codes.jsx 列表中 F.money(c.withdraw) 在 undefined 上调 .toFixed 崩溃。给 c.deposit / c.withdraw / c.commission / arppu 全部加 ||0 兜底' },
+      { type: 'fix', text: '🐛 商户后台「已创建代理」列表 React 警告「Encountered two children with the same key, AG100005」— 旧创建代理 ID 生成逻辑过滤掉了「_createWay 不等于商户创建」的行(包括第 5 条 AP範例6 _id=AG100005 / _displayId=AP200006),导致新建代理 ID 又生成到 AG100005,与原 5 条第 5 行 a.id 冲突' },
+      { type: 'modify', text: '新 ID 生成改为:遍历所有 agents 的 id + _displayId,凡是以 AG 开头的取数字部分,取最大值 +1,彻底覆盖既存编号' },
+    ],
+  },
+  {
+    ver: 'v3.0.51',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '创建专业代理弹窗(CreateAgentModal)— 删除「申请理由 / 推广渠道说明」textarea(原仅当 isApplied=true 自行申请复核时显示) — 该字段在弹窗里只读且重复' },
+    ],
+  },
+  {
+    ver: 'v3.0.50',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '自行申请代理「查看&审核」抽屉 基本资料 删除「代理类型」字段(注册时已默认 normal,审核时不再展示);最终顺序:代理创建方式 / 代理ID / 代理名称 / 上级代理 / 创建时间' },
+    ],
+  },
+  {
+    ver: 'v3.0.49',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 代理后台注册生成的代理ID 编号位数多了一位(AC1100001) — prefix 写成 AC1 + min 100001 = AC1 + 100001 = 7 位编号。改 prefix=AC + min=100001 → AC100001 正确 6 位编号' },
+      { type: 'add', text: '🆕 注册弹窗第 3 步 密码 / 重新输入密码 两个输入框右侧加眼睛图标(eye/eyeOff)— 点击切换显示/隐藏密码;新增 RegPasswordInput 组件复用' },
+    ],
+  },
+  {
+    ver: 'v3.0.48',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '商户后台 → 自行申请代理 → 查看&审核 抽屉 头像:agentportal 来源 改成「AC」字 + 黄色背景(#f59e0b);frontend 来源 保持「AP」字 + 绿色(#10b981)' },
+      { type: 'add', text: '查看&审核 抽屉 在「申请资料 / 操作记录」之间新增 2 个 tab:「流量来源」「收款方式」与已创建代理详情页一致' },
+      { type: 'add', text: '流量来源 tab — 读 detail._formSnapshot.trafficUrls,逐条 mono 字体长方块展示;空时显示「(未填写流量来源)」灰色虚线占位' },
+      { type: 'add', text: '收款方式 tab — 固定显示 UPI badge + UPI ID(loginName@paytm)+ 收款人姓名(name)+ 黄色提示「当前阶段仅支持 UPI」' },
+      { type: 'modify', text: '4 个 tab 顺序:申请资料 → 流量来源 → 收款方式 → 操作记录' },
+    ],
+  },
+  {
+    ver: 'v3.0.47',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: '注册弹窗第 3 步「创建账户」— 删除「用户名」输入框,与第 1 步「申请人姓名」(applyName) 重复;提交时直接用 applyName 作为 loginName,登入 LoginModal 也用 applyName 匹配' },
+      { type: 'remove', text: '注册弹窗第 3 步 — 删除「我同意收到 Partners-MM 联盟计画的新讯息」营销订阅勾选项(agreeNews);保留「我同意条款 + 隐私政策」单条必勾' },
+      { type: 'modify', text: 'step3Valid 校验从 form.username 改为 form.applyName;同意条款 grid 从两栏 1fr 1fr 改为单栏(只剩一条)' },
+    ],
+  },
+  {
+    ver: 'v3.0.46',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '🆕 专业代理后台注册的用户 提交申请后,即可用注册账号密码登入代理后台,系统会根据当前申请状态弹出对应的进度状态弹窗' },
+      { type: 'add', text: 'modules/agent_login.jsx 新增 ApplicationProgressModal 组件 — 5 种 state 各自有 icon / 标题 / 描述 / 提示(reviewing/supplement/supplemented/failed/passed)' },
+      { type: 'add', text: '弹窗内容:大圆形状态图标 + 标题 + 描述 + 拒绝原因/补件说明(如有)+ 提示 + 申请编号/名称/提交时间/更新时间 表格 + 「我知道了」按钮(主题色随 state)' },
+      { type: 'modify', text: 'LoginModal handleLogin 校验逻辑 — ①先匹配 APS_AGENT_ACCOUNTS(正式账户) → 直接 onLogin;②再匹配 APS_APPS_STORE 中 _channel=agentportal + loginName + password → 弹 ApplicationProgressModal;③都没匹配到 → 显示「账号或密码错误」' },
+      { type: 'add', text: '使用方式 — 用户注册成功后(state=reviewing),拿同样的账号密码到登入页登入 → 弹「申请审核中」状态;管理员在商户后台改 state 为 supplement/failed/passed → 用户登入时分别弹对应状态' },
+    ],
+  },
+  {
+    ver: 'v3.0.45',
+    date: '2026-05-18',
+    changes: [
+      { type: 'remove', text: 'CreateAgentModal 当来源为「自行申请」(isApplied=true)时,隐藏「代理类型」字段 — 用户在注册时已经选过(默认 normal),无需管理员复核;商户主动创建代理时仍正常显示需要选择' },
+      { type: 'modify', text: '提交逻辑不受影响 — form.type 在 prefill 时已根据 prefill.tier 自动设置(normal/general/super → individual/team/super)' },
+    ],
+  },
+  {
+    ver: 'v3.0.44',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '🐛 CreateAgentModal(创建/复核代理弹窗) — 代理创建方式 字段当来源为「自行申请」时显示文案 由「自行申请代理」改为「代理自行创建」' },
+      { type: 'remove', text: '🐛 CreateAgentModal 删除「用户ID」block — 与「代理ID」紧挨着,信息冗余' },
+      { type: 'modify', text: '🐛 联系方式 手机国码改为固定 +91(印度) — 移除可选择的国码下拉(原 +1 美加 / +44 英国 / +55 巴西 / +52 墨西哥 / +91 印度),改为 inline span 显示 +91,与注册弹窗一致' },
+    ],
+  },
+  {
+    ver: 'v3.0.43',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '自行申请代理「查看&审核」抽屉 基本资料 — 全部字段单列左对齐(代理类型不再与代理ID同行),阅读顺序:代理创建方式 / 代理ID / 代理名称 / 代理类型 / 上级代理 / 创建时间' },
+    ],
+  },
+  {
+    ver: 'v3.0.42',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '自行申请代理「查看&审核」抽屉 基本资料 字段顺序微调:代理名称从「代理ID」右边移到「代理ID」下面;代理类型从单独一行升到「代理ID」右边,节省空间' },
+      { type: 'modify', text: '最终顺序:代理创建方式 / 代理ID + 代理类型 / 代理名称 / 上级代理 / 创建时间' },
+    ],
+  },
+  {
+    ver: 'v3.0.41',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '代理 ID 前缀调整 — 专业代理后台注册:AG2xxxxx → AC1xxxxx(最小 AC100001) — A=Agent,C=Console;网站前台保持 AP2xxxxx;商户创建保持 AG1xxxxx' },
+      { type: 'modify', text: '代理创建方式文案:旧「自行申请代理」→ 网站前台 改成「用户自行申请」+ 新增「代理后台自行申请」(专业后台注册来源)' },
+      { type: 'modify', text: 'AGENTS_INITIAL 第 5 条示例(AP範例6) _createWay 同步改为「用户自行申请」+ 增加 _channel=frontend 标记;新增 FIXED_CHANNELS 数组烘焙 _channel' },
+      { type: 'modify', text: 'isApplied 判断逻辑由 === "自行申请代理" 改为 !== "商户创建代理" — 兼容两种自行申请来源' },
+      { type: 'modify', text: 'AgentDetail 头像 AP/AC 二字根据 _channel 区分(agentportal=AC,frontend=AP)' },
+      { type: 'modify', text: '已创建代理列表筛选下拉「自行申请代理」改为「用户 / 代理后台自行申请」(覆盖两种来源)' },
+      { type: 'modify', text: '示例数据 AC100001(原 AG200001)同步更新 ID' },
+    ],
+  },
+  {
+    ver: 'v3.0.40',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '🔄 撤销 v3.0.39 第 4 条:专业后台来源审核「通过」不再跳 CreateAgentModal,改回弹出复核弹窗 — 让管理员有机会复核分润模式 / 权限配置等关键项' },
+      { type: 'modify', text: 'CreateAgentModal 的 prefill 逻辑 — 增加 loginName / password 预填(从申请记录里带过去),管理员看见就是注册时填的账号 / 密码,可改也可直接通过' },
+      { type: 'remove', text: '自行申请代理「查看&审核」抽屉 — 删除「用户ID」字段(整行)' },
+      { type: 'remove', text: '自行申请代理「查看&审核」抽屉 — 删除「申请理由 / 推广渠道说明」整个 section + textarea' },
+      { type: 'modify', text: '自行申请代理「查看&审核」抽屉 — 「创建时间」从基本资料第 2 行移到上级代理下面(最后一行)' },
+      { type: 'modify', text: 'ad-info-grid 字段顺序重排为:代理创建方式 / 代理ID|代理名称 / 代理类型 / 上级代理 / 创建时间' },
+    ],
+  },
+  {
+    ver: 'v3.0.39',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '🆕 专业代理后台未登录着陆页 → 注册流程闭环 — 用户在 BEANS 着陆页填 Become a Partner 提交后,数据流入商户后台「自行申请代理」列表,与网站前台并存但区分来源' },
+      { type: 'add', text: '代理 ID 编号规则:_channel=agentportal → AG2xxxxx(专业后台注册);_channel=frontend → AP2xxxxx(网站前台申请);两套独立计数,商户创建仍是 AG1xxxxx' },
+      { type: 'modify', text: 'modules/agents.jsx APS_addApplication 函数 — 支持 _channel 字段;ID 生成根据 prefix(AG2/AP2)各自计算下一个编号;申请记录额外携带 loginName/password(用于审核通过后免填)' },
+      { type: 'modify', text: 'SELF_APPLICATIONS_INITIAL 示例数据 — 给原有 5 条标记 _channel=frontend;新增 1 条 AG200001 _channel=agentportal 示例(loginName: apexpromo,演示自动创建账户流程)' },
+      { type: 'modify', text: 'modules/agent_login.jsx RegisterModal step3 提交按钮 — 调用 window.APS_addApplication({ _channel:agentportal, ...form }) 把表单写入 store;同时把 { loginName, appId } 写 localStorage.APS_AGENTPORTAL_LAST_REG 供后续查询申请进度' },
+      { type: 'add', text: '商户后台 → 自行申请代理 列表 新增「申请渠道」列 + 顶部筛选条「全部 / 网站前台 / 专业后台」;列内以蓝 / 黄 chip 区分(网站前台 / 专业后台)' },
+      { type: 'modify', text: '审核通过流程 — 检测 _channel=agentportal 且已带 loginName/password 时,跳过 CreateAgentModal,直接 onCreateAgent + 自动 form(用注册时的 type/loginName/password/contacts/默认 commission/perms);弹 toast 提示「账户已用注册时填的账号 / 密码自动创建」' },
+      { type: 'add', text: '兼容性:网站前台老申请(无 loginName)继续走 PassModal 让管理员手动填账号 / 密码' },
+      { type: 'add', text: '⏭️ 下一轮待做:专业后台登录页加「查申请进度」入口 + 进度弹窗(读 LS 中的 loginName 反查 store 申请状态)' },
+    ],
+  },
+  {
+    ver: 'v3.0.38',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 自行申请代理 → 查看&审核 弹窗手机模式 底部「要求补件 / 拒绝 / 通过」审核栏无法滚到 — 原因:.self-app-detail-panel 没设 display:flex,head/tabs/body 都按默认流式堆叠把 foot 顶出屏幕外,iframe 内整体内容超 viewport 也无法用 mask 滚动到底' },
+      { type: 'modify', text: '<768px:.self-app-detail-panel 强制 display:flex + flex-direction:column;head/tabs flex-shrink:0(固定高);body flex:1 + min-height:0 + overflow-y:auto + -webkit-overflow-scrolling:touch(中间区域自身可滚);foot flex-shrink:0 + 顶部 border 区分 → foot 永远钉在底部可见可点' },
+    ],
+  },
+  {
+    ver: 'v3.0.37',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '🐛 iOS Safari 点击输入框时画面自动放大且键盘收起后不复原 — 经典 input 字号 <16px 触发的自动 zoom。viewport meta 加 maximum-scale=1 + user-scalable=no 关掉自动放大' },
+      { type: 'modify', text: 'index.html viewport meta 同步更新;app.jsx viewMode auto/mobile 分支的 viewport 也同步加 maximum-scale=1' },
+      { type: 'fix', text: '🐛 注册弹窗手机模式关闭 X 按钮没反应 — 之前 X 是 position:absolute 相对于 modal,但 v3.0.36 改 mask 滚动后 modal overflow:visible,absolute 仍生效;问题是 modal 自身可能高度超 viewport,X 跟着内容滚出可视范围,且被键盘 / 其他元素挡住' },
+      { type: 'modify', text: '<768px:.aglp-modal-close 改 position:fixed + top:12 + right:12 + z-index:10 + 半透明白底 + 浅阴影,始终钉在屏幕右上角不随内容滚动,任意时刻都可点' },
+    ],
+  },
+  {
+    ver: 'v3.0.36',
+    date: '2026-05-18',
     changes: [
       { type: 'fix', text: '🐛 注册弹窗手机模式 内容超出屏幕高度后无法滑动 / 看不到「下一步」「提交」按钮 — 原因:.aglp-modal 设置了 min-height:100vh + overflow-y:auto 让 modal 内部滚动,但 iframe 内的手指滑动事件被父层 mobile-preview-overlay 截走,导致 modal 内部无法响应 touch scroll' },
       { type: 'modify', text: '改为「整个 mask 滚动」方案 — .aglp-mask 加 overflow-y:auto + -webkit-overflow-scrolling:touch;.aglp-modal min-height:auto + height:auto + overflow:visible,让内容自然撑高 mask 容器,滚动条在 mask 而非 modal 内' },

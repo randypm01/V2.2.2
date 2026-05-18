@@ -103,6 +103,16 @@ function ensureLandingStyle() {
     padding: 16px 14px 80px !important;  /* 底部留 80 给 fixed footer 不挡 */
     overflow: visible !important;
     box-sizing: border-box !important;
+    position: relative;
+  }
+  /* v3.0.37 关闭按钮 sticky 在 modal 右上角,跟随滚动始终可点击 */
+  .aglp-modal-close {
+    position: fixed !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 10 !important;
+    background: rgba(255,255,255,.95) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
   }
   /* v3.0.35 弹窗内所有元素强制 box-sizing 兜底,所有 input/select/textarea 强制 100% 宽度 */
   .aglp-modal * { box-sizing: border-box !important; }
@@ -337,8 +347,58 @@ function ensureLandingStyle() {
   document.head.appendChild(s);
 }
 
+// v3.0.46 申请进度状态弹窗 — 用户用注册时的账号密码登入,但申请还未通过时显示
+function ApplicationProgressModal({ app, onClose, onSupplement }) {
+  const { Icon } = window.UI;
+  const STATE_META = {
+    reviewing:    { icon:'history',  iconBg:'#fef3c7',  iconColor:'#d97706', title:'申请审核中', desc:'您的代理申请已提交,正在等待商户审核。审核通过后即可使用此账号登入代理后台。', tip:'通常 1-3 个工作日内完成审核,请耐心等待。', accent:'#d97706' },
+    supplement:   { icon:'alert',    iconBg:'#faf5ff',  iconColor:'#7c3aed', title:'需要补充材料', desc:'商户审核后认为您的申请资料不完整,需要您补充相关材料后重新提交。', tip:'', accent:'#7c3aed' },
+    supplemented: { icon:'check',    iconBg:'#fff7ed',  iconColor:'#ea580c', title:'已补件,等待复核', desc:'您已成功补件,商户将尽快复核您的申请。', tip:'复核通过后您即可登入代理后台,请耐心等待。', accent:'#ea580c' },
+    failed:       { icon:'x',        iconBg:'#fef2f2',  iconColor:'#dc2626', title:'申请未通过', desc:'很遗憾,您的代理申请未通过审核。', tip:'您可以重新提交申请,但需要使用不同的账号信息。', accent:'#dc2626' },
+    passed:       { icon:'check',    iconBg:'#dcfce7',  iconColor:'#16a34a', title:'申请已通过', desc:'您的申请已通过审核!但代理账户尚未正式启用,请稍后再试或联系客服。', tip:'账户启用后您即可正常登入。', accent:'#16a34a' },
+  };
+  const meta = STATE_META[app.state] || STATE_META.reviewing;
+  const isSupplement = app.state === 'supplement';
+  return (
+    <div className="aglp-mask" style={{zIndex:1100}} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="aglp-modal" style={{maxWidth:440, padding:'32px 28px'}}>
+        <button className="aglp-modal-close" onClick={onClose} title="关闭"><Icon name="x" size={16}/></button>
+        <div style={{textAlign:'center'}}>
+          <div style={{
+            width:72, height:72, margin:'0 auto 18px', borderRadius:'50%',
+            background: meta.iconBg, color: meta.iconColor,
+            display:'grid', placeItems:'center',
+          }}><Icon name={meta.icon} size={36}/></div>
+          <h2 style={{margin:'0 0 10px', fontSize:22, fontWeight:700, color:'#0f172a'}}>{meta.title}</h2>
+          <p style={{margin:'0 0 6px', fontSize:13.5, color:'#475569', lineHeight:1.65}}>{meta.desc}</p>
+          {app.failReason && (isSupplement || app.state === 'failed') && (
+            <div style={{margin:'14px 0', padding:'10px 12px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:6, fontSize:13, lineHeight:1.55, color:'#991b1b', textAlign:'left'}}>
+              <div style={{fontSize:11, fontWeight:600, color:'#dc2626', marginBottom:4}}>{app.state === 'failed' ? '拒绝原因' : '补件说明'}</div>
+              {app.failReason}
+            </div>
+          )}
+          {meta.tip && <p style={{margin:'14px 0 20px', fontSize:12.5, color:'#94a3b8', lineHeight:1.6}}>{meta.tip}</p>}
+          <div style={{display:'flex', flexDirection:'column', gap:8, padding:'14px 16px', background:'#f8fafc', borderRadius:8, fontSize:12.5, textAlign:'left', marginTop: meta.tip ? 0 : 14}}>
+            <div style={{display:'flex', justifyContent:'space-between'}}><span style={{color:'#64748b'}}>申请编号</span><span style={{color:'#0f172a', fontFamily:'JetBrains Mono', fontWeight:600}}>{app.id}</span></div>
+            <div style={{display:'flex', justifyContent:'space-between'}}><span style={{color:'#64748b'}}>申请名称</span><span style={{color:'#0f172a', fontWeight:500}}>{app.name}</span></div>
+            <div style={{display:'flex', justifyContent:'space-between'}}><span style={{color:'#64748b'}}>提交时间</span><span style={{color:'#0f172a', fontFamily:'JetBrains Mono'}}>{app.createdAt}</span></div>
+            <div style={{display:'flex', justifyContent:'space-between'}}><span style={{color:'#64748b'}}>更新时间</span><span style={{color:'#0f172a', fontFamily:'JetBrains Mono'}}>{app.updatedAt}</span></div>
+          </div>
+          <button onClick={() => {
+            if (isSupplement && onSupplement) { onSupplement(app); }
+            else { onClose(); }
+          }} style={{
+            marginTop:18, width:'100%', padding:12, borderRadius:8, border:'none',
+            background: meta.accent, color:'#fff', fontSize:14.5, fontWeight:600, cursor:'pointer',
+          }}>{isSupplement ? '立即补件' : '我知道了'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============ 登入弹窗(原表单完整搬到这里) ============
-function LoginModal({ onClose, onLogin, onSwitchRegister }) {
+function LoginModal({ onClose, onLogin, onSwitchRegister, onSupplement }) {
   const { Icon } = window.UI;
   const [, force] = React.useReducer((x) => x + 1, 0);
   const [lang] = window.useAgentLang();
@@ -349,6 +409,8 @@ function LoginModal({ onClose, onLogin, onSwitchRegister }) {
   const [remember, setRemember] = React.useState(false);
   const [error, setError] = React.useState('');
   const [accOpen, setAccOpen] = React.useState(false);
+  // v3.0.46 申请进度状态弹窗(账号密码匹配「代理后台自行申请」未通过的记录时显示)
+  const [progressApp, setProgressApp] = React.useState(null);
 
   React.useEffect(() => {
     const unsub = window.APS_AGENT_ACCOUNTS.subscribe(force);
@@ -360,6 +422,18 @@ function LoginModal({ onClose, onLogin, onSwitchRegister }) {
   }, [onClose]);
 
   const accounts = window.APS_AGENT_ACCOUNTS.list;
+  // v3.0.53 快选列表同时包含「代理后台自行申请」注册记录(未通过也能填入账号密码快速测试进度弹窗)
+  const pendingApps = (window.APS_APPS_STORE && window.APS_APPS_STORE.list || [])
+    .filter(a => a._channel === 'agentportal' && a.loginName && a.password)
+    .map(a => ({
+      _pendingApp: true,
+      agentId: a.id,
+      loginName: a.loginName,
+      password: a.password,
+      name: a.name,
+      state: a.state,
+    }));
+  const quickList = [...accounts, ...pendingApps];
   const fillFromAcc = (acc) => {
     setLoginName(acc.loginName || '');
     setPassword(acc.password || '');
@@ -367,13 +441,58 @@ function LoginModal({ onClose, onLogin, onSwitchRegister }) {
     setAccOpen(false);
   };
 
+  // v3.0.74 帐户已停用提示弹窗
+  const [suspendedAcc, setSuspendedAcc] = React.useState(null);
+
   const handleLogin = () => {
     if (!loginName || !password) { setError(T('login.err.empty')); return; }
+    // 1) 优先匹配正式账户(已审核通过 / 商户创建)
     const acc = accounts.find((a) => a.loginName === loginName && a.password === password);
-    if (!acc) { setError(T('login.err.wrong')); return; }
-    if (remember) localStorage.setItem('APS_REMEMBER_LOGIN', loginName);
-    else localStorage.removeItem('APS_REMEMBER_LOGIN');
-    onLogin(acc);
+    if (acc) {
+      // v3.0.74 校验 已创建代理 列表里的账户状态;status==='suspended' 弹「已停用」提示,禁止进入
+      const allAgents = (window.APS_MERCHANT_AGENTS_STORE && window.APS_MERCHANT_AGENTS_STORE.list) || [];
+      const agentRec = allAgents.find(a => a.id === acc.agentId || a._displayId === acc.agentId);
+      if (agentRec && agentRec.status === 'suspended') {
+        setSuspendedAcc({ ...acc, suspendReason: agentRec._appData?.suspendReason || '账户已被停用' });
+        return;
+      }
+      if (remember) localStorage.setItem('APS_REMEMBER_LOGIN', loginName);
+      else localStorage.removeItem('APS_REMEMBER_LOGIN');
+      onLogin(acc);
+      return;
+    }
+    // v3.0.46 2) 匹配代理后台自行申请的记录
+    const apps = (window.APS_APPS_STORE && window.APS_APPS_STORE.list) || [];
+    const pending = apps.find(a =>
+      a._channel === 'agentportal' &&
+      a.loginName === loginName &&
+      a.password === password
+    );
+    if (pending) {
+      // v3.0.65 已通过审核(passed)→ 自动建立正式账户 + 跳过进度弹窗直接登入
+      if (pending.state === 'passed') {
+        const newAcc = {
+          agentId: pending.id,
+          userId: pending.userId || '',
+          name: pending.name,
+          loginName: pending.loginName,
+          password: pending.password,
+          tier: pending.tier || 'normal',
+          createdAt: pending.createdAt,
+        };
+        if (window.APS_AGENT_ACCOUNTS && window.APS_AGENT_ACCOUNTS.add) {
+          window.APS_AGENT_ACCOUNTS.add(newAcc);
+        }
+        if (remember) localStorage.setItem('APS_REMEMBER_LOGIN', loginName);
+        else localStorage.removeItem('APS_REMEMBER_LOGIN');
+        onLogin(newAcc);
+        return;
+      }
+      // 其他未通过状态 → 弹申请进度弹窗
+      setProgressApp(pending);
+      return;
+    }
+    setError(T('login.err.wrong'));
   };
 
   return (
@@ -391,20 +510,32 @@ function LoginModal({ onClose, onLogin, onSwitchRegister }) {
           <button type="button" className="aglp-quick-btn" onClick={() => setAccOpen((v) => !v)}>
             <Icon name="users" size={14}/>
             <span>{T('login.quick.label')}</span>
-            <span className="count">{accounts.length}</span>
+            <span className="count">{quickList.length}</span>
             <Icon name="chevronDown" size={12} style={{ marginLeft:4, transform: accOpen ? 'rotate(180deg)' : 'none', transition:'.15s' }}/>
           </button>
           {accOpen && (
             <div className="aglp-quick-list">
-              {accounts.length === 0 ? (
+              {quickList.length === 0 ? (
                 <div className="aglp-quick-empty">{T('login.quick.empty')}</div>
-              ) : accounts.map((acc, i) => {
+              ) : quickList.map((acc, i) => {
                 const isAp = String(acc.agentId || '').startsWith('AP');
+                const isAc = String(acc.agentId || '').startsWith('AC');
+                const stateMeta = {
+                  reviewing: { label:'审核中', color:'#d97706', bg:'#fef3c7' },
+                  supplement: { label:'待补件', color:'#7c3aed', bg:'#f3e8ff' },
+                  supplemented: { label:'待复核', color:'#ea580c', bg:'#fed7aa' },
+                  failed: { label:'已拒绝', color:'#dc2626', bg:'#fee2e2' },
+                  passed: { label:'已通过', color:'#16a34a', bg:'#dcfce7' },
+                };
+                const stm = acc._pendingApp && stateMeta[acc.state];
                 return (
                   <div key={acc.loginName + i} className="aglp-quick-row" onClick={() => fillFromAcc(acc)}>
-                    <div className="av" style={{ background: isAp ? '#10b981' : '#3b82f6' }}>{isAp ? 'AP' : 'AG'}</div>
+                    <div className="av" style={{ background: isAc ? '#f59e0b' : isAp ? '#10b981' : '#3b82f6' }}>{isAc ? 'AC' : isAp ? 'AP' : 'AG'}</div>
                     <div className="info">
-                      <div className="nm">{acc.name || acc.loginName}</div>
+                      <div className="nm" style={{display:'flex',alignItems:'center',gap:6}}>
+                        <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{acc.name || acc.loginName}</span>
+                        {stm && <span style={{flexShrink:0,fontSize:10,fontWeight:600,padding:'1px 6px',borderRadius:3,color:stm.color,background:stm.bg}}>{stm.label}</span>}
+                      </div>
                       <div className="id">{acc.agentId || acc.userId || '-'} · {acc.loginName} / {acc.password}</div>
                     </div>
                     <span className="fill">{T('login.fill')}</span>
@@ -449,6 +580,44 @@ function LoginModal({ onClose, onLogin, onSwitchRegister }) {
 
         <div className="aglp-modal-foot">{T('login.foot.q')} <a onClick={() => { onClose(); onSwitchRegister && onSwitchRegister(); }}>{T('login.foot.apply')}</a></div>
       </div>
+      {progressApp && <ApplicationProgressModal
+        app={progressApp}
+        onClose={() => setProgressApp(null)}
+        onSupplement={(app) => {
+          setProgressApp(null);
+          onClose();
+          if (onSupplement) onSupplement(app);
+        }}
+      />}
+      {suspendedAcc && (
+        <div className="aglp-mask" style={{zIndex:1100}} onMouseDown={(e) => { if (e.target === e.currentTarget) setSuspendedAcc(null); }}>
+          <div className="aglp-modal" style={{maxWidth:420, padding:'32px 28px'}}>
+            <button className="aglp-modal-close" onClick={() => setSuspendedAcc(null)}><Icon name="x" size={16}/></button>
+            <div style={{textAlign:'center'}}>
+              <div style={{
+                width:72, height:72, margin:'0 auto 18px', borderRadius:'50%',
+                background:'#fef2f2', color:'#dc2626',
+                display:'grid', placeItems:'center',
+              }}><Icon name="x" size={36}/></div>
+              <h2 style={{margin:'0 0 10px', fontSize:22, fontWeight:700, color:'#0f172a'}}>帐户已停用</h2>
+              <p style={{margin:'0 0 6px', fontSize:13.5, color:'#475569', lineHeight:1.65}}>您的代理帐户已被商户停用,无法登入专业代理后台。</p>
+              <div style={{margin:'14px 0', padding:'10px 12px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:6, fontSize:13, lineHeight:1.55, color:'#991b1b', textAlign:'left'}}>
+                <div style={{fontSize:11, fontWeight:600, color:'#dc2626', marginBottom:4}}>停用原因</div>
+                {suspendedAcc.suspendReason}
+              </div>
+              <p style={{margin:'14px 0 20px', fontSize:12.5, color:'#94a3b8', lineHeight:1.6}}>如有疑问,请联系商户客服处理</p>
+              <div style={{display:'flex', flexDirection:'column', gap:8, padding:'14px 16px', background:'#f8fafc', borderRadius:8, fontSize:12.5, textAlign:'left'}}>
+                <div style={{display:'flex', justifyContent:'space-between'}}><span style={{color:'#64748b'}}>代理ID</span><span style={{color:'#0f172a', fontFamily:'JetBrains Mono', fontWeight:600}}>{suspendedAcc.agentId}</span></div>
+                <div style={{display:'flex', justifyContent:'space-between'}}><span style={{color:'#64748b'}}>登录账号</span><span style={{color:'#0f172a', fontFamily:'JetBrains Mono'}}>{suspendedAcc.loginName}</span></div>
+              </div>
+              <button onClick={() => setSuspendedAcc(null)} style={{
+                marginTop:18, width:'100%', padding:12, borderRadius:8, border:'none',
+                background:'#dc2626', color:'#fff', fontSize:14.5, fontWeight:600, cursor:'pointer',
+              }}>我知道了</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -551,6 +720,24 @@ function RegInput(props) {
   />;
 }
 
+// v3.0.49 带眼睛图标的密码输入框 — 用于注册第 3 步
+function RegPasswordInput({ value, onChange }) {
+  const { Icon } = window.UI;
+  const [show, setShow] = React.useState(false);
+  return (
+    <div style={{ position:'relative' }}>
+      <RegInput type={show ? 'text' : 'password'} value={value} onChange={onChange} style={{ paddingRight:42 }}/>
+      <button type="button" onClick={() => setShow(s => !s)} style={{
+        position:'absolute', top:'50%', right:10, transform:'translateY(-50%)',
+        width:28, height:28, border:'none', background:'transparent',
+        display:'grid', placeItems:'center', cursor:'pointer', color:'#94a3b8',
+      }} title={show ? '隐藏密码' : '显示密码'} aria-label={show ? '隐藏密码' : '显示密码'}>
+        <Icon name={show ? 'eyeOff' : 'eye'} size={16}/>
+      </button>
+    </div>
+  );
+}
+
 function RegSelect({ value, onChange, options, placeholder }) {
   return (
     <select value={value} onChange={onChange} style={{
@@ -568,7 +755,7 @@ function RegSelect({ value, onChange, options, placeholder }) {
   );
 }
 
-function RegisterModal({ onClose, onSwitchLogin }) {
+function RegisterModal({ onClose, onSwitchLogin, prefill }) {
   const { Icon } = window.UI;
   const [lang] = window.useAgentLang();
   const T = (k) => window.t(k);
@@ -605,6 +792,14 @@ function RegisterModal({ onClose, onSwitchLogin }) {
     return () => document.removeEventListener('keydown', onEsc);
   }, [onClose]);
 
+  // v3.0.54 补件重提:从 prefill.formSnapshot 回填整个表单(密码也复用,用户可改)
+  React.useEffect(() => {
+    if (prefill && prefill.formSnapshot) {
+      setForm(f => ({ ...f, ...prefill.formSnapshot }));
+      setStep(1);
+    }
+  }, [prefill]);
+
   // 校验
   const step1Valid = form.applyName.trim() && form.contacts[0]?.value && form.contacts[1]?.value;
   const step2Valid = true; // v3.0.12 仅保留 UPI 收款 + 流量来源选填，始终可以下一页
@@ -615,7 +810,7 @@ function RegisterModal({ onClose, onSwitchLogin }) {
     pattern: form.password.length >= 8 && form.password.length <= 50 && /[A-Z]/.test(form.password) && /[a-z]/.test(form.password) && /[0-9]/.test(form.password),
   };
   const passMatch = form.password && form.password === form.password2;
-  const step3Valid = form.username && passChecks.notEmpty && passChecks.minLen && passChecks.pattern && passMatch && form.agreeTerms;
+  const step3Valid = form.applyName && passChecks.notEmpty && passChecks.minLen && passChecks.pattern && passMatch && form.agreeTerms;
 
   const phoneOpts = REG_COUNTRIES.map((c) => ({ value:c.code, label:`${c.flag} ${c.code}` }));
   const countryOpts = REG_COUNTRIES.map((c) => c.name);
@@ -756,14 +951,11 @@ function RegisterModal({ onClose, onSwitchLogin }) {
             {step === 3 && (
               <>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
-                  <RegField label={T('reg.s3.username')} full>
-                    <RegInput value={form.username} onChange={(e)=>set('username',e.target.value.replace(/\s/g,''))}/>
-                  </RegField>
                   <RegField label={T('reg.s3.password')}>
-                    <RegInput type="password" value={form.password} onChange={(e)=>set('password',e.target.value)}/>
+                    <RegPasswordInput value={form.password} onChange={(e)=>set('password',e.target.value)}/>
                   </RegField>
                   <RegField label={T('reg.s3.password2')}>
-                    <RegInput type="password" value={form.password2} onChange={(e)=>set('password2',e.target.value)}/>
+                    <RegPasswordInput value={form.password2} onChange={(e)=>set('password2',e.target.value)}/>
                   </RegField>
                 </div>
 
@@ -788,18 +980,61 @@ function RegisterModal({ onClose, onSwitchLogin }) {
                   </div>
                 </div>
 
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:18 }}>
+                <div style={{ marginBottom:18 }}>
                   <label style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12.5, color:'#475569', cursor:'pointer' }}>
                     <input type="checkbox" checked={form.agreeTerms} onChange={(e)=>set('agreeTerms',e.target.checked)} style={{ marginTop:2 }}/>
                     <span>{T('reg.s3.agree.terms_a')}<a style={{ color:'#3b82f6', textDecoration:'underline' }}>{T('reg.s3.agree.terms_b')}</a>{T('reg.s3.agree.terms_c')}<a style={{ color:'#3b82f6', textDecoration:'underline' }}>{T('reg.s3.agree.privacy')}</a></span>
                   </label>
-                  <label style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12.5, color:'#475569', cursor:'pointer' }}>
-                    <input type="checkbox" checked={form.agreeNews} onChange={(e)=>set('agreeNews',e.target.checked)} style={{ marginTop:2 }}/>
-                    <span>{T('reg.s3.agree.news_a')}<strong>Partners-MM</strong>{T('reg.s3.agree.news_b')}</span>
-                  </label>
                 </div>
 
-                <button onClick={() => setStep(4)} disabled={!step3Valid} style={{
+                <button onClick={() => {
+                  // v3.0.39 提交注册申请 → 推送到商户后台「自行申请代理」store
+                  // v3.0.54 若 prefill.appId 存在(补件重提)→ 直接 UPSERT 原申请记录,state='supplemented'
+                  const primaryContact = (form.contacts.find(c => c.value)?.value) || '';
+                  const contactList = form.contacts.filter(c => c.value).map(c => c.type).join(' · ');
+                  const trafficList = (form.trafficUrls || []).filter(Boolean).join(' · ');
+                  if (prefill && prefill.appId && window.APS_APPS_STORE) {
+                    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                    window.APS_APPS_STORE.list = window.APS_APPS_STORE.list.map(a =>
+                      a.id === prefill.appId
+                        ? {
+                            ...a,
+                            name: form.applyName || a.name,
+                            contact: primaryContact || a.contact,
+                            channels: trafficList || contactList || a.channels,
+                            loginName: form.applyName,
+                            password: form.password,
+                            _formSnapshot: { ...form },
+                            state: 'supplemented',
+                            failReason: null,
+                            updatedAt: nowStr,
+                            _logs: [...(a._logs || []), { at: nowStr, by: '用户:' + (a.userId || a.loginName || '-'), type:'supplemented', note:'用户已补件,资料重新提交' }],
+                          }
+                        : a
+                    );
+                    window.APS_APPS_STORE.listeners.forEach(fn => fn());
+                  } else if (window.APS_addApplication) {
+                    const created = window.APS_addApplication({
+                      _channel: 'agentportal',
+                      name: form.applyName || '新申请人',
+                      tier: 'normal',
+                      contact: primaryContact,
+                      region: '',
+                      reason: '通过专业代理后台直接注册申请',
+                      channels: trafficList || contactList,
+                      loginName: form.applyName,
+                      password: form.password,
+                      _formSnapshot: { ...form },
+                    });
+                    try {
+                      localStorage.setItem('APS_AGENTPORTAL_LAST_REG', JSON.stringify({
+                        loginName: form.applyName,
+                        appId: created?.id || '',
+                      }));
+                    } catch (e) {}
+                  }
+                  setStep(4);
+                }} disabled={!step3Valid} style={{
                   width:'100%', padding:13, borderRadius:8, border:'none',
                   background: step3Valid ? 'linear-gradient(135deg,#3b82f6,#1e40af)' : '#e5e7eb',
                   color: step3Valid ? '#fff' : '#94a3b8',
@@ -813,24 +1048,45 @@ function RegisterModal({ onClose, onSwitchLogin }) {
         ) : (
           // Step 4: 成功页
           <div style={{ textAlign:'center', padding:'8px 4px 4px' }}>
-            <div style={{
-              width:64, height:64, margin:'0 auto 18px', borderRadius:'50%',
-              background:'linear-gradient(135deg,#dcfce7,#bbf7d0)', color:'#16a34a',
-              display:'grid', placeItems:'center',
-            }}><Icon name="check" size={32}/></div>
-            <h2 style={{ margin:'0 0 14px', fontSize:24, fontWeight:700, color:'#0f172a' }}>{T('reg.s4.title')}</h2>
-            <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p1')}</p>
-            <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p2')}</p>
-            <p style={{ margin:'0 0 22px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p3')}</p>
-            <button style={{
-              padding:'12px 36px', borderRadius:8, border:'none',
-              background:'linear-gradient(135deg,#3b82f6,#1e40af)',
-              color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer',
-              display:'inline-flex', alignItems:'center', gap:8,
-            }} onClick={onClose}>
-              <Icon name="send" size={15}/>
-              {T('reg.s4.subscribe')}
-            </button>
+            {prefill && prefill.appId ? (
+              // v3.0.56 补件重提成功 — 显示「已补件待审核」状态
+              <>
+                <div style={{
+                  width:64, height:64, margin:'0 auto 18px', borderRadius:'50%',
+                  background:'#fff7ed', color:'#ea580c',
+                  display:'grid', placeItems:'center',
+                }}><Icon name="check" size={32}/></div>
+                <h2 style={{ margin:'0 0 14px', fontSize:24, fontWeight:700, color:'#0f172a' }}>已补件,等待复核</h2>
+                <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>您已成功补件,资料已重新提交。</p>
+                <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>商户将尽快复核您的申请。</p>
+                <p style={{ margin:'0 0 22px', fontSize:13.5, color:'#475569' }}>复核通过后您即可登入代理后台,请耐心等待。</p>
+                <button style={{
+                  padding:'12px 36px', borderRadius:8, border:'none',
+                  background:'#ea580c', color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer',
+                }} onClick={onClose}>我知道了</button>
+              </>
+            ) : (
+              <>
+                <div style={{
+                  width:64, height:64, margin:'0 auto 18px', borderRadius:'50%',
+                  background:'linear-gradient(135deg,#dcfce7,#bbf7d0)', color:'#16a34a',
+                  display:'grid', placeItems:'center',
+                }}><Icon name="check" size={32}/></div>
+                <h2 style={{ margin:'0 0 14px', fontSize:24, fontWeight:700, color:'#0f172a' }}>{T('reg.s4.title')}</h2>
+                <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p1')}</p>
+                <p style={{ margin:'0 0 6px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p2')}</p>
+                <p style={{ margin:'0 0 22px', fontSize:13.5, color:'#475569' }}>{T('reg.s4.p3')}</p>
+                <button style={{
+                  padding:'12px 36px', borderRadius:8, border:'none',
+                  background:'linear-gradient(135deg,#3b82f6,#1e40af)',
+                  color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer',
+                  display:'inline-flex', alignItems:'center', gap:8,
+                }} onClick={onClose}>
+                  <Icon name="send" size={15}/>
+                  {T('reg.s4.subscribe')}
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1026,6 +1282,7 @@ window.AgentLoginModule = function ({ onLogin }) {
   const { Icon } = window.UI;
   const [showLogin, setShowLogin] = React.useState(false);
   const [showRegister, setShowRegister] = React.useState(false);
+  const [registerPrefill, setRegisterPrefill] = React.useState(null); // v3.0.54 补件重提交预填数据
   const [mobileMenu, setMobileMenu] = React.useState(false);
   const [lang, setLang] = window.useAgentLang();
   const t = LANDING_I18N[lang];
@@ -1293,8 +1550,40 @@ window.AgentLoginModule = function ({ onLogin }) {
         </div>
       </footer>
 
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLogin={onLogin} onSwitchRegister={() => setShowRegister(true)}/>}
-      {showRegister && <RegisterModal onClose={() => setShowRegister(false)} onSwitchLogin={() => setShowLogin(true)}/>}
+      {showLogin && <LoginModal
+        onClose={() => setShowLogin(false)}
+        onLogin={onLogin}
+        onSwitchRegister={() => { setRegisterPrefill(null); setShowRegister(true); }}
+        onSupplement={(app) => {
+          // v3.0.55 供 LoginModal 「立即补件」按钮调用:预填原注册表单(优先 _formSnapshot,缺失时根据 app 字段重建)
+          const snap = app._formSnapshot || (() => {
+            const contact = String(app.contact || '');
+            const isEmail = /@/.test(contact);
+            return {
+              applyName: app.name || '',
+              contacts: [
+                { type:'Email',  value: isEmail ? contact : '' },
+                { type:'Mobile', value: !isEmail ? contact.replace(/^\+?\d{1,3}\s*/, '') : '', dial: '+91' },
+              ],
+              trafficUrls: String(app.channels || '').split(/\s*·\s*|\s*,\s*/).filter(Boolean).length
+                ? String(app.channels || '').split(/\s*·\s*|\s*,\s*/).filter(Boolean)
+                : [''],
+              payMethod: 'UPI',
+              password: app.password || '',
+              password2: app.password || '',
+              agreeTerms: true,
+              agreeNews: false,
+            };
+          })();
+          setRegisterPrefill({ appId: app.id, formSnapshot: snap });
+          setShowRegister(true);
+        }}
+      />}
+      {showRegister && <RegisterModal
+        onClose={() => { setShowRegister(false); setRegisterPrefill(null); }}
+        onSwitchLogin={() => setShowLogin(true)}
+        prefill={registerPrefill}
+      />}
     </div>
   );
 };

@@ -170,11 +170,11 @@ function MyCodesModule() {
                         </td>
                         <td style={{color:'var(--text-2)',fontSize:11.5,maxWidth:160,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={c.remark}>{c.remark || '—'}</td>
                         <td className="right text-mono">{F.fmtNum(c.regs)}</td>
-                        <td className="right text-mono">${F.money(c.deposit)}</td>
-                        <td className="right text-mono">${F.money(c.withdraw)}</td>
+                        <td className="right text-mono">${F.money(c.deposit||0)}</td>
+                        <td className="right text-mono">${F.money(c.withdraw||0)}</td>
                         <td className="right text-mono" style={{color: parseFloat(cvr)>=30?'var(--success)':'var(--text-1)'}}>{cvr}%</td>
-                        <td className="right text-mono">${F.money(arppu)}</td>
-                        <td className="right text-mono">${F.money(c.commission)}</td>
+                        <td className="right text-mono">${F.money(arppu||0)}</td>
+                        <td className="right text-mono">${F.money(c.commission||0)}</td>
                         <td>{c.status === 'active'
                           ? <span className="badge b-success"><span className="dot"/>启用</span>
                           : <span className="badge b-warning"><span className="dot"/>暂停</span>}
