@@ -1188,10 +1188,7 @@ function AgentDetail({ agent, onClose }) {
               </table>
             </div>
 
-            {isApplied && (<>
-              <div className="ad-section-title">申请理由 / 推广渠道说明<span style={{color:'var(--danger)'}}>*</span></div>
-              <textarea className="textarea" rows={4} readOnly value={agent._appData?.reason || ''} placeholder="请描述您的资源情况、预计每月新增玩家数、主要推广渠道与方式..."/>
-            </>)}
+            {/* v3.0.85 已删除「申请理由 / 推广渠道说明」 */}
 
             <div className="ad-section-title">备注</div>
             <textarea className="textarea" rows={4} readOnly={!editing} value={note} onChange={e=>setNote(e.target.value)} placeholder="(未填写备注)" style={{background: editing ? '#fff' : '#f8fafc'}}/>
@@ -1352,6 +1349,74 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
   const [q, setQ] = React.useState('');
   const [detail, setDetail] = React.useState(null);
   const [detailTab, setDetailTab] = React.useState('basic');
+  // v3.0.82 编辑态:editing 为 true 时 申请资料 / 流量来源 / 收款方式 可编辑
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(null);
+  React.useEffect(() => {
+    if (detail) {
+      const snap = detail._formSnapshot || {};
+      setDraft({
+        name: detail.name || '',
+        loginName: detail.loginName || '',
+        password: detail.password || '',
+        contacts: snap.contacts ? snap.contacts.map(c => ({ ...c })) : [
+          {type:'Email', value:''},
+          {type:'Mobile', value:'', dial:'+91'},
+        ],
+        trafficUrls: (snap.trafficUrls && snap.trafficUrls.length) ? [...snap.trafficUrls] : [''],
+        upiId: snap.upiId || '',
+        holder: snap.holder || '',
+        remark: snap.remark || '',
+      });
+      setEditing(false);
+    } else {
+      setDraft(null);
+      setEditing(false);
+    }
+  }, [detail?.id]);
+  const saveDraft = () => {
+    if (!detail || !draft) return;
+    const primaryContact = (draft.contacts.find(c => c.value)?.value) || '';
+    const contactList = draft.contacts.filter(c => c.value).map(c => c.type).join(' · ');
+    const trafficList = (draft.trafficUrls || []).filter(Boolean).join(' · ');
+    const nowStr = new Date().toISOString().slice(0,19).replace('T',' ');
+    setApps(window.APS_APPS_STORE.list.map(a =>
+      a.id === detail.id
+        ? {
+            ...a,
+            name: draft.name || a.name,
+            // v3.0.83 登入帐号 / 登入密码 不可编辑,保持原值
+            contact: primaryContact || a.contact,
+            channels: trafficList || contactList || a.channels,
+            _formSnapshot: { ...(a._formSnapshot || {}), contacts: draft.contacts, trafficUrls: draft.trafficUrls, upiId: draft.upiId, holder: draft.holder, remark: draft.remark },
+            updatedAt: nowStr,
+            _logs: [...(a._logs || []), { at: nowStr, by: '商户:管理员-randy', type:'edit', note:'编辑申请资料 / 流量来源 / 收款方式' }],
+          }
+        : a
+    ));
+    setDetail(window.APS_APPS_STORE.list.find(a => a.id === detail.id));
+    setEditing(false);
+    toast('已保存修改');
+  };
+  const cancelEdit = () => {
+    if (!detail) return;
+    const snap = detail._formSnapshot || {};
+    setDraft({
+      name: detail.name || '',
+      loginName: detail.loginName || '',
+      password: detail.password || '',
+      contacts: snap.contacts ? snap.contacts.map(c => ({ ...c })) : [
+        {type:'Email', value:''},
+        {type:'Mobile', value:'', dial:'+91'},
+      ],
+      trafficUrls: (snap.trafficUrls && snap.trafficUrls.length) ? [...snap.trafficUrls] : [''],
+      upiId: snap.upiId || '',
+      holder: snap.holder || '',
+      remark: snap.remark || '',
+    });
+    setEditing(false);
+  };
+  const canEdit = detail && (detail.state === 'reviewing' || detail.state === 'supplement' || detail.state === 'supplemented');
   const [actionModal, setActionModal] = React.useState(null);
   const [reason, setReason] = React.useState('');
   const [reasonTpl, setReasonTpl] = React.useState('custom');
@@ -1515,7 +1580,27 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
               ) : detailTab==='traffic' ? (
                 <div style={{padding:'4px 0'}}>
                   <div className="ad-section-title">流量来源链接</div>
-                  {(() => {
+                  {editing ? (
+                    <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                      {(draft?.trafficUrls || ['']).map((u, i) => (
+                        <div key={i} style={{display:'flex',gap:8,alignItems:'center'}}>
+                          <input className="input" style={{flex:1}} value={u} placeholder="https://domain.com" onChange={e=>{
+                            const next = [...draft.trafficUrls];
+                            next[i] = e.target.value;
+                            setDraft({...draft, trafficUrls: next});
+                          }}/>
+                          {draft.trafficUrls.length > 1 && (
+                            <button type="button" className="contact-remove" onClick={()=>{
+                              setDraft({...draft, trafficUrls: draft.trafficUrls.filter((_,j)=>j!==i)});
+                            }}>−</button>
+                          )}
+                        </div>
+                      ))}
+                      <button type="button" className="contact-add-btn" onClick={()=>{
+                        setDraft({...draft, trafficUrls: [...(draft.trafficUrls||[]), '']});
+                      }}>+ 新增流量来源链接</button>
+                    </div>
+                  ) : (() => {
                     const urls = (detail._formSnapshot?.trafficUrls || []).filter(Boolean);
                     if (!urls.length) {
                       return <div style={{padding:'12px 14px',background:'#f8fafc',border:'1px dashed var(--line)',borderRadius:6,fontSize:13,color:'var(--text-3)'}}>(未填写流量来源)</div>;
@@ -1537,9 +1622,19 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
                     <div className="ad-info-grid">
                       <div><span className="ad-k">付款方式:</span><span className="ad-v"><span style={{padding:'2px 10px',background:'#dbeafe',color:'#1e40af',borderRadius:99,fontSize:12,fontWeight:600}}>UPI</span></span></div>
                       <div></div>
-                      <div><span className="ad-k">UPI ID:</span><span className="ad-v text-mono">{detail._formSnapshot?.upiId || '—'}</span></div>
+                      <div>
+                        <span className="ad-k">UPI ID:</span>
+                        {editing
+                          ? <input className="input sm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',fontFamily:'JetBrains Mono',marginLeft:4}} placeholder="example@paytm" value={draft?.upiId||''} onChange={e=>setDraft({...draft,upiId:e.target.value})}/>
+                          : <span className="ad-v text-mono">{detail._formSnapshot?.upiId || '—'}</span>}
+                      </div>
                       <div></div>
-                      <div><span className="ad-k">收款人姓名:</span><span className="ad-v">{detail._formSnapshot?.holder || '—'}</span></div>
+                      <div>
+                        <span className="ad-k">收款人姓名:</span>
+                        {editing
+                          ? <input className="input sm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',marginLeft:4}} placeholder="持卡人姓名" value={draft?.holder||''} onChange={e=>setDraft({...draft,holder:e.target.value})}/>
+                          : <span className="ad-v">{detail._formSnapshot?.holder || '—'}</span>}
+                      </div>
                       <div></div>
                     </div>
                   </div>
@@ -1555,11 +1650,22 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
                   <div></div>
                   <div><span className="ad-k">代理ID:</span><span className="ad-v text-mono">{detail.id}</span></div>
                   <div></div>
-                  <div><span className="ad-k">代理名称:</span><span className="ad-v">{detail.name}</span></div>
+                  <div>
+                    <span className="ad-k">代理名称:</span>
+                    {editing
+                      ? <input className="input sm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',marginLeft:4}} value={draft?.name||''} onChange={e=>setDraft({...draft,name:e.target.value})}/>
+                      : <span className="ad-v">{detail.name}</span>}
+                  </div>
                   <div></div>
-                  <div><span className="ad-k">登入帐号:</span><span className="ad-v text-mono">{detail.loginName || '—'}</span></div>
+                  <div>
+                    <span className="ad-k">登入帐号:</span>
+                    <span className="ad-v text-mono">{detail.loginName || '—'}</span>
+                  </div>
                   <div></div>
-                  <div><span className="ad-k">登入密码:</span><span className="ad-v text-mono">{detail.password ? '••••••••' : '—'}</span></div>
+                  <div>
+                    <span className="ad-k">登入密码:</span>
+                    <span className="ad-v text-mono">{detail.password ? '••••••••' : '—'}</span>
+                  </div>
                   <div></div>
                   <div><span className="ad-k">上级代理:</span><span className="ad-v text-mono">{detail.parentId}-{detail.parentName}</span></div>
                   <div></div>
@@ -1569,23 +1675,70 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
               </div>
 
               <div className="ad-section-title mt-4">联系方式</div>
-              <table className="ad-contact-tbl">
-                <thead><tr><th style={{width:140}}>联系类型</th><th>联系资料</th></tr></thead>
-                <tbody>
-                  {(() => {
-                    const snap = detail._formSnapshot?.contacts;
-                    if (snap && snap.length) {
-                      return snap.filter(c => c.value).map((c, i) => (
-                        <tr key={i}>
-                          <td>{c.type === 'Mobile' ? '手机' : c.type}</td>
-                          <td className="text-mono">{(c.type === 'Mobile' || c.type === '手机' || c.type === 'WhatsApp') ? `${c.dial || '+91'} ${c.value}` : c.value}</td>
-                        </tr>
-                      ));
-                    }
-                    return <tr><td colSpan={2} style={{color:'var(--text-3)',textAlign:'center',padding:'16px'}}>—</td></tr>;
-                  })()}
-                </tbody>
-              </table>
+              {editing ? (
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {(draft?.contacts || []).map((c, i) => {
+                    const isPhone = c.type === 'Mobile' || c.type === '手机' || c.type === 'WhatsApp';
+                    return (
+                      <div key={i} style={{display:'grid',gridTemplateColumns:'120px 1fr 32px',gap:8,alignItems:'center'}}>
+                        <div style={{padding:'6px 10px',background:'#f8fafc',border:'1px solid var(--line)',borderRadius:6,fontSize:12.5,fontWeight:600}}>{c.type === 'Mobile' ? '手机' : c.type}</div>
+                        {isPhone ? (
+                          <div style={{display:'flex',border:'1px solid var(--line)',borderRadius:6,overflow:'hidden'}}>
+                            <span style={{padding:'0 10px',background:'#f8fafc',borderRight:'1px solid var(--line)',display:'inline-flex',alignItems:'center',fontFamily:'JetBrains Mono',fontSize:12.5}}>+91</span>
+                            <input className="input" style={{flex:1,border:'none',borderRadius:0,height:32}} value={c.value} onChange={e=>{
+                              const next = [...draft.contacts];
+                              next[i] = {...c, value: e.target.value};
+                              setDraft({...draft, contacts: next});
+                            }}/>
+                          </div>
+                        ) : (
+                          <input className="input" style={{height:32}} value={c.value} onChange={e=>{
+                            const next = [...draft.contacts];
+                            next[i] = {...c, value: e.target.value};
+                            setDraft({...draft, contacts: next});
+                          }}/>
+                        )}
+                        {i >= 2 && (
+                          <button type="button" className="contact-remove" onClick={()=>{
+                            setDraft({...draft, contacts: draft.contacts.filter((_,j)=>j!==i)});
+                          }}>−</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button type="button" className="contact-add-btn" style={{marginTop:4}} onClick={()=>{
+                    setDraft({...draft, contacts: [...draft.contacts, {type:'Telegram', value:''}]});
+                  }}>+ 新增联系方式</button>
+                </div>
+              ) : (
+                <table className="ad-contact-tbl">
+                  <thead><tr><th style={{width:140}}>联系类型</th><th>联系资料</th></tr></thead>
+                  <tbody>
+                    {(() => {
+                      const snap = detail._formSnapshot?.contacts;
+                      if (snap && snap.length) {
+                        return snap.filter(c => c.value).map((c, i) => (
+                          <tr key={i}>
+                            <td>{c.type === 'Mobile' ? '手机' : c.type}</td>
+                            <td className="text-mono">{(c.type === 'Mobile' || c.type === '手机' || c.type === 'WhatsApp') ? `${c.dial || '+91'} ${c.value}` : c.value}</td>
+                          </tr>
+                        ));
+                      }
+                      return <tr><td colSpan={2} style={{color:'var(--text-3)',textAlign:'center',padding:'16px'}}>—</td></tr>;
+                    })()}
+                  </tbody>
+                </table>
+              )}
+
+              {/* v3.0.85 备注 — 自行申请代理详情新增字段(只读 / 可编辑) */}
+              <div className="ad-section-title mt-4">备注</div>
+              {editing ? (
+                <textarea className="textarea" rows={3} placeholder="(未填写备注)" style={{width:'100%'}} value={draft?.remark || ''} onChange={e=>setDraft({...draft, remark: e.target.value})}/>
+              ) : (
+                <div style={{padding:'10px 14px',background:'#f8fafc',border:'1px solid var(--line)',borderRadius:6,fontSize:13,color: detail._formSnapshot?.remark ? 'var(--text-1)' : 'var(--text-3)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>
+                  {detail._formSnapshot?.remark || '(未填写备注)'}
+                </div>
+              )}
 
               {detail.failReason && <>
                 <div className="ad-section-title mt-4">{detail.state==='failed'?'拒绝原因':'补件说明'}</div>
@@ -1593,7 +1746,20 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
               </>}
               </>}
             </div>
-            {detailTab==='basic' && (
+            {/* v3.0.82 编辑/保存 按钮:仅当 detailTab !== 'logs' 且 canEdit 时显示 */}
+            {detailTab !== 'logs' && canEdit && (
+              <div className="agent-detail-foot" style={{justifyContent:'flex-end',alignItems:'center',gap:8}}>
+                {!editing ? (
+                  <button className="btn sm" style={{borderColor:'var(--brand)',color:'var(--brand)'}} onClick={()=>setEditing(true)}>
+                    <Icon name="edit" size={12}/> 编辑
+                  </button>
+                ) : (<>
+                  <button className="btn sm ghost" onClick={cancelEdit}>取消</button>
+                  <button className="btn sm primary" onClick={saveDraft}>保存</button>
+                </>)}
+              </div>
+            )}
+            {detailTab==='basic' && !editing && (
               <div className="agent-detail-foot" style={{justifyContent:'space-between',alignItems:'center'}}>
                 <div style={{fontSize:13,color:'var(--text-1)'}}>申请进度: <span style={{color:APP_STATE_META[detail.state].fg,fontWeight:600}}>{APP_STATE_META[detail.state].label}</span></div>
                 {(detail.state==='reviewing'||detail.state==='supplement'||detail.state==='supplemented') && (

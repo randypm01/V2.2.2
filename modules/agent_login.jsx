@@ -768,7 +768,7 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
     ],
     trafficUrls:[''],
     payMethod:'UPI',
-    username:'', password:'', password2:'',
+    loginName:'', password:'', password2:'',
     agreeTerms:false, agreeNews:false,
   });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -796,11 +796,52 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
   React.useEffect(() => {
     if (prefill && prefill.formSnapshot) {
       setForm(f => ({ ...f, ...prefill.formSnapshot }));
-      setStep(1);
+      // v3.0.81 补件重提:跳过第 1 步「基本资料」,直接到第 2 步「流量来源与收款」
+      setStep(2);
     }
   }, [prefill]);
 
-  // 校验
+  const isSupplement = !!(prefill && prefill.appId);
+
+  // v3.0.79 校验:登入帐号、Email、手机号码 唯一性 + 格式
+  const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_RX = /^\d{8,15}$/;
+  const existingApps = (window.APS_APPS_STORE && window.APS_APPS_STORE.list) || [];
+  const existingAccounts = (window.APS_AGENT_ACCOUNTS && window.APS_AGENT_ACCOUNTS.list) || [];
+  // 取出已存在的 loginName / email / phone(排除当前补件中的同一记录)
+  const skipAppId = prefill && prefill.appId;
+  const usedLoginNames = new Set();
+  const usedEmails = new Set();
+  const usedPhones = new Set();
+  existingApps.forEach(a => {
+    if (a.id === skipAppId) return;
+    if (a.loginName) usedLoginNames.add(String(a.loginName).toLowerCase());
+    const snap = a._formSnapshot;
+    if (snap && snap.contacts) {
+      snap.contacts.forEach(c => {
+        const v = String(c.value || '').trim().toLowerCase();
+        if (!v) return;
+        if (c.type === 'Email') usedEmails.add(v);
+        if (c.type === 'Mobile' || c.type === '手机' || c.type === 'WhatsApp') usedPhones.add(v);
+      });
+    } else {
+      const ct = String(a.contact || '').toLowerCase();
+      if (EMAIL_RX.test(ct)) usedEmails.add(ct);
+      else if (PHONE_RX.test(ct.replace(/\D/g,''))) usedPhones.add(ct.replace(/\D/g,''));
+    }
+  });
+  existingAccounts.forEach(a => { if (a.loginName) usedLoginNames.add(String(a.loginName).toLowerCase()); });
+
+  const emailContact = form.contacts.find(c => c.type === 'Email');
+  const phoneContact = form.contacts.find(c => c.type === 'Mobile' || c.type === '手机' || c.type === 'WhatsApp');
+  const emailVal = (emailContact?.value || '').trim();
+  const phoneVal = (phoneContact?.value || '').trim();
+
+  const emailValid = emailVal && EMAIL_RX.test(emailVal);
+  const phoneValid = phoneVal && PHONE_RX.test(phoneVal);
+  const emailDup = emailValid && usedEmails.has(emailVal.toLowerCase());
+  const phoneDup = phoneValid && usedPhones.has(phoneVal.toLowerCase());
+  const loginNameDup = form.loginName && usedLoginNames.has(String(form.loginName).toLowerCase());
   const step1Valid = form.applyName.trim() && form.contacts[0]?.value && form.contacts[1]?.value;
   const step2Valid = true; // v3.0.12 仅保留 UPI 收款 + 流量来源选填，始终可以下一页
   const passChecks = {
@@ -810,7 +851,7 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
     pattern: form.password.length >= 8 && form.password.length <= 50 && /[A-Z]/.test(form.password) && /[a-z]/.test(form.password) && /[0-9]/.test(form.password),
   };
   const passMatch = form.password && form.password === form.password2;
-  const step3Valid = form.applyName && passChecks.notEmpty && passChecks.minLen && passChecks.pattern && passMatch && form.agreeTerms;
+  const step3Valid = form.loginName && !loginNameDup && form.applyName && passChecks.notEmpty && passChecks.minLen && passChecks.pattern && passMatch && form.agreeTerms;
 
   const phoneOpts = REG_COUNTRIES.map((c) => ({ value:c.code, label:`${c.flag} ${c.code}` }));
   const countryOpts = REG_COUNTRIES.map((c) => c.name);
@@ -823,38 +864,48 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
         {step < 4 ? (
           <>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-              {step > 1 && (
+              {step > 1 && !isSupplement && (
                 <button onClick={() => setStep((s) => s - 1)} style={{
                   position:'absolute', left:0, background:'transparent', border:'none', cursor:'pointer',
                   color:'#64748b', padding:4, display:'grid', placeItems:'center',
                 }} title="上一步"><Icon name="chevronLeft" size={20}/></button>
               )}
-              <h2 style={{ margin:0, fontSize:22, fontWeight:700, color:'#0f172a' }}>{T('reg.title')}</h2>
+              <h2 style={{ margin:0, fontSize:22, fontWeight:700, color:'#0f172a' }}>{isSupplement ? '要求补件' : T('reg.title')}</h2>
             </div>
 
             {/* v3.0.11 副标题移到标题下方 / 步骤之上 */}
             <div style={{ textAlign:'center', fontSize:13, color:'#64748b', marginTop:8, marginBottom:4, minHeight:18 }}>
-              {step === 1 && T('reg.s1.welcome')}
-              {step === 2 && T('reg.s2.welcome')}
-              {step === 3 && ((form.applyName || T('reg.s3.you')) + T('reg.s3.welcome_b'))}
+              {isSupplement ? '请根据商户审核反馈,补充或修改流量来源与收款资料后重新提交' : (<>
+                {step === 1 && T('reg.s1.welcome')}
+                {step === 2 && T('reg.s2.welcome')}
+                {step === 3 && ((form.applyName || T('reg.s3.you')) + T('reg.s3.welcome_b'))}
+              </>)}
             </div>
 
-            <RegStep cur={step} labels={[T('reg.step.basic'), T('reg.step.traffic'), T('reg.step.account')]}/>
+            {!isSupplement && <RegStep cur={step} labels={[T('reg.step.basic'), T('reg.step.traffic'), T('reg.step.account')]}/>}
 
-            {step === 1 && (
+            {!isSupplement && step === 1 && (
               <>
                 <div style={{ marginBottom:18 }}>
                   <label style={{ fontSize:13, fontWeight:600, color:'#1e293b', display:'block', marginBottom:6 }}>{T('reg.s1.applyName')} <span style={{ color:'#ef4444' }}>*</span></label>
                   <RegInput placeholder={T('reg.s1.applyName.ph')} value={form.applyName} onChange={(e)=>set('applyName', e.target.value)}/>
                 </div>
 
-                {/* v3.0.12 联系方式:删除外标签 + 至少填写2项 hint;去掉外层 .contact-list 边框背景 */}
+                {/* v3.0.79 联系方式 — Email + 手机 强制格式 + 唯一性校验,错误提示在弹框下方 */}
                 <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:18 }}>
                   {form.contacts.map((c, idx) => {
                     const locked = idx < 2;
-                    const isPhone = c.type === 'Mobile' || c.type === 'WhatsApp';
+                    const isPhone = c.type === 'Mobile' || c.type === 'WhatsApp' || c.type === '手机';
+                    const isEmail = c.type === 'Email';
+                    const v = String(c.value || '').trim();
+                    let err = '';
+                    if (isEmail && v && !EMAIL_RX.test(v)) err = 'Email 格式不正确';
+                    else if (isPhone && v && !PHONE_RX.test(v)) err = '手机号码格式不正确(8-15 位数字)';
+                    else if (isEmail && v && usedEmails.has(v.toLowerCase())) err = 'Email 已被使用';
+                    else if (isPhone && v && usedPhones.has(v.toLowerCase())) err = '手机号码已被使用';
                     return (
-                      <div key={idx} className="contact-row" style={{ display:'grid', gridTemplateColumns:'130px 1fr 32px', gap:10, alignItems:'center' }}>
+                      <div key={idx}>
+                        <div className="contact-row" style={{ display:'grid', gridTemplateColumns:'130px 1fr 32px', gap:10, alignItems:'center' }}>
                         <div className="contact-cell-type">
                           {locked ? (
                             <div style={{
@@ -894,6 +945,8 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
                         <div className="contact-cell-act" style={{ display:'flex', justifyContent:'center' }}>
                           {!locked && <button type="button" className="contact-remove" title={T('reg.s1.remove')} onClick={()=>removeContact(idx)}>−</button>}
                         </div>
+                        </div>
+                        {err && <div style={{fontSize:11.5,color:'#dc2626',marginTop:4,marginLeft:140}}>× {err}</div>}
                       </div>
                     );
                   })}
@@ -939,17 +992,50 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
                     }}>UPI</div>
                   </RegField>
                 </div>
-                <button onClick={() => setStep(3)} disabled={!step2Valid} style={{
+                <button onClick={() => {
+                  if (isSupplement) {
+                    // v3.0.81 补件模式 — 直接提交 UPSERT
+                    const primaryContact = (form.contacts.find(c => c.value)?.value) || '';
+                    const contactList = form.contacts.filter(c => c.value).map(c => c.type).join(' · ');
+                    const trafficList = (form.trafficUrls || []).filter(Boolean).join(' · ');
+                    if (window.APS_APPS_STORE) {
+                      const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                      window.APS_APPS_STORE.list = window.APS_APPS_STORE.list.map(a =>
+                        a.id === prefill.appId
+                          ? {
+                              ...a,
+                              contact: primaryContact || a.contact,
+                              channels: trafficList || contactList || a.channels,
+                              _formSnapshot: { ...form },
+                              state: 'supplemented',
+                              failReason: null,
+                              updatedAt: nowStr,
+                              _logs: [...(a._logs || []), { at: nowStr, by: '用户:' + (a.loginName || a.name || '-'), type:'supplemented', note:'用户已补件,资料重新提交' }],
+                            }
+                          : a
+                      );
+                      window.APS_APPS_STORE.listeners.forEach(fn => fn());
+                    }
+                    setStep(4);
+                    return;
+                  }
+                  setStep(3);
+                }} disabled={!step2Valid} style={{
                   width:'100%', padding:13, borderRadius:8, border:'none',
                   background: step2Valid ? 'linear-gradient(135deg,#3b82f6,#1e40af)' : '#e5e7eb',
                   color: step2Valid ? '#fff' : '#94a3b8',
                   fontSize:15, fontWeight:600, cursor: step2Valid ? 'pointer' : 'not-allowed', transition:'.15s',
-                }}>{T('reg.s2.next')}</button>
+                }}>{isSupplement ? '提交补件' : T('reg.s2.next')}</button>
               </>
             )}
 
             {step === 3 && (
               <>
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontSize:13, fontWeight:600, color:'#1e293b', display:'block', marginBottom:6 }}>登入帐号 <span style={{ color:'#ef4444' }}>*</span></label>
+                  <RegInput placeholder="请输入登入帐号(英文/数字)" value={form.loginName||''} onChange={(e)=>set('loginName',e.target.value.replace(/\s/g,''))}/>
+                  {loginNameDup && <div style={{fontSize:11.5,color:'#dc2626',marginTop:4}}>× 登入帐号已被使用,请换一个</div>}
+                </div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
                   <RegField label={T('reg.s3.password')}>
                     <RegPasswordInput value={form.password} onChange={(e)=>set('password',e.target.value)}/>
@@ -1002,7 +1088,7 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
                             name: form.applyName || a.name,
                             contact: primaryContact || a.contact,
                             channels: trafficList || contactList || a.channels,
-                            loginName: form.applyName,
+                            loginName: form.loginName,
                             password: form.password,
                             _formSnapshot: { ...form },
                             state: 'supplemented',
@@ -1022,13 +1108,13 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
                       region: '',
                       reason: '通过专业代理后台直接注册申请',
                       channels: trafficList || contactList,
-                      loginName: form.applyName,
+                      loginName: form.loginName,
                       password: form.password,
                       _formSnapshot: { ...form },
                     });
                     try {
                       localStorage.setItem('APS_AGENTPORTAL_LAST_REG', JSON.stringify({
-                        loginName: form.applyName,
+                        loginName: form.loginName,
                         appId: created?.id || '',
                       }));
                     } catch (e) {}

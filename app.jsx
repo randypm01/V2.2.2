@@ -506,7 +506,7 @@ function App() {
               onClick={()=>setRoute('version')} title="版本">
               <Icon name="history" size={15} className="sb-icon"/>
               <span>版本</span>
-              <span className="sb-badge" style={{fontFamily:'JetBrains Mono'}}>v2.3.7</span>
+              <span className="sb-badge" style={{fontFamily:'JetBrains Mono'}}>{(window.VERSIONS && window.VERSIONS[0]?.ver) || 'v1.0'}</span>
             </div>
             <div className={'sb-item ' + (isActiveRoute('prd_overview')?'active':'')}
               onClick={()=>setRoute('prd_overview')} title="规划优先级">

@@ -2,9 +2,69 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.0.78',
+    ver: 'v3.0.85',
     date: '2026-05-18',
     current: true,
+    changes: [
+      { type: 'add', text: '自行申请代理「查看&审核」抽屉 申请资料下方 新增「备注」textarea — 只读模式显示「(未填写备注)」灰色占位;编辑模式可输入,保存后写入 _formSnapshot.remark' },
+      { type: 'remove', text: '已创建代理「查看&配置」抽屉 删除「申请理由 / 推广渠道说明 *」整段 textarea — 由「自行申请代理」的「备注」字段取代' },
+    ],
+  },
+  {
+    ver: 'v3.0.84',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '侧栏「版本」徽标 由硬编码 v2.3.7 改为读 window.VERSIONS[0].ver 动态显示当前版本号' },
+      { type: 'add', text: '版本列表 — 已导出代码的版本(目前标记 v3.0.22 / v3.0.36 / v3.0.77)在版本号 chip 旁显示黄色「已导出代码」chip + 下载图标' },
+      { type: 'add', text: 'modules/version.jsx 顶部 暴露 window.VERSIONS;新增 EXPORTED_VERSIONS Set 记录所有已导出代码的版本号' },
+    ],
+  },
+  {
+    ver: 'v3.0.83',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '自行申请代理「查看&审核」编辑模式 — 登入帐号 / 登入密码 改回只读(用户注册时确定后不允许商户修改);保存时也不再写回这两个字段' },
+    ],
+  },
+  {
+    ver: 'v3.0.82',
+    date: '2026-05-18',
+    changes: [
+      { type: 'feat', text: '自行申请代理 申请进度为 待审核 / 要求补件 / 已补件待审核 时,商户审核「查看&审核」抽屉支持「编辑」' },
+      { type: 'add', text: '可编辑字段:代理名称 / 登入帐号 / 登入密码 / 联系方式(支持新增/移除非锁定行)/ 流量来源链接(支持新增/移除)/ UPI ID / 收款人姓名' },
+      { type: 'modify', text: '抽屉底部 显示「编辑」按钮(右下);进入编辑后变「取消 / 保存」;保存写回 APS_APPS_STORE 对应记录(同步更新 _formSnapshot/contact/channels/loginName/password)+ 追加 type=edit 操作日志' },
+      { type: 'modify', text: '终态(已通过 / 已拒绝)不显示编辑按钮;操作记录 tab 永远只读' },
+    ],
+  },
+  {
+    ver: 'v3.0.81',
+    date: '2026-05-18',
+    changes: [
+      { type: 'modify', text: '补件流程注册弹窗 — 标题由「注册」改为「要求补件」;隐藏 3 步指示器、上一步按钮、第 1 步「基本资料」、第 3 步「创建账户」' },
+      { type: 'modify', text: '补件模式打开后 setStep(2) 直接进入「流量来源与收款」;主按钮文案改「提交补件」,点击直接 UPSERT 申请记录(state→supplemented),弹「已补件,等待复核」成功页' },
+      { type: 'modify', text: '欢迎语改为「请根据商户审核反馈,补充或修改流量来源与收款资料后重新提交」' },
+    ],
+  },
+  {
+    ver: 'v3.0.80',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '注册第 1 步 Email / 手机号码 一打开就显示「× 请填写此栏位」红字 — 改为只在字段有值但格式错或重复时才显示提示;为空时不再显示「请填写」错字(按钮置灰已足够暗示必填)' },
+    ],
+  },
+  {
+    ver: 'v3.0.79',
+    date: '2026-05-18',
+    changes: [
+      { type: 'fix', text: '注册第 3 步 「登入帐号」标题/提示显示成 i18n key — RegisterModal 内部 T = (k) => window.t(k) 没传 fallback,改为 (k, fb) => window.t(k, fb);label/placeholder 同步用硬编码中文兜底' },
+      { type: 'add', text: '登入帐号 唯一性校验 — 扫描 APS_APPS_STORE + APS_AGENT_ACCOUNTS 中所有 loginName(小写),命中显示「× 登入帐号已被使用」红字;补件流程会排除当前 prefill.appId' },
+      { type: 'add', text: 'Email 必填 + 格式校验(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/) + 唯一性;手机号码 必填 + 8-15 位数字 + 唯一性;无效或重复在行下方显示「× 格式不正确 / 已被使用」' },
+      { type: 'modify', text: 'step1Valid 校验改为 应用人姓名 + emailValid + phoneValid + !emailDup + !phoneDup;step3Valid 加 !loginNameDup;不通过则「下一页」/「Complete」按钮置灰' },
+    ],
+  },
+  {
+    ver: 'v3.0.78',
+    date: '2026-05-18',
     changes: [
       { type: 'fix', text: 'AC100005 帐户状态仍显「已启用」根因再修复 — v3.0.75 把 localStorage 清理放在 ensureMerchantAgentsStore 初始化代码块内,只第一次调用时执行;后续 AgentsModule 重新挂载时 flip() 仍会用旧的 set 状态把 pending → active' },
       { type: 'modify', text: '把 AC100005 的 localStorage 清理移到函数顶部、每次调用都执行 — 切换 tab、刷新、重新 mount 都会保证 set 内没有 AC100005,flip() 跳过' },
@@ -1919,6 +1979,14 @@ const TYPE_META = {
   baseline: { label: '基线', bg: '#f1f5f9', fg: '#475569' },
 };
 
+// v3.0.84 暴露给 app.jsx 侧栏使用,显示当前版本号
+if (typeof window !== 'undefined') {
+  window.VERSIONS = VERSIONS;
+}
+
+// v3.0.84 标记哪些版本已经导出代码(快照下载)— 列表中显示「已导出」绿色 chip
+const EXPORTED_VERSIONS = new Set(['v3.0.22', 'v3.0.36', 'v3.0.77']);
+
 function VersionModule() {
   return (
     <div className="page">
@@ -1951,6 +2019,15 @@ function VersionModule() {
                   background:'#dcfce7',color:'#15803d',
                   fontSize:11,fontWeight:600,
                 }}>当前版本</span>
+              )}
+              {EXPORTED_VERSIONS.has(v.ver) && (
+                <span style={{
+                  padding:'2px 8px',borderRadius:3,
+                  background:'#fef3c7',color:'#92400e',
+                  fontSize:11,fontWeight:600,display:'inline-flex',alignItems:'center',gap:4,
+                }}>
+                  <window.Icon name="download" size={11}/> 已导出代码
+                </span>
               )}
               <span style={{fontSize:12,color:'var(--text-3)'}}>
                 <window.Icon name="history" size={11}/> {v.date}
