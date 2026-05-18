@@ -2,9 +2,18 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.0.21',
+    ver: 'v3.0.22',
     date: '2026-05-18',
     current: true,
+    changes: [
+      { type: 'fix', text: '🐛 关键修复 — index.html 的 viewport meta 由 width=1440 改为 width=device-width, initial-scale=1。此前 Phase 1-5 写的所有 @media (max-width: …) 全部失效,因为浏览器被强制按 1440 渲染再缩小到屏宽,媒体查询永远不触发' },
+      { type: 'fix', text: '现象:netlify 部署后 iPhone 打开是「缩小到屏宽的桌面版」而非响应式版面(用户上传截图确认)' },
+      { type: 'add', text: 'viewport-fit=cover 配合 iPhone 安全区域(刘海屏 / 灵动岛),避免顶栏被遮挡' },
+    ],
+  },
+  {
+    ver: 'v3.0.21',
+    date: '2026-05-18',
     changes: [
       { type: 'feat', text: '响应式 Phase 5 / 5 完结 — 抽屉 / 弹窗 / 详情 tabs / Tweaks 面板小屏适配,仅改 styles.css(~60 行)' },
       { type: 'add', text: '<1024px:.drawer 宽 640→560,.drawer.wide 920→720,max-width 92vw 兜底' },
