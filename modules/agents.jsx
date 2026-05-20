@@ -1120,29 +1120,20 @@ function AgentDetail({ agent, onClose }) {
           <div>
             <div className="ad-section-title">基本资料</div>
             <div className="ad-info-card">
-              <div className="ad-info-grid">
+              <div className="ad-info-grid" style={{gridTemplateColumns:'1fr'}}>
                 <div><span className="ad-k">代理创建方式:</span><span className="ad-v">{createWay}</span></div>
-                {isApplied
-                  ? <div><span className="ad-k">用户ID:</span><span className="ad-v text-mono">{agent._appData?.userId || 'P34157319'}</span></div>
-                  : <div><span className="ad-k">创建代理人:</span><span className="ad-v">randy</span></div>}
                 <div><span className="ad-k">代理ID:</span><span className="ad-v text-mono">{displayId}</span></div>
-                <div><span className="ad-k">创建时间:</span><span className="ad-v text-mono">{isApplied ? (agent._appData?.appliedAt || '2026-5-11 23:59:59') : fmtDT(agent.created)}</span></div>
                 <div><span className="ad-k">代理名称:</span>
                   {editing
                     ? <input className="input sm" value={name} onChange={e=>setName(e.target.value)} style={{height:24,fontSize:13,padding:'2px 8px',width:'70%'}}/>
                     : <span className="ad-v">{name}</span>}</div>
-                <div></div>
                 <div><span className="ad-k">登入帐号:</span>
                   {editing
                     ? <input className="input sm" value={loginName} onChange={e=>setLoginName(e.target.value)} style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',fontFamily:'JetBrains Mono'}}/>
                     : <span className="ad-v text-mono">{loginName}</span>}</div>
-                <div></div>
                 <div><span className="ad-k">登入密码:</span><span className="ad-v text-mono">********</span></div>
-                <div></div>
-                <div><span className="ad-k">代理类型:</span><span className="ad-v">个人代理</span></div>
-                <div></div>
                 <div><span className="ad-k">上级代理:</span><span className="ad-v text-mono">{parentLabel}</span></div>
-                <div></div>
+                <div><span className="ad-k">创建时间:</span><span className="ad-v text-mono">{isApplied ? (agent._appData?.appliedAt || '2026-5-11 23:59:59') : fmtDT(agent.created)}</span></div>
               </div>
             </div>
 
@@ -1645,32 +1636,25 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
               ) : <>
               <div className="ad-section-title">基本资料</div>
               <div className="ad-info-card">
-                <div className="ad-info-grid">
+                <div className="ad-info-grid" style={{gridTemplateColumns:'1fr'}}>
                   <div><span className="ad-k">代理创建方式:</span><span className="ad-v">{detail._channel === 'agentportal' ? '代理后台自行申请' : '用户自行申请'}</span></div>
-                  <div></div>
                   <div><span className="ad-k">代理ID:</span><span className="ad-v text-mono">{detail.id}</span></div>
-                  <div></div>
                   <div>
                     <span className="ad-k">代理名称:</span>
                     {editing
                       ? <input className="input sm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',marginLeft:4}} value={draft?.name||''} onChange={e=>setDraft({...draft,name:e.target.value})}/>
                       : <span className="ad-v">{detail.name}</span>}
                   </div>
-                  <div></div>
                   <div>
                     <span className="ad-k">登入帐号:</span>
                     <span className="ad-v text-mono">{detail.loginName || '—'}</span>
                   </div>
-                  <div></div>
                   <div>
                     <span className="ad-k">登入密码:</span>
                     <span className="ad-v text-mono">{detail.password ? '••••••••' : '—'}</span>
                   </div>
-                  <div></div>
                   <div><span className="ad-k">上级代理:</span><span className="ad-v text-mono">{detail.parentId}-{detail.parentName}</span></div>
-                  <div></div>
                   <div><span className="ad-k">创建时间:</span><span className="ad-v text-mono">{detail.createdAt}</span></div>
-                  <div></div>
                 </div>
               </div>
 

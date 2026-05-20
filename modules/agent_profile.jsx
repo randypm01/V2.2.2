@@ -46,7 +46,9 @@ function AgentProfileModule() {
         ]}/>
 
         {tab === 'basic' && (() => {
-          // v2.5.8 重做:字段与商户后台「查看&配置 → 基本资料」一一对应,不存在的字段不出现
+          // v3.1.8 字段与商户后台「查看&审核」弹窗的「基本资料」一致:
+          //   代理创建方式 / 代理ID / 代理名称 / 登入帐号 / 登入密码 / 上级代理 / 创建时间 / 联系方式 / 备注
+          //   不再显示「代理类型 / 帐户状态 / 申请理由」,也不再显示顶部「同步说明」蓝条
           const D = window.APS_DATA;
           const isApplied = (me._createWay || '') === '自行申请代理';
           const displayId = me._displayId || me.id;
@@ -60,116 +62,60 @@ function AgentProfileModule() {
             return d.toISOString().slice(0,10) + ' ' + d.toTimeString().slice(0,8);
           })();
           const loginName = me._appData?.loginName || (me.name||'').replace(/[^A-Za-z]/g,'').toLowerCase() || 'agent';
-          const tierLabel = me._aType
-            || (me.tier === 'normal' ? '个人代理' : me.tier === 'general' ? '团队代理' : me.tier === 'super' ? '总代理' : '个人代理');
           const parentLabel = me.parent
             ? me.parent + '-' + (D.agents.find(x=>x.id===me.parent)?.name || 'Agent')
             : 'AG000000-本商户';
-          const statusMap = { active:'已启用', pending:'未启用', frozen:'已冻结', suspended:'已停用' };
-          const contacts = (me._appData?.contacts || []);
-          const findContact = (t) => contacts.find(c => c.type === t);
-          const email = findContact('Email')?.value || '—';
-          const phone = findContact('手机')
-            ? ((findContact('手机').dial || '') + ' ' + findContact('手机').value).trim()
-            : '—';
-          const tg = findContact('Telegram')?.value || '—';
 
-          const Row = ({ label, value, mono }) => (
-            <div style={{display:'flex',padding:'10px 0',borderBottom:'1px solid var(--line-soft)',fontSize:13}}>
-              <span style={{width:130,color:'var(--text-2)',flexShrink:0}}>{label}</span>
-              <span style={{
-                flex:1,color:'var(--text-0)',
-                fontFamily: mono ? 'var(--font-mono)' : 'inherit'
-              }}>{value || '—'}</span>
-            </div>
-          );
+          // 联系方式 — 与商户弹窗一致:从 _appData.contacts 逐项渲染(filter value)
+          // 若代理没有 _appData(商户创建),给一组默认示例
+          const contacts = (me._appData?.contacts && me._appData.contacts.length > 0)
+            ? me._appData.contacts
+            : [
+                { type:'Email',    value: me.email || '' },
+                { type:'手机',     dial:'+91', value: '' },
+                { type:'Telegram', value: '' },
+              ];
+          const filledContacts = contacts.filter(c => c.value);
 
           return (
             <div style={{padding:'18px 22px'}}>
-              <div style={{
-                padding:'10px 14px',marginBottom:14,fontSize:11.5,
-                background:'var(--brand-soft)',border:'1px solid var(--brand-line)',borderRadius:6,
-                color:'var(--brand)',display:'flex',alignItems:'center',gap:8
-              }}>
-                <Icon name="shield" size={13}/>该页信息与商户后台「代理账户管理」同步 — 如需修改请联系商户运营
-              </div>
-
-              <div className="form-section-title" style={{marginTop:0}}>基本资料</div>
-              <div style={{
-                background:'#fafbfc',border:'1px solid var(--line)',borderRadius:8,
-                padding:'4px 16px',marginBottom:14
-              }}>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',columnGap:24}}>
-                  <Row label="代理创建方式" value={me._createWay || '商户创建代理'}/>
-                  {isApplied
-                    ? <Row label="用户ID" value={me._appData?.userId || '—'} mono/>
-                    : <Row label="创建代理人" value="randy"/>}
-                  <Row label="代理ID" value={displayId} mono/>
-                  <Row label="创建时间" value={createdFmt} mono/>
-                  <Row label="代理名称" value={me.name}/>
-                  <div/>
-                  <Row label="登入帐号" value={loginName} mono/>
-                  <div/>
-                  <Row label="登入密码" value="********" mono/>
-                  <div/>
-                  <Row label="代理类型" value={tierLabel}/>
-                  <div/>
-                  <Row label="上级代理" value={parentLabel} mono/>
-                  <div/>
+              {/* 基本资料 — 与商户后台「查看&审核」弹窗布局一致(每行一列字段,左标签 右值) */}
+              <div className="ad-section-title">基本资料</div>
+              <div className="ad-info-card">
+                <div className="ad-info-grid" style={{gridTemplateColumns:'1fr'}}>
+                  <div><span className="ad-k">代理创建方式:</span><span className="ad-v">{me._createWay || '商户创建代理'}</span></div>
+                  <div><span className="ad-k">代理ID:</span><span className="ad-v text-mono">{displayId}</span></div>
+                  <div><span className="ad-k">代理名称:</span><span className="ad-v">{me.name}</span></div>
+                  <div><span className="ad-k">登入帐号:</span><span className="ad-v text-mono">{loginName}</span></div>
+                  <div><span className="ad-k">登入密码:</span><span className="ad-v text-mono">••••••••</span></div>
+                  <div><span className="ad-k">上级代理:</span><span className="ad-v text-mono">{parentLabel}</span></div>
+                  <div><span className="ad-k">创建时间:</span><span className="ad-v text-mono">{createdFmt}</span></div>
                 </div>
               </div>
 
-              <div style={{
-                display:'flex',alignItems:'center',padding:'10px 16px',
-                background:'#fafbfc',border:'1px solid var(--line)',borderRadius:8,marginBottom:18
-              }}>
-                <span style={{color:'var(--text-2)',fontSize:13,marginRight:10}}>帐户状态:</span>
-                <span className={'status-pill ' + (me.status==='active'?'st-active':me.status==='frozen'?'st-frozen':me.status==='suspended'?'st-suspended':'st-pending')}>
-                  {statusMap[me.status] || '已启用'}
-                </span>
+              <div className="ad-section-title mt-4">联系方式</div>
+              <table className="ad-contact-tbl">
+                <thead><tr><th style={{width:140}}>联系类型</th><th>联系资料</th></tr></thead>
+                <tbody>
+                  {filledContacts.length > 0
+                    ? filledContacts.map((c, i) => (
+                        <tr key={i}>
+                          <td>{c.type === 'Mobile' ? '手机' : c.type}</td>
+                          <td className="text-mono">
+                            {(c.type === 'Mobile' || c.type === '手机' || c.type === 'WhatsApp')
+                              ? `${c.dial || '+91'} ${c.value}`
+                              : c.value}
+                          </td>
+                        </tr>
+                      ))
+                    : <tr><td colSpan={2} style={{color:'var(--text-3)',textAlign:'center',padding:'16px'}}>—</td></tr>}
+                </tbody>
+              </table>
+
+              <div className="ad-section-title mt-4">备注</div>
+              <div style={{padding:'10px 14px',background:'#f8fafc',border:'1px solid var(--line)',borderRadius:6,fontSize:13,color: me.note ? 'var(--text-1)' : 'var(--text-3)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>
+                {me.note || '(未填写备注)'}
               </div>
-
-              <div className="form-section-title" style={{marginTop:0}}>联系方式</div>
-              <div style={{border:'1px solid var(--line)',borderRadius:8,overflow:'hidden',marginBottom:18}}>
-                <table className="tbl" style={{margin:0}}>
-                  <thead>
-                    <tr>
-                      <th style={{width:140}}>联系类型</th>
-                      <th>联系资料</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td>Email</td><td className="text-mono">{email}</td></tr>
-                    <tr><td>手机</td><td className="text-mono">{phone}</td></tr>
-                    <tr><td>Telegram</td><td className="text-mono">{tg}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {isApplied && (
-                <>
-                  <div className="form-section-title" style={{marginTop:0}}>
-                    申请理由 / 推广渠道说明
-                  </div>
-                  <textarea
-                    className="textarea"
-                    rows={4}
-                    readOnly
-                    value={me._appData?.reason || ''}
-                    style={{background:'#fafbfc',marginBottom:14}}
-                  />
-                </>
-              )}
-
-              <div className="form-section-title" style={{marginTop:0}}>备注</div>
-              <textarea
-                className="textarea"
-                rows={3}
-                readOnly
-                value={me.note || ''}
-                placeholder="(无备注)"
-                style={{background:'#fafbfc'}}
-              />
             </div>
           );
         })()}

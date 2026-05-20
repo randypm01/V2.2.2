@@ -13,32 +13,51 @@ const MRUI = window.UI;
 const MR_T = (k, fb) => window.t(k, fb);
 
 // —— 构造一期玩家数据(数据风格与 my_players.jsx 对齐)——
+// v3.1.7 佣金/基数重新计算:
+//   预估佣金 = max(0, 充值 - 提款 - 余额)
+//   分润基数(仅已结算期) = max(0, 上期未结算余额 + 上期佣金基数 + (本期充值 - 本期提款 - 本期结算余额))
+//   结算佣金 = 分润基数 × 分润比例
 function buildPeriodPlayers(agentId, seed) {
   // 用 seed 让不同期数据稍有不同(乘以 0.7 ~ 1.3 之间的系数)
   const factor = 0.7 + (((seed * 31) % 7) / 10);
-  const make = (id, code, vip, dep, wd, wager, balance, isLoss) => {
-    const payout = Math.round(wager * 0.92);
-    const ggr = wager - payout;
-    const rate = 5;                                  // 分润比例 5%
-    const commission = Math.round(ggr * rate / 100); // 简化:佣金 = GGR × 5%
+  const make = (id, code, vip, dep, wd, wager, balance, isLoss, prevUnsettled, prevBase) => {
+    const deposit  = Math.round(dep * factor);
+    const withdraw = Math.round(wd * factor);
+    const wagerV   = Math.round(wager * factor);
+    const payout   = Math.round(wagerV * 0.92);
+    const ggrSign  = isLoss ? -1 : 1;
+    const ggr      = (wagerV - payout) * ggrSign;
+    const rate     = 5;
+    const balanceV = Math.round(balance * factor);
+    // 分润基数(仅已结算期用):(上期未结算余额 + 上期佣金基数) + (本期充值 - 本期提款 - 本期结算余额)
+    const baseRaw = (prevUnsettled || 0) + (prevBase || 0) + (deposit - withdraw - balanceV);
+    const base    = Math.max(0, baseRaw);
+    // 预估佣金(仅预估期用):max(0, 充值 - 提款 - 余额)
+    const estComRaw = deposit - withdraw - balanceV;
+    const estCom    = Math.max(0, estComRaw);
+    // 结算佣金 = 分润基数 × 分润比例
+    const settledCom = Math.round(base * rate / 100);
     return {
       id, agentId, code, vip,
-      deposit: Math.round(dep * factor),
-      withdraw: Math.round(wd * factor),
-      wager: Math.round(wager * factor),
-      payout: Math.round(payout * factor),
-      ggr: Math.round(ggr * factor) * (isLoss ? -1 : 1),
-      balance: Math.round(balance * factor),
-      commission: Math.round(commission * factor) * (isLoss ? -1 : 1),
+      deposit, withdraw, wager: wagerV, payout, ggr,
+      balance: balanceV,
       rate,
+      estCom,            // 预估佣金
+      base,              // 分润基数(已 max(0))
+      baseRaw,           // 原始分润基数(含负)— 预留以防未来需要
+      prevUnsettled: prevUnsettled || 0,
+      prevBase: prevBase || 0,
+      settledCom,        // 结算佣金
+      commission: settledCom, // 兼容原字段(KPI 总佣金用)
       isLoss,
     };
   };
+  // 参数增加 prevUnsettled / prevBase — 模拟上期结转数据
   return [
-    make('P12354531','RANDY01', 1, 10000, 10000, 10000, 10000, false),
-    make('P12354532','RANDY02', 1, 10000, 10000, 10000, 10000, false),
-    make('P12354533','RANDY03', 1, 10000, 10000, 10000, 10000, true),
-    make('P12354534','RANDY04', 1, 10000, 10000, 10000, 10000, true),
+    make('P12354531','RANDY01', 1, 10000, 10000, 10000, 10000, false,  200,  500),
+    make('P12354532','RANDY02', 1, 10000, 10000, 10000, 10000, false,  -100, 300),
+    make('P12354533','RANDY03', 1, 10000, 10000, 10000, 10000, true,   0,    0),
+    make('P12354534','RANDY04', 1, 10000, 10000, 10000, 10000, true,   -800, 0),
   ];
 }
 
@@ -59,7 +78,6 @@ function MyRevshareModule() {
 
   // 工具栏筛选(两期共用)
   const [q, setQ] = React.useState('');
-  const [vipF, setVipF] = React.useState('all');
   const [statusF, setStatusF] = React.useState('all'); // all | profit | loss
   const [page, setPage] = React.useState(1);
 
@@ -86,7 +104,6 @@ function MyRevshareModule() {
 
   const filtered = players.filter(p => {
     if (q && !(p.id + p.code).toLowerCase().includes(q.toLowerCase())) return false;
-    if (vipF !== 'all' && String(p.vip) !== vipF) return false;
     if (statusF === 'profit' && p.isLoss) return false;
     if (statusF === 'loss' && !p.isLoss) return false;
     return true;
@@ -208,10 +225,6 @@ function MyRevshareModule() {
             {/* 工具栏 */}
             <div className="toolbar" style={{padding:'0 0 12px'}}>
               <MRUI.SearchInput value={q} onChange={(v)=>{setQ(v);setPage(1);}} placeholder={MR_T('mr.filter.search_ph','玩家UID / 邀请Code')} width={220}/>
-              <select className="filter-select" value={vipF} onChange={e=>{setVipF(e.target.value);setPage(1);}}>
-                <option value="all">{MR_T('mr.filter.all_vip','全部 VIP')}</option>
-                {[0,1,2,3,4,5,6,7].map(v=><option key={v} value={v}>VIP {v}</option>)}
-              </select>
               <select className="filter-select" value={statusF} onChange={e=>{setStatusF(e.target.value);setPage(1);}}>
                 <option value="all">{MR_T('mr.filter.all_status','全部用户状态')}</option>
                 <option value="profit">{MR_T('mr.status.profit','盈利')}</option>
@@ -226,7 +239,6 @@ function MyRevshareModule() {
                 <thead><tr>
                   <th>{MR_T('mr.col.uid','玩家 UID')}</th>
                   <th>{MR_T('mr.col.source_code','来源 Code')}</th>
-                  <th>{MR_T('mr.col.vip','VIP 等级')}</th>
                   <th className="right">{MR_T('mr.col.deposit','充值金额')}</th>
                   <th className="right">{MR_T('mr.col.withdraw','提款金额')}</th>
                   <th className="right">{MR_T('mr.col.gap','充提差')}</th>
@@ -238,7 +250,9 @@ function MyRevshareModule() {
                   <th className="right">{MR_T('mr.col.wager','投注')}</th>
                   <th className="right">{MR_T('mr.col.payout','派彩')}</th>
                   <th className="right">GGR</th>
-                  <th className="right">{MR_T('mr.col.base','分润基数')}</th>
+                  {tab === 'settled' && (
+                    <th className="right">{MR_T('mr.col.base','分润基数')}</th>
+                  )}
                   <th className="right">{MR_T('mr.col.rate','分润比例')}</th>
                   <th className="right" style={{color:'var(--brand)'}}>
                     {tab === 'estimate'
@@ -254,7 +268,6 @@ function MyRevshareModule() {
                       <tr key={p.id}>
                         <td className="text-mono" style={{color:'var(--text-0)',fontSize:12,fontWeight:600}}>{p.id}</td>
                         <td className="text-mono" style={{color:'var(--brand)',fontSize:11.5}}>{p.code}</td>
-                        <td><span style={{fontSize:12,color:'var(--text-1)'}}>VIP {p.vip}</span></td>
                         <td className="right text-mono">{money(p.deposit)}</td>
                         <td className="right text-mono">{money(p.withdraw)}</td>
                         <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
@@ -262,9 +275,11 @@ function MyRevshareModule() {
                         <td className="right text-mono">{money(p.wager)}</td>
                         <td className="right text-mono">{money(p.payout)}</td>
                         <td className="right text-mono" style={{color: p.ggr>=0?'var(--success)':'var(--danger)'}}>{(p.ggr>=0?'+':'-')+'₹'+F.money(Math.abs(p.ggr||0))}</td>
-                        <td className="right text-mono">{money(Math.abs(p.ggr||0))}</td>
+                        {tab === 'settled' && (
+                          <td className="right text-mono">{money(p.base)}</td>
+                        )}
                         <td className="right text-mono">{p.rate}%</td>
-                        <td className="right text-mono">{money(p.commission)}</td>
+                        <td className="right text-mono">{money(tab === 'estimate' ? p.estCom : p.settledCom)}</td>
                         <td>
                           {p.isLoss
                             ? <span className="badge b-danger">{MR_T('mr.status.loss','亏损')}</span>
@@ -274,7 +289,7 @@ function MyRevshareModule() {
                     );
                   })}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={14} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
+                    <tr><td colSpan={tab === 'settled' ? 13 : 12} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
                   )}
                 </tbody>
               </table>
