@@ -617,3 +617,157 @@ window.resolvePlanLabels = function(planKeys) {
     .filter(Boolean)
     .map(o => o.label);
 };
+
+// v3.0.86 把 plan key 解析成完整 plan 詳情(供「查看&配置 分潤模式 tab」只讀展示)
+window.resolvePlan = function(key) {
+  if (!key) return null;
+  const colon = key.indexOf(':');
+  if (colon < 0) return null;
+  const mode = key.slice(0, colon);
+  const id = key.slice(colon + 1);
+  const store = window.RV_PLANS || { single: [], revenue: [] };
+  if (mode === 'single') {
+    const p = store.single.find(x => x.id === id);
+    if (!p) return null;
+    return { mode, modeLabel: '單付費分潤方案', plan: p };
+  }
+  if (mode === 'revenue') {
+    const p = store.revenue.find(x => x.id === id);
+    if (!p) return null;
+    const t = REV_TYPES.find(x => x.key === p.type);
+    return { mode, modeLabel: '收益分潤方案', plan: p, typeLabel: t?.label, formula: t?.formula };
+  }
+  return null;
+};
+
+// v3.0.86 平台級結算默認值(後續可改成讀取商戶設定)
+window.RV_PLATFORM_DEFAULTS = {
+  currency: 'INR',
+  symbol: '₹',
+  minSettleAmount: 200,
+  negativeCarry: true,
+};
+
+// =================== v3.0.86 共享:分潤模式 只讀視圖 ===================
+// 用于「查看&配置 → 分润模式」非编辑态展示;比 form 半透明态更清晰
+// v3.1.14 props.hideHeader:为 true 时不渲染内部「分润规则 + badge」标题(代理后台「我的帐户」用外层 section title)
+window.CommissionReadOnly = function CommissionReadOnly({ value, hideHeader }) {
+  const v = value || { kind:'weekly', weekday:1, monthday:1, plans:[] };
+  const D = window.RV_PLATFORM_DEFAULTS || { currency:'INR', symbol:'₹', minSettleAmount:200, negativeCarry:true };
+  const WD = ['每週一','每週二','每週三','每週四','每週五','每週六','每週日'];
+
+  // 結算周期描述
+  const cycleText = v.kind === 'weekly'
+    ? `每週結算 · ${WD[(v.weekday||1)-1]} 00:00:00,結算上週一 00:00:00 ~ 週日 23:59:59`
+    : `每月結算 · 每月${v.monthday||1}號 00:00:00,結算上月1號 00:00:00 ~ 月底 23:59:59`;
+
+  const plans = (v.plans || []).filter(Boolean);
+  const fmtMoney = (n) => `${D.symbol}${Number(n).toLocaleString()}`;
+
+  // 字段-值 一行
+  const Row = ({ k, children, mono, multiline }) => (
+    <div style={{
+      display:'flex', alignItems: multiline?'flex-start':'baseline',
+      padding:'10px 0', borderBottom:'1px dashed var(--line-soft)',
+      fontSize:13, lineHeight:1.7,
+    }}>
+      <div style={{width:120,flexShrink:0,color:'var(--text-2)'}}>{k}</div>
+      <div style={{flex:1,color:'var(--text-0)',fontFamily: mono?'JetBrains Mono':undefined}}>{children}</div>
+    </div>
+  );
+
+  const renderSingle = (detail, idx) => {
+    const p = detail.plan;
+    return (
+      <PlanCard key={idx} title="分潤規則" badge={detail.modeLabel} hideHeader={hideHeader}>
+        <Row k="分潤方案">{detail.modeLabel} · <b style={{fontWeight:500}}>{p.name}</b></Row>
+        <Row k="結算週期">{cycleText}</Row>
+        <Row k="結算幣種">{D.currency} ({D.symbol})</Row>
+        <Row k="最低結算金額">{fmtMoney(D.minSettleAmount)} <span style={{color:'var(--text-3)',fontSize:12}}>(低於該金額順延至下期)</span></Row>
+        <Row k="最低首存金額" mono>{fmtMoney(p.minDeposit)}</Row>
+        <Row k="最低流水倍數" mono>{p.minTurnover}</Row>
+        <Row k="最低 NGR" mono>{p.minNGR < 0 ? <span style={{color:'var(--danger)'}}>{p.minNGR}</span> : p.minNGR}</Row>
+        <Row k="有效天數" mono>{p.validDays} 天</Row>
+        <Row k="活躍留存">{p.needRetain ? `是 · ${p.retainDays} 天` : '否'}</Row>
+        <Row k="排除提款過玩家">{p.excludeWithdrawn ? '是' : '否'}</Row>
+        <Row k="負盈利結轉">{D.negativeCarry ? '是,上月負數計入下月' : '否'}</Row>
+        {p.remark && <Row k="備註" multiline><span style={{color:'var(--text-2)'}}>{p.remark}</span></Row>}
+      </PlanCard>
+    );
+  };
+
+  const renderRevenue = (detail, idx) => {
+    const p = detail.plan;
+    return (
+      <PlanCard key={idx} title="分潤規則" badge={detail.modeLabel} hideHeader={hideHeader}>
+        <Row k="分潤方案">{detail.typeLabel} · <b style={{fontWeight:500}}>{p.name}</b></Row>
+        <Row k="結算週期">{cycleText}</Row>
+        <Row k="結算幣種">{D.currency} ({D.symbol})</Row>
+        <Row k="最低結算金額">{fmtMoney(D.minSettleAmount)} <span style={{color:'var(--text-3)',fontSize:12}}>(低於該金額順延至下期)</span></Row>
+        <Row k="分潤比例" mono>{(p.ratio * 100).toFixed(p.ratio*100 % 1 === 0 ? 0 : 2)}%</Row>
+        <Row k="結算佣金上限" mono>{fmtMoney(p.cap)}</Row>
+        <Row k="負盈利結轉">{D.negativeCarry ? '是,上月負數計入下月' : '否'}</Row>
+        {detail.formula && (
+          <Row k="分潤計算公式流程" multiline>
+            <pre style={{
+              margin:'2px 0 0',padding:'10px 12px',
+              background:'#f8fafc',border:'1px solid var(--line-soft)',borderRadius:6,
+              fontSize:12,lineHeight:1.85,color:'var(--text-1)',
+              fontFamily:'JetBrains Mono, monospace',whiteSpace:'pre-wrap',
+            }}>{detail.formula}</pre>
+          </Row>
+        )}
+        {p.remark && <Row k="備註" multiline><span style={{color:'var(--text-2)'}}>{p.remark}</span></Row>}
+      </PlanCard>
+    );
+  };
+
+  if (plans.length === 0) {
+    return (
+      <div style={{padding:'40px 0',textAlign:'center',color:'var(--text-3)',fontSize:13,
+        background:'#f8fafc',border:'1px dashed var(--line)',borderRadius:8}}>
+        尚未配置分潤方案
+      </div>
+    );
+  }
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      {plans.map((key, idx) => {
+        const detail = window.resolvePlan(key);
+        if (!detail) {
+          return (
+            <PlanCard key={idx} title="分潤規則" badge="未知方案">
+              <div style={{padding:'14px 0',color:'var(--text-3)',fontSize:13}}>方案不存在或已被刪除(key: {key})</div>
+            </PlanCard>
+          );
+        }
+        return detail.mode === 'single' ? renderSingle(detail, idx) : renderRevenue(detail, idx);
+      })}
+    </div>
+  );
+};
+
+// 卡片外框
+function PlanCard({ title, badge, hideHeader, children }) {
+  return (
+    <div>
+      {!hideHeader && (
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+          <div style={{fontSize:13,color:'var(--text-0)',fontWeight:600}}>{title}</div>
+          {badge && (
+            <span style={{
+              display:'inline-block',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:500,
+              background: badge.includes('收益') ? '#eff6ff' : '#f0fdf4',
+              color: badge.includes('收益') ? '#1d4ed8' : '#15803d',
+              border: '1px solid ' + (badge.includes('收益') ? '#bfdbfe' : '#bbf7d0'),
+            }}>{badge}</span>
+          )}
+        </div>
+      )}
+      <div style={{border:'1px solid var(--line)',borderRadius:8,padding:'4px 16px 14px',background:'#fff'}}>
+        {children}
+      </div>
+    </div>
+  );
+}

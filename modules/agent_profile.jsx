@@ -9,28 +9,38 @@ function AgentProfileModule() {
   const [lang] = window.useAgentLang();
   const T = (k, fb) => window.t(k, fb);
   const [tab, setTab] = React.useState('basic');
-  const [show2FA, setShow2FA] = React.useState(false);
   const [showPwd, setShowPwd] = React.useState(false);
 
-  // 合作方案 (从代理对象推断)
-  const plan = {
-    type: ['CPA','RevShare','Hybrid'][me.level % 3],
-    cpa: 50,
-    revShare: 35,
-    cycle: '周结(每周一)',
-    minWithdraw: 200,
-    currency: me.currency,
-    negativeCarry: true,
-    holdDays: 7,
+  // v3.1.11 從代理對象讀:分潤模式 / 權限 / 流量來源 / 收款方式
+  // _comm 由商戶創建時烘入(agents.jsx v2.4.47);未烘入時給默認示例(週期資產變動分潤)
+  const comm = me._comm || { kind:'weekly', weekday:1, monthday:1, plans:['revenue:RV-002'] };
+  // _perms 同上
+  const perms = me._perms || {
+    shareCode:true, viewRisk:false, viewPlayers:true, applyWithdraw:true,
+    viewCommission:true, createSubAgent:false, useApi:false, viewSubAgent:true,
+    downloadMaterial:true, viewCrossLayer:false,
   };
-
-  // 登录设备记录
-  const devices = [
-    { name:'MacBook Pro · Chrome 124', ip:'203.74.201.18', loc:'巴西 圣保罗', last: Date.now()-2*3600*1000, cur: true },
-    { name:'iPhone 15 Pro · Safari', ip:'203.74.201.18', loc:'巴西 圣保罗', last: Date.now()-1*86400000, cur: false },
-    { name:'iPad Air · Safari', ip:'45.211.93.42', loc:'巴西 里约', last: Date.now()-5*86400000, cur: false },
-    { name:'Windows 11 · Edge', ip:'185.221.17.84', loc:'葡萄牙 里斯本', last: Date.now()-12*86400000, cur: false },
-  ];
+  // 流量來源 / 收款方式 從 _appData._formSnapshot 讀;預設用 me.name 生成 2 個示例(与商户后台「查看&配置」fallback 一致)
+  const snap = me._appData?._formSnapshot || {};
+  const trafficUrls = (() => {
+    if (snap.trafficUrls && snap.trafficUrls.length) {
+      const cleaned = snap.trafficUrls.filter(Boolean);
+      if (cleaned.length) return cleaned;
+    }
+    const slug = (me.name || 'agent').toLowerCase().replace(/\s/g,'');
+    return [
+      'https://youtube.com/@' + slug,
+      'https://t.me/' + slug + '_channel',
+    ];
+  })();
+  // v3.1.12 收款方式 字段按截图扩展:method / IFSC / Account / Real Name / Email
+  const payment = {
+    method: snap.payMethod || 'UPI',
+    ifsc:   snap.ifsc      || '123123',
+    account:snap.account   || '123123',
+    realName: snap.holder  || me._payment?.holder || me.name || 'Nick An',
+    email:  snap.email     || (me._appData?.contacts?.find(c => c.type === 'Email')?.value) || me.email || '123@gmail.com',
+  };
 
   return (
     <div className="page">
@@ -40,9 +50,12 @@ function AgentProfileModule() {
 
       <div className="card">
         <PFUI.Tabs value={tab} onChange={setTab} tabs={[
-          {key:'basic',    label:'基本资料'},
-          {key:'plan',     label:'合作方案'},
-          {key:'security', label:'安全设置'},
+          {key:'basic',      label:'基本资料'},
+          {key:'commission', label:'分润模式'},
+          {key:'perms',      label:'权限配置'},
+          {key:'traffic',    label:'流量来源'},
+          {key:'payment',    label:'收款方式'},
+          {key:'security',   label:'安全设置'},
         ]}/>
 
         {tab === 'basic' && (() => {
@@ -93,6 +106,19 @@ function AgentProfileModule() {
                 </div>
               </div>
 
+              {/* v3.1.15 帐户状态行 — 代理后台用户不可自行冻结/停用,只显示状态 pill */}
+              <div className="ad-status-row">
+                <div>
+                  <span className="ad-k">帐户状态:</span>
+                  <span style={{
+                    marginLeft:4,
+                    display:'inline-block',padding:'2px 10px',borderRadius:99,
+                    fontSize:12,fontWeight:600,
+                    background:'#dcfce7',color:'#15803d',border:'1px solid #86efac',
+                  }}>已启用</span>
+                </div>
+              </div>
+
               <div className="ad-section-title mt-4">联系方式</div>
               <table className="ad-contact-tbl">
                 <thead><tr><th style={{width:140}}>联系类型</th><th>联系资料</th></tr></thead>
@@ -111,91 +137,92 @@ function AgentProfileModule() {
                     : <tr><td colSpan={2} style={{color:'var(--text-3)',textAlign:'center',padding:'16px'}}>—</td></tr>}
                 </tbody>
               </table>
-
-              <div className="ad-section-title mt-4">备注</div>
-              <div style={{padding:'10px 14px',background:'#f8fafc',border:'1px solid var(--line)',borderRadius:6,fontSize:13,color: me.note ? 'var(--text-1)' : 'var(--text-3)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>
-                {me.note || '(未填写备注)'}
-              </div>
             </div>
           );
         })()}
 
-        {tab === 'security' && (
+        {tab === 'commission' && (
           <div style={{padding:'18px 22px'}}>
-            <div className="form-section-title" style={{marginTop:0}}>登录安全</div>
-            <div style={{display:'grid',gap:10}}>
-              <SecurityRow icon="shield" title="登录密码" desc="上次修改:30 天前 · 建议每 90 天更换一次"
-                action={<button className="btn sm" onClick={()=>setShowPwd(true)}>修改密码</button>}/>
-              <SecurityRow icon="phone" title="二步验证 (2FA)" desc="使用 Google Authenticator 或 Authy 扫码绑定"
-                badge={<span className="badge b-warning"><span className="dot"/>未启用</span>}
-                action={<button className="btn sm primary" onClick={()=>setShow2FA(true)}>立即启用</button>}/>
+            <div className="ad-section-title">分润规则</div>
+            <window.CommissionReadOnly value={comm} hideHeader={true}/>
+          </div>
+        )}
+
+        {tab === 'perms' && (
+          <div style={{padding:'18px 22px'}}>
+            <div className="ad-section-title">权限范围</div>
+            <div style={{border:'1px solid var(--line)',borderRadius:8,padding:'18px 22px',background:'#fff'}}>
+              {/* 运营 section */}
+              <div style={{fontSize:13,color:'var(--text-2)',fontWeight:500,marginBottom:10}}>运营</div>
+              <div style={{display:'flex',flexDirection:'column',gap:8,paddingLeft:8}}>
+                <PermRow on={true} label="我的帐户" sub="(查看)"/>
+                <PermRow on={perms.shareCode} label="Code 与链接管理" sub="(查看/编辑)"/>
+                {perms.shareCode && (
+                  <div style={{display:'flex',alignItems:'center',gap:12,paddingLeft:24,paddingTop:2,paddingBottom:4}}>
+                    <span style={{fontSize:13,color:'var(--text-2)'}}>可创建邀请 Code 上限数量</span>
+                    <span style={{fontSize:13,color:'var(--text-0)',fontFamily:'JetBrains Mono',fontWeight:500}}>20</span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{borderTop:'1px dashed var(--line-soft)',margin:'14px 0'}}/>
+
+              {/* 报表 section */}
+              <div style={{fontSize:13,color:'var(--text-2)',fontWeight:500,marginBottom:10}}>报表</div>
+              <div style={{display:'flex',flexDirection:'column',gap:8,paddingLeft:8}}>
+                <PermRow on={perms.shareCode} label="邀请 Code 与链接管理" sub="(查看)"/>
+                <PermRow on={perms.viewPlayers} label="玩家损益" sub="(查看)"/>
+                <PermRow on={perms.viewCommission} label="分润报表" sub="(查看)"/>
+              </div>
             </div>
           </div>
         )}
 
-        {tab === 'plan' && (
+        {tab === 'traffic' && (
           <div style={{padding:'18px 22px'}}>
-            <div style={{
-              padding:20,
-              background:'linear-gradient(135deg,#3b82f612,transparent)',
-              border:'1px solid var(--brand-line)',
-              borderRadius:8,
-              display:'flex',alignItems:'center',gap:24,
-              marginBottom:18
-            }}>
-              <div style={{width:56,height:56,borderRadius:14,background:'var(--brand-soft)',display:'grid',placeItems:'center'}}>
-                <Icon name="pie" size={28} style={{color:'var(--brand)'}}/>
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:11,color:'var(--text-3)'}}>当前合作方案</div>
-                <div style={{fontSize:22,fontWeight:600,color:'var(--text-0)',marginTop:4}}>{plan.type} · CPA $50 + RevShare 35%</div>
-                <div className="text-mute" style={{fontSize:12,marginTop:4}}>方案版本 v2.6 · 由商户运营 ops.lily 配置 · 锁定至 2026-12-31</div>
-              </div>
-              <button className="btn">下载方案文件</button>
-            </div>
-
-            <div className="grid-2" style={{gap:14}}>
-              <div className="card-inner">
-                <div className="form-section-title" style={{marginTop:0}}>CPA 设置</div>
-                <PlanRow label="CPA 金额" value="$50 / per CPA"/>
-                <PlanRow label="最低首存" value="$20"/>
-                <PlanRow label="最低流水倍数" value="×5"/>
-                <PlanRow label="最低 NGR" value="$30"/>
-                <PlanRow label="留存条件" value="D3 留存"/>
-                <PlanRow label="人工复核高额 CPA" value="≥ $100 复核"/>
-              </div>
-              <div className="card-inner">
-                <div className="form-section-title" style={{marginTop:0}}>RevShare 设置</div>
-                <PlanRow label="分润比例" value="35% NGR" highlight/>
-                <PlanRow label="NGR 计算口径" value="GGR - Bonus - 返水"/>
-                <PlanRow label="负盈利结转" value={plan.negativeCarry ? '是 · 上月负数计入下月' : '否'}/>
-                <PlanRow label="结算周期" value={plan.cycle}/>
-                <PlanRow label="结算币种" value={plan.currency}/>
-                <PlanRow label="最低结算金额" value={'$' + plan.minWithdraw}/>
-              </div>
-            </div>
-
-            <div className="form-section-title mt-4">权限范围</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'6px 24px'}}>
-              {[
-                ['查看玩家列表', true], ['查看下级代理', true],
-                ['创建分享 Code', true], ['创建下级代理', true],
-                ['申请提款', true], ['查看 CPA 报表', true],
-                ['查看 RevShare 报表', true], ['下载素材', true],
-                ['使用 API / Postback', false], ['查看跨层数据', false],
-              ].map(([p,on]) => (
-                <div key={p} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0',borderBottom:'1px solid var(--line-soft)',fontSize:12.5}}>
-                  {on
-                    ? <Icon name="check" size={13} style={{color:'var(--success)'}}/>
-                    : <Icon name="x" size={13} style={{color:'var(--text-3)'}}/>}
-                  <span style={{color: on?'var(--text-1)':'var(--text-3)'}}>{p}</span>
+            <div className="ad-section-title">流量来源链接</div>
+            <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:12}}>您推广所使用的频道、平台账号或落地页(Youtube / Tiktok / Telegram / Facebook ...)</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {trafficUrls.length === 0 && (
+                <div style={{padding:'14px',background:'#f8fafc',border:'1px dashed var(--line)',borderRadius:8,fontSize:13,color:'var(--text-3)',textAlign:'center'}}>(未填写流量来源)</div>
+              )}
+              {trafficUrls.map((u, i) => (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontSize:12,color:'var(--text-3)',width:24,textAlign:'right'}}>{i+1}.</span>
+                  <input className="input" value={u} readOnly
+                    style={{flex:1,background:'#f8fafc',fontFamily:'JetBrains Mono'}}/>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {tab === 'payout' && null /* v2.5.8 removed */}
+        {tab === 'payment' && (
+          <div style={{padding:'18px 22px'}}>
+            <div className="ad-section-title">收款方式</div>
+            <div className="ad-info-card">
+              <div className="ad-info-grid" style={{gridTemplateColumns:'1fr'}}>
+                <div><span className="ad-k">收款方式:</span><span className="ad-v">{payment.method}</span></div>
+                <div><span className="ad-k">IFSC:</span><span className="ad-v text-mono">{payment.ifsc || '-'}</span></div>
+                <div><span className="ad-k">Account:</span><span className="ad-v text-mono">{payment.account || '-'}</span></div>
+                <div><span className="ad-k">Real Name:</span><span className="ad-v">{payment.realName || '-'}</span></div>
+                <div><span className="ad-k">Email:</span><span className="ad-v text-mono">{payment.email || '-'}</span></div>
+              </div>
+            </div>
+            <div style={{marginTop:12,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
+              <Icon name="info" size={12}/> 如需修改收款方式,请联系商户运营
+            </div>
+          </div>
+        )}
+
+        {tab === 'security' && (
+          <div style={{padding:'18px 22px'}}>
+            <div className="ad-section-title">登入安全</div>
+            <SecurityRow icon="shield" title="登入密码"
+              desc={'上次修改时间:' + new Date(Date.now()-30*86400000).toISOString().slice(0,10) + ' ' + new Date().toTimeString().slice(0,8)}
+              action={<button className="btn sm" style={{borderColor:'var(--brand)',color:'var(--brand)'}} onClick={()=>setShowPwd(true)}>修改密码</button>}/>
+          </div>
+        )}
       </div>
 
       {/* 修改密码 Modal */}
@@ -205,30 +232,6 @@ function AgentProfileModule() {
           <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>当前密码</label><input className="input" type="password"/></div>
           <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>新密码 (至少 12 位,包含大小写 + 数字 + 符号)</label><input className="input" type="password"/></div>
           <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>确认新密码</label><input className="input" type="password"/></div>
-        </div>
-      </PFUI.Modal>
-
-      {/* 2FA Modal */}
-      <PFUI.Modal open={show2FA} onClose={()=>setShow2FA(false)} title="启用二步验证 (2FA)"
-        subtitle="使用 Google Authenticator 或 Authy 扫描下方二维码"
-        footer={<><button className="btn ghost" onClick={()=>setShow2FA(false)}>稍后</button><button className="btn primary" onClick={()=>{toast('2FA 已启用');setShow2FA(false);}}>完成绑定</button></>}>
-        <div style={{textAlign:'center',padding:'10px 20px'}}>
-          <div style={{width:180,height:180,margin:'0 auto',padding:14,background:'#fff',borderRadius:8,border:'1px solid var(--line)'}}>
-            <svg viewBox="0 0 21 21" style={{width:'100%',height:'100%'}}>
-              {Array.from({length:21}).map((_,r)=>Array.from({length:21}).map((_,c)=>{
-                const seed = (r*13 + c*7 + 3) % 7;
-                return seed > 3 ? <rect key={r+'-'+c} x={c} y={r} width="1" height="1" fill="#000"/> : null;
-              }))}
-            </svg>
-          </div>
-          <div style={{margin:'14px 0 8px',fontSize:11,color:'var(--text-3)'}}>或手动输入密钥:</div>
-          <div className="text-mono" style={{fontSize:13,letterSpacing:1.5,color:'var(--brand)',background:'var(--bg-2)',padding:'8px 14px',display:'inline-block',borderRadius:4}}>
-            JBSW Y3DP EHPK 3PXP
-          </div>
-          <div style={{marginTop:18}}>
-            <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6,textAlign:'left'}}>输入 6 位验证码</label>
-            <input className="input" placeholder="000000" maxLength="6" style={{textAlign:'center',fontFamily:'var(--font-mono)',fontSize:18,letterSpacing:6}}/>
-          </div>
         </div>
       </PFUI.Modal>
     </div>
@@ -253,11 +256,15 @@ function SecurityRow({ icon, title, desc, badge, action }) {
   );
 }
 
-function PlanRow({ label, value, highlight }) {
+// v3.1.11 权限行(代理后台「我的帐户 → 权限配置」只读展示用)
+function PermRow({ on, label, sub }) {
   return (
-    <div style={{display:'flex',padding:'8px 0',borderBottom:'1px solid var(--line-soft)',fontSize:12.5}}>
-      <span className="text-mute" style={{flex:1}}>{label}</span>
-      <span className="text-mono" style={{color: highlight?'var(--brand)':'var(--text-0)',fontWeight: highlight?600:500}}>{value}</span>
+    <div style={{display:'flex',alignItems:'center',gap:8,fontSize:13.5,lineHeight:1.6}}>
+      {on
+        ? <Icon name="check" size={14} style={{color:'#16a34a'}}/>
+        : <Icon name="x" size={14} style={{color:'#dc2626'}}/>}
+      <span style={{color: on?'var(--text-0)':'var(--text-3)'}}>{label}</span>
+      {sub && <span style={{color:'var(--text-3)',fontSize:12.5}}>{sub}</span>}
     </div>
   );
 }

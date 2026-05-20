@@ -5,27 +5,41 @@ const { Modal: AM, StatusBadge: AS, RiskBadge: AR, PageHead: APH, SearchInput: A
 // v2.4.9 代理ID 规则：商户创建代理 = AG1xxxxx；自行申请代理 = AP2xxxxx
 // v2.4.35 根据 app 当前 state 生成符合状态机的示例操作日志(若已有 _logs 则不动)
 function seedAppLogs(app) {
-  if (app._logs && app._logs.length) return app;
-  const baseTime = app.createdAt || '2026-05-11 23:59:59';
-  const userBy = `用户:${app.userId || '-'}`;
+  // v3.1.17 自动构造 _formSnapshot.contacts(Email + 手机)— 让所有自行申请代理示例都有完整联系方式
+  let next = app;
+  if (!app._formSnapshot?.contacts && (app.contact || app.phone)) {
+    next = {
+      ...app,
+      _formSnapshot: {
+        ...(app._formSnapshot || {}),
+        contacts: [
+          { type:'Email',  value: app.contact || '' },
+          { type:'手机',   value: app.phone   || '', dial:'+91' },
+        ].filter(c => c.value),
+      },
+    };
+  }
+  if (next._logs && next._logs.length) return next;
+  const baseTime = next.createdAt || '2026-05-11 23:59:59';
+  const userBy = `用户:${next.userId || '-'}`;
   const merchantBy = '商户:管理员-randy';
   const logs = [{ at: baseTime, by: userBy, type:'submit' }];
-  const update = app.updatedAt || baseTime;
-  if (app.state === 'supplement')      logs.push({ at: update, by: merchantBy, type:'supplement',   note: app.failReason || '请补充身份证正面·反面 + 手持证件照' });
-  if (app.state === 'supplemented')  { logs.push({ at:'2026-05-12 12:30:00', by:merchantBy, type:'supplement', note:'请补充推广渠道证明截图' }); logs.push({ at: update, by:userBy, type:'supplemented', note:'已补充推广渠道截图与近 30 天数据' }); }
-  if (app.state === 'failed')          logs.push({ at: update, by: merchantBy, type:'reject',       note: app.failReason || '与现有代理渠道重叠较多,本次申请不通过' });
-  if (app.state === 'passed')          logs.push({ at: update, by: merchantBy, type:'pass',         note: '由管理员手动创建专业代理账户' });
-  return { ...app, _logs: logs };
+  const update = next.updatedAt || baseTime;
+  if (next.state === 'supplement')      logs.push({ at: update, by: merchantBy, type:'supplement',   note: next.failReason || '请补充身份证正面·反面 + 手持证件照' });
+  if (next.state === 'supplemented')  { logs.push({ at:'2026-05-12 12:30:00', by:merchantBy, type:'supplement', note:'请补充推广渠道证明截图' }); logs.push({ at: update, by:userBy, type:'supplemented', note:'已补充推广渠道截图与近 30 天数据' }); }
+  if (next.state === 'failed')          logs.push({ at: update, by: merchantBy, type:'reject',       note: next.failReason || '与现有代理渠道重叠较多,本次申请不通过' });
+  if (next.state === 'passed')          logs.push({ at: update, by: merchantBy, type:'pass',         note: '由管理员手动创建专业代理账户' });
+  return { ...next, _logs: logs };
 }
 const SELF_APPLICATIONS_INITIAL = [
-  { id:'AC100001', _channel:'agentportal', name:'AC範例1',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'apex_promo@gmail.com',region:'India · Chennai',    reason:'通过专业代理后台网址直接注册申请',                                channels:'YouTube · Telegram',                    loginName:'apexpromo',  password:'Test@1234',  createdAt:'2026-05-13 08:30:00', updatedAt:'2026-05-13 08:30:00', state:'reviewing' },
-  { id:'AC100002', _channel:'agentportal', name:'AC範例2',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'sara_ig@gmail.com',   region:'India · Mumbai',     reason:'Instagram 投放主播,30k 粉丝',                                    channels:'Instagram · Stories',                   loginName:'saraig',     password:'Test@1234',  createdAt:'2026-05-13 09:15:30', updatedAt:'2026-05-14 10:00:00', state:'supplement',   failReason:'请补充身份证正反面 + 推广渠道近 30 天数据截图' },
-  { id:'AC100003', _channel:'agentportal', name:'AC範例3',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'rohan@gmail.com',     region:'India · Delhi',      reason:'已有完整推广团队和工具栈',                                        channels:'YouTube · Telegram · Discord',          loginName:'rohan_tech', password:'Test@1234',  createdAt:'2026-05-13 11:20:00', updatedAt:'2026-05-15 14:30:00', state:'supplemented' },
-  { id:'AC100004', _channel:'agentportal', name:'AC範例4',    tier:'general', userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'priya_media@gmail.com',region:'India · Pune',      reason:'团队 8 人,主投 Telegram + WhatsApp',                              channels:'Telegram 群 5,000+ · WhatsApp',         loginName:'priyamedia', password:'Test@1234',  createdAt:'2026-05-12 16:40:00', updatedAt:'2026-05-13 18:00:00', state:'failed',       failReason:'与现有代理 AG100023 渠道高度重叠,本次申请不通过' },
-  { id:'AC100005', _channel:'agentportal', name:'AC範例5',    tier:'super',   userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'arjun_aff@gmail.com', region:'India · Bangalore',  reason:'隔壁平台代理 2 年,月均流水 ₹300 万',                              channels:'Telegram · Affiliate 网络',             loginName:'arjunaff',   password:'Test@1234',  createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', state:'passed' },
-  { id:'AC100006', _channel:'agentportal', name:'AC範例6',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'rajesh_aff@gmail.com',region:'India · Hyderabad',  reason:'通过代理后台注册申请;主投 Telegram + YouTube',                    channels:'Telegram · YouTube',                    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', state:'passed' },
-  { id:'AC100007', _channel:'agentportal', name:'AC範例7',    tier:'general', userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'meena_promo@gmail.com',region:'India · Kolkata',   reason:'团队 6 人;近期投诉较多临时冻结',                                  channels:'Instagram · TikTok',                    loginName:'meena_promo', password:'Test@1234', createdAt:'2026-04-10 08:00:00', updatedAt:'2026-04-12 11:00:00', state:'passed' },
-  { id:'AC100008', _channel:'agentportal', name:'AC範例8',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'fakeaff@gmail.com',   region:'India · Jaipur',     reason:'已停用 — 违规推广手法',                                            channels:'Affiliate 网络',                        loginName:'fakeaff_x',   password:'Test@1234', createdAt:'2026-03-15 16:30:00', updatedAt:'2026-03-20 18:00:00', state:'passed' },
+  { id:'AC100001', _channel:'agentportal', name:'AC範例1',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'apex_promo@gmail.com',phone:'98123 11001',region:'India · Chennai',    reason:'通过专业代理后台网址直接注册申请',                                channels:'YouTube · Telegram',                    loginName:'apexpromo',  password:'Test@1234',  createdAt:'2026-05-13 08:30:00', updatedAt:'2026-05-13 08:30:00', state:'reviewing' },
+  { id:'AC100002', _channel:'agentportal', name:'AC範例2',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'sara_ig@gmail.com',   phone:'98213 22002',region:'India · Mumbai',     reason:'Instagram 投放主播,30k 粉丝',                                    channels:'Instagram · Stories',                   loginName:'saraig',     password:'Test@1234',  createdAt:'2026-05-13 09:15:30', updatedAt:'2026-05-14 10:00:00', state:'supplement',   failReason:'请补充身份证正反面 + 推广渠道近 30 天数据截图' },
+  { id:'AC100003', _channel:'agentportal', name:'AC範例3',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'rohan@gmail.com',     phone:'99100 33003',region:'India · Delhi',      reason:'已有完整推广团队和工具栈',                                        channels:'YouTube · Telegram · Discord',          loginName:'rohan_tech', password:'Test@1234',  createdAt:'2026-05-13 11:20:00', updatedAt:'2026-05-15 14:30:00', state:'supplemented' },
+  { id:'AC100004', _channel:'agentportal', name:'AC範例4',    tier:'general', userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'priya_media@gmail.com',phone:'97300 44004',region:'India · Pune',      reason:'团队 8 人,主投 Telegram + WhatsApp',                              channels:'Telegram 群 5,000+ · WhatsApp',         loginName:'priyamedia', password:'Test@1234',  createdAt:'2026-05-12 16:40:00', updatedAt:'2026-05-13 18:00:00', state:'failed',       failReason:'与现有代理 AG100023 渠道高度重叠,本次申请不通过' },
+  { id:'AC100005', _channel:'agentportal', name:'AC範例5',    tier:'super',   userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'arjun_aff@gmail.com',phone:'98800 55005', phone:'98800 55005',region:'India · Bangalore',  reason:'隔壁平台代理 2 年,月均流水 ₹300 万',                              channels:'Telegram · Affiliate 网络',             loginName:'arjunaff',   password:'Test@1234',  createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', state:'passed' },
+  { id:'AC100006', _channel:'agentportal', name:'AC範例6',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'rajesh_aff@gmail.com',phone:'90400 66006',phone:'90400 66006',region:'India · Hyderabad',  reason:'通过代理后台注册申请;主投 Telegram + YouTube',                    channels:'Telegram · YouTube',                    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', state:'passed' },
+  { id:'AC100007', _channel:'agentportal', name:'AC範例7',    tier:'general', userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'meena_promo@gmail.com',phone:'98300 77007',phone:'98300 77007',region:'India · Kolkata',   reason:'团队 6 人;近期投诉较多临时冻结',                                  channels:'Instagram · TikTok',                    loginName:'meena_promo', password:'Test@1234', createdAt:'2026-04-10 08:00:00', updatedAt:'2026-04-12 11:00:00', state:'passed' },
+  { id:'AC100008', _channel:'agentportal', name:'AC範例8',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'fakeaff@gmail.com',phone:'91000 88008',   phone:'91000 88008',region:'India · Jaipur',     reason:'已停用 — 违规推广手法',                                            channels:'Affiliate 网络',                        loginName:'fakeaff_x',   password:'Test@1234', createdAt:'2026-03-15 16:30:00', updatedAt:'2026-03-20 18:00:00', state:'passed' },
 ];
 // 全局共享 store: 网站前台提交 → 商户后台自行申请列表
 if (!window.APS_APPS_STORE) {
@@ -230,7 +244,11 @@ function ensureMerchantAgentsStore() {
         channels: 'YouTube · Instagram · WhatsApp Group',
         note: '',
         loginName: 'apexample6',
-        contacts: '+91 98123 45678',
+        // v3.1.17 改为数组结构 — Email + 手机,与 ACSamples 一致
+        contacts: [
+          { type:'Email', value:'apexample6@gmail.com' },
+          { type:'手机',  value:'98123 45678', dial:'+91' },
+        ],
         appliedAt: '2026-05-11 23:59:59',
         history: [
           { at: '2026-05-11 23:59:59', by: '用户:P34157319', what: '申请专业代理' },
@@ -253,10 +271,10 @@ function ensureMerchantAgentsStore() {
   };
   // v3.0.75 → v3.0.78 已上移到函数顶部、每次都执行(原 onelane init 内的清理已废弃,改放函数 top)
   const ACSamples = [
-    { id:'AC100005', name:'AC範例5', tier:'super',   status:'pending',   loginName:'arjunaff',     password:'Test@1234', createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', activatedAt:null,                  region:'India · Bangalore', contact:'arjun_aff@gmail.com',  reason:'隔壁平台代理 2 年,月均流水 ₹300 万',  channels:'Telegram · Affiliate 网络',     players: 0,   commission: 0 },
-    { id:'AC100006', name:'AC範例6', tier:'normal',  status:'active',    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', activatedAt:'2026-04-23 09:30:00', region:'India · Hyderabad',  contact:'rajesh_aff@gmail.com', reason:'通过代理后台注册申请;主投 Telegram + YouTube',  channels:'Telegram · YouTube',     players: 142, commission: 18500 },
-    { id:'AC100007', name:'AC範例7', tier:'general', status:'frozen',    loginName:'meena_promo', password:'Test@1234', createdAt:'2026-04-10 08:00:00', updatedAt:'2026-04-12 11:00:00', activatedAt:'2026-04-13 09:00:00', region:'India · Kolkata',    contact:'meena_promo@gmail.com',reason:'团队 6 人;近期投诉较多临时冻结',                channels:'Instagram · TikTok',     players: 87,  commission: 12200, frozenReason:'近期玩家投诉率超阈值,临时冻结排查' },
-    { id:'AC100008', name:'AC範例8', tier:'normal',  status:'suspended', loginName:'fakeaff_x',   password:'Test@1234', createdAt:'2026-03-15 16:30:00', updatedAt:'2026-03-20 18:00:00', activatedAt:'2026-03-21 10:00:00', region:'India · Jaipur',     contact:'fakeaff@gmail.com',    reason:'已停用 — 违规推广手法',                          channels:'Affiliate 网络',         players: 0,   commission: 0,     suspendReason:'查实存在虚假推广行为,终止合作' },
+    { id:'AC100005', name:'AC範例5', tier:'super',   status:'pending',   loginName:'arjunaff',     password:'Test@1234', createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', activatedAt:null,                  region:'India · Bangalore', contact:'arjun_aff@gmail.com',  phone:'98800 55005', reason:'隔壁平台代理 2 年,月均流水 ₹300 万',  channels:'Telegram · Affiliate 网络',     players: 0,   commission: 0 },
+    { id:'AC100006', name:'AC範例6', tier:'normal',  status:'active',    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', activatedAt:'2026-04-23 09:30:00', region:'India · Hyderabad',  contact:'rajesh_aff@gmail.com', phone:'90400 66006', reason:'通过代理后台注册申请;主投 Telegram + YouTube',  channels:'Telegram · YouTube',     players: 142, commission: 18500 },
+    { id:'AC100007', name:'AC範例7', tier:'general', status:'frozen',    loginName:'meena_promo', password:'Test@1234', createdAt:'2026-04-10 08:00:00', updatedAt:'2026-04-12 11:00:00', activatedAt:'2026-04-13 09:00:00', region:'India · Kolkata',    contact:'meena_promo@gmail.com',phone:'98300 77007', reason:'团队 6 人;近期投诉较多临时冻结',                channels:'Instagram · TikTok',     players: 87,  commission: 12200, frozenReason:'近期玩家投诉率超阈值,临时冻结排查' },
+    { id:'AC100008', name:'AC範例8', tier:'normal',  status:'suspended', loginName:'fakeaff_x',   password:'Test@1234', createdAt:'2026-03-15 16:30:00', updatedAt:'2026-03-20 18:00:00', activatedAt:'2026-03-21 10:00:00', region:'India · Jaipur',     contact:'fakeaff@gmail.com',    phone:'91000 88008', reason:'已停用 — 违规推广手法',                          channels:'Affiliate 网络',         players: 0,   commission: 0,     suspendReason:'查实存在虚假推广行为,终止合作' },
   ];
   ACSamples.forEach(s => {
     const tierLabel = s.tier === 'general' ? '团队代理' : s.tier === 'super' ? '总代理' : '个人代理';
@@ -296,6 +314,11 @@ function ensureMerchantAgentsStore() {
         channels: s.channels,
         loginName: s.loginName,
         appliedAt: s.createdAt,
+        // v3.1.17 已创建代理 联系方式 — Email + 手机(从 ACSamples 的 contact + phone 构造)
+        contacts: [
+          { type:'Email', value: s.contact || '' },
+          { type:'手机',  value: s.phone   || '', dial:'+91' },
+        ].filter(c => c.value),
         _formSnapshot: null,
       },
     });
@@ -1187,11 +1210,15 @@ function AgentDetail({ agent, onClose }) {
         )}
 
         {tab === 'commission' && (
-          <div style={{padding:'4px 0',opacity: editing ? 1 : 0.85, pointerEvents: editing ? 'auto' : 'none'}}>
-            <window.CommissionModeForm
-              value={comm}
-              onChange={setComm}
-            />
+          <div style={{padding:'4px 0'}}>
+            {editing ? (
+              <window.CommissionModeForm
+                value={comm}
+                onChange={setComm}
+              />
+            ) : (
+              <window.CommissionReadOnly value={comm}/>
+            )}
           </div>
         )}
 

@@ -2,9 +2,94 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.1.9',
+    ver: 'v3.1.18',
     date: '2026-05-20',
     current: true,
+    changes: [
+      { type: 'fix', text: '代理后台 → 我的帐户 → 流量来源 tab 显示「未填写流量来源」与商户后台「查看&配置」对不上:复用商户弹窗同款 fallback 逻辑 — 当代理对象无 _formSnapshot.trafficUrls 时,基于 me.name 生成 2 个默认链接(https://youtube.com/@xxx + https://t.me/xxx_channel)' },
+    ],
+  },
+  {
+    ver: 'v3.1.17',
+    date: '2026-05-20',
+    changes: [
+      { type: 'add', text: '商户后台 已创建代理 + 自行申请代理 所有范例数据 补上「联系方式」Email + 手机 — 让「查看&配置 / 查看&审核 → 基本资料 → 联系方式」表格不再为空' },
+      { type: 'add', text: 'SELF_APPLICATIONS_INITIAL 8 条 AC 范例新增 phone 字段(98123 11001 ~ 91000 88008)' },
+      { type: 'add', text: 'seedAppLogs() 自动构造 _formSnapshot.contacts:[{type:Email,value:contact},{type:手机,value:phone,dial:+91}],已有 snapshot 则不覆盖 — 网站前台真实提交的数据不受影响' },
+      { type: 'add', text: 'ACSamples (AC100005~AC100008) 新增 phone 字段 + push 到 MERCHANT_AGENTS_STORE 时构造 _appData.contacts 数组结构(过滤空值)' },
+      { type: 'modify', text: 'AP範例6 (_appData.contacts) 从字符串「+91 98123 45678」改为数组结构:[{type:Email,value:apexample6@gmail.com},{type:手机,value:98123 45678,dial:+91}] — 与 ACSamples 数据结构对齐' },
+    ],
+  },
+  {
+    ver: 'v3.1.16',
+    date: '2026-05-20',
+    changes: [
+      { type: 'remove', text: '代理后台 → 我的帐户 → 基本资料 tab 删除「备注」section(备注 title + 灰底卡片)— 代理用户无需看到/编辑商户对该代理的内部备注' },
+    ],
+  },
+  {
+    ver: 'v3.1.15',
+    date: '2026-05-20',
+    changes: [
+      { type: 'remove', text: '代理后台 → 我的帐户 → 基本资料 tab 删除「冻结帐户 / 停用帐户」按钮 — 代理用户不应看到这两个操作(权限属于商户运营)' },
+      { type: 'fix', text: '代理后台 → 我的帐户 → 基本资料 「已启用」帐户状态 pill 改绿色:背景 #dcfce7 / 字色 #15803d / 边框 #86efac(原 status-pill p-success class 在代理后台未生效)' },
+    ],
+  },
+  {
+    ver: 'v3.1.14',
+    date: '2026-05-20',
+    changes: [
+      { type: 'add', text: '代理后台 → 我的帐户 → 分润模式 tab 默认数据:未配置 _comm 时给默认示例「revenue:RV-002 (週期資產變動分潤 · 團隊代理適用)」,与商户后台分润管理 SEED_REVENUE 对齐 — 让页面默认就能看到完整分润规则卡片(后续与商户后台关联)' },
+      { type: 'add', text: 'window.CommissionReadOnly 新增 hideHeader prop:为 true 时不渲染内部「分润规则 + badge」标题;PlanCard 同步加 hideHeader 支持 — 代理后台「我的帐户」用外层 ad-section-title 统一,避免双重 title' },
+      { type: 'modify', text: 'agent_profile.jsx 分润模式 tab 调用 CommissionReadOnly 时传 hideHeader=true' },
+    ],
+  },
+  {
+    ver: 'v3.1.13',
+    date: '2026-05-20',
+    changes: [
+      { type: 'remove', text: '代理后台 → 我的帐户 → 权限配置 tab 删除「其他」section(下级代理 / 申请提款 / 素材下载 / API / 跨层数据 / 创建下级代理)— 只保留「运营 / 报表」两个 section,与目标截图一致' },
+    ],
+  },
+  {
+    ver: 'v3.1.12',
+    date: '2026-05-20',
+    changes: [
+      { type: 'modify', text: '代理后台 → 我的帐户 → 收款方式 tab 字段扩展:从原「付款方式(UPI pill)/ UPI ID / 收款人姓名」3 个字段,改为按截图加上 5 个字段:收款方式 / IFSC / Account / Real Name / Email' },
+      { type: 'add', text: 'payment 对象新增 ifsc / account / email 字段,从 _appData._formSnapshot.ifsc/account/email 读;未配置时给默认值(123123 / 123123 / Email 联系方式 / 123@gmail.com)— 后续与商户后台「收款方式 tab」补充对应字段关联' },
+      { type: 'remove', text: '收款方式 tab 去掉 UPI pill 蓝色徽章,改为纯文字「UPI」 — 与截图视觉一致' },
+    ],
+  },
+  {
+    ver: 'v3.1.11',
+    date: '2026-05-20',
+    changes: [
+      { type: 'feat', text: '代理后台 → 我的帐户 整页重做:tabs 从 3 个(基本资料 / 合作方案 / 安全设置)扩展为 6 个,与商户后台「查看&配置」弹窗对齐:基本资料 / 分润模式 / 权限配置 / 流量来源 / 收款方式 / 安全设置' },
+      { type: 'add', text: '基本资料 tab 在「基本资料 / 联系方式」之间新增「帐户状态」行:显示「已启用」pill + 「冻结帐户 / 停用帐户」按钮 — 点击 toast 提示「需联系商户运营」(代理无权限自行操作)' },
+      { type: 'add', text: '分润模式 tab:复用 window.CommissionReadOnly 组件,从 me._comm 读取代理的分润模式配置(商户创建时烘入);未配置时显示「尚未配置分润方案」占位' },
+      { type: 'add', text: '权限配置 tab:按「运营 / 报表 / 其他」3 个 section 渲染,从 me._perms 读;运营 section 在「Code 与链接管理」开启时附带「可创建邀请 Code 上限数量 20」字段' },
+      { type: 'add', text: '流量来源 tab:从 me._appData._formSnapshot.trafficUrls 读取代理申请时填写的流量来源链接,只读 input 列表展示;未填写时显示占位' },
+      { type: 'add', text: '收款方式 tab:UPI 卡片显示 付款方式(UPI pill)/ UPI ID / 收款人姓名;底部黄色提示「如需修改请联系商户运营」' },
+      { type: 'remove', text: '安全设置 tab 删除「二步验证(2FA)」整段(SecurityRow + 2FA Modal),只保留「登入密码」一行 — 与截图目标设计一致' },
+      { type: 'remove', text: '删除 plan tab 整段内容(原 CPA/RevShare 卡片 + 合作方案 hero + 权限范围 grid)+ 相关 plan 对象、devices mock 数据、PlanRow 子组件、show2FA state' },
+      { type: 'add', text: '新增 PermRow 子组件:✓/✗ + 权限名称 + (查看/编辑) 灰色后缀,用于权限配置 tab 渲染' },
+    ],
+  },
+  {
+    ver: 'v3.1.10',
+    date: '2026-05-20',
+    changes: [
+      { type: 'feat', text: '商户后台 → 已创建代理「查看&配置」弹窗 → 分润模式 tab 非编辑态改造为清晰的「分润规则」字段-值卡片(替换原 form 半透明展示)' },
+      { type: 'add', text: '新增 window.CommissionReadOnly 组件 (revshare.jsx),按 plan 模式分别渲染:收益分润 显示 分润方案/结算周期/结算币种/最低结算金额/分润比例/结算佣金上限/负盈利结转/分润计算公式流程/备注;单付费分润 显示 最低首存/流水倍数/NGR/有效天数/活跃留存/排除提款过玩家/备注' },
+      { type: 'add', text: '新增 window.resolvePlan(key) helper:按 single:/revenue: key 前缀解析出完整 plan 详情(含 modeLabel/typeLabel/formula),供只读视图使用' },
+      { type: 'add', text: '新增 window.RV_PLATFORM_DEFAULTS 平台级结算默认值:币种 INR(₹)/最低结算金额 ₹200/负盈利结转 是 — 后续可改成读取商户设定' },
+      { type: 'add', text: '多 plan 时分别渲染多张「分润规则」卡片,卡片头部带方案模式 badge(收益分润 蓝 / 单付费分润 绿);plan 已被删除时显示「方案不存在」占位' },
+      { type: 'modify', text: '编辑态仍使用 window.CommissionModeForm(form 表单);非编辑态切换为只读视图,移除原 opacity:.85 + pointerEvents:none 的半透明处理' },
+    ],
+  },
+  {
+    ver: 'v3.1.9',
+    date: '2026-05-20',
     changes: [
       { type: 'remove', text: '商户后台 → 代理账户管理 → 已创建代理「查看&配置」弹窗 → 基本资料 删除「用户ID / 创建代理人」字段(三元判断整段去掉)和「代理类型」字段' },
       { type: 'modify', text: '商户后台 → 已创建代理「查看&配置」弹窗 → 基本资料 改单列布局(左对齐),不再 2 列 grid,所有字段统一在左边' },
