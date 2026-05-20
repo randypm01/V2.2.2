@@ -80,11 +80,9 @@ function MyPlayersModule() {
           [MP_T('mp.kpi.deposit','总充值金额'),      money(totalDep)],
           [MP_T('mp.kpi.withdraw','总提款金额'),     money(totalWd)],
           [MP_T('mp.kpi.gap','充提差'),              fmtGap(totalGap), totalGap>=0?'up':'down'],
-          [MP_T('mp.kpi.balance','总玩家余额'),      money(totalBalance)],
           [MP_T('mp.kpi.wager','总投注'),            money(totalWager)],
           [MP_T('mp.kpi.payout','总派彩'),           money(totalPayout)],
           [MP_T('mp.kpi.ggr','GGR'),                 fmtGap(totalGgr), totalGgr>=0?'up':'down'],
-          [MP_T('mp.kpi.commission','总佣金'),       money(totalCom)],
         ].map(([l,v,delta]) => (
           <div key={l} className="kpi">
             <div className="label">{l}</div>
@@ -114,11 +112,9 @@ function MyPlayersModule() {
               <th className="right">{MP_T('mp.col.deposit','充值金额')}</th>
               <th className="right">{MP_T('mp.col.withdraw','提款金额')}</th>
               <th className="right">{MP_T('mp.col.gap','充提差')}</th>
-              <th className="right">{MP_T('mp.col.balance','玩家余额')}</th>
               <th className="right">{MP_T('mp.col.wager','投注')}</th>
               <th className="right">{MP_T('mp.col.payout','派彩')}</th>
               <th className="right">{MP_T('mp.col.ggr','GGR')}</th>
-              <th className="right">{MP_T('mp.col.commission','佣金')}</th>
             </tr></thead>
             <tbody>
               {paged.map(p => {
@@ -132,16 +128,14 @@ function MyPlayersModule() {
                     <td className="right text-mono">{money(p.deposit)}</td>
                     <td className="right text-mono">{money(p.withdraw)}</td>
                     <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
-                    <td className="right text-mono">{money(p.balance)}</td>
                     <td className="right text-mono">{money(p.wager)}</td>
                     <td className="right text-mono">{money(p.payout)}</td>
                     <td className="right text-mono" style={{color: p.ggr>=0?'var(--success)':'var(--danger)'}}>{(p.ggr>=0?'+':'-')+'₹'+F.money(Math.abs(p.ggr||0))}</td>
-                    <td className="right text-mono">{money(p.commission)}</td>
                   </tr>
                 );
               })}
               {paged.length === 0 && (
-                <tr><td colSpan={12} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MP_T('mp.empty','暂无玩家数据')}</td></tr>
+                <tr><td colSpan={10} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MP_T('mp.empty','暂无玩家数据')}</td></tr>
               )}
             </tbody>
           </table>

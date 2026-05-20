@@ -67,7 +67,16 @@ function MyCodesMgmtModule() {
   const [showCreate, setShowCreate] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(null);
   const [delTarget, setDelTarget] = React.useState(null);
+  const [showLimit, setShowLimit] = React.useState(false);
   const [codes, setCodes] = React.useState(buildSampleCodesMgmt);
+
+  // Code 创建数量上限 — 超出后弹窗提示用户联系管理员
+  const MAX_CODES = 20;
+  const reachedLimit = codes.length >= MAX_CODES;
+  const handleClickCreate = () => {
+    if (reachedLimit) { setShowLimit(true); return; }
+    setShowCreate(true);
+  };
 
   const filtered = codes.filter(c => {
     if (q && !(c.code + c.desc).toLowerCase().includes(q.toLowerCase())) return false;
@@ -78,6 +87,7 @@ function MyCodesMgmtModule() {
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
   const submitCreate = (form) => {
+    if (codes.length >= MAX_CODES) { setShowCreate(false); setShowLimit(true); return; }
     const id = 'CDM-' + String(codes.length + 1).padStart(3, '0');
     const finalCode = form.code.toUpperCase();
     setCodes([{
@@ -108,9 +118,14 @@ function MyCodesMgmtModule() {
         title={MCM_T('page.my_codes_mgmt.title','Code 与链接管理')}
         subtitle={MCM_T('page.my_codes_mgmt.sub','创建与管理您的专属邀请 Code 和推广链接')}
       >
-        <button className="btn primary" onClick={()=>setShowCreate(true)}>
-          <Icon name="plus" size={13}/>{MCM_T('mcm.btn.create','创建 邀请 Code')}
-        </button>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <span style={{fontSize:12,color:'var(--text-2)'}}>
+            {MCM_T('mcm.limit.counter_a','已创建')} <b style={{color: reachedLimit ? 'var(--danger)' : 'var(--text-0)'}}>{codes.length}</b> / {MAX_CODES}
+          </span>
+          <button className="btn primary" onClick={handleClickCreate}>
+            <Icon name="plus" size={13}/>{MCM_T('mcm.btn.create','创建 邀请 Code')}
+          </button>
+        </div>
       </MCM_UI.PageHead>
 
       <div className="card">
@@ -181,6 +196,26 @@ function MyCodesMgmtModule() {
         </div>
         <MCM_UI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
       </div>
+
+      {/* 上限提示弹窗 */}
+      <MCM_UI.Modal open={showLimit} onClose={()=>setShowLimit(false)} width={440}
+        title={MCM_T('mcm.limit.title','已达 Code 创建上限')}
+        subtitle={MCM_T('mcm.limit.sub','如需创建更多 Code,请联系管理员')}
+        footer={
+          <button className="btn primary" onClick={()=>setShowLimit(false)}>{MCM_T('mcm.limit.ok','我知道了')}</button>
+        }>
+        <div style={{fontSize:13,lineHeight:1.75,color:'var(--text-1)'}}>
+          <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',background:'var(--bg-3)',borderRadius:8,marginBottom:12}}>
+            <Icon name="alert" size={16} style={{color:'var(--warning, #f59e0b)',marginTop:2,flexShrink:0}}/>
+            <div>
+              {MCM_T('mcm.limit.body_a','您当前已创建')} <b style={{color:'var(--text-0)'}}>{codes.length}</b> {MCM_T('mcm.limit.body_b','条邀请 Code,已达系统创建上限')} <b style={{color:'var(--text-0)'}}>{MAX_CODES}</b> {MCM_T('mcm.limit.body_c','条。')}
+            </div>
+          </div>
+          <div style={{color:'var(--text-2)',fontSize:12.5}}>
+            {MCM_T('mcm.limit.tip','请联系管理员申请提高创建上限,或先删除/停用闲置的 Code 后再创建新的。')}
+          </div>
+        </div>
+      </MCM_UI.Modal>
 
       {/* 创建 邀请 Code */}
       {showCreate && <CreateModalMgmt

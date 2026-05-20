@@ -404,8 +404,6 @@ function MyCodesModule() {
           [T('mc.kpi.wd_amt','总提款金额'), '₹' + F.money(totalWithdraw)],
           [T('mc.kpi.cvr','充值转化率'), totalCvr.toFixed(1) + '%'],
           [T('mc.kpi.gap','充提差'), (totalGap>=0?'+':'') + '₹' + F.money(Math.abs(totalGap)), totalGap>=0?'up':'down'],
-          [T('mc.kpi.balance','玩家余额'), '₹' + F.money(totalPlayerBal)],
-          [T('mc.kpi.commission','总佣金'), '₹' + F.money(totalComm)],
         ].map(([l,v,delta]) => (
           <div key={l} className="kpi">
             <div className="label">{l}</div>
@@ -435,8 +433,6 @@ function MyCodesModule() {
               <th className="right">{T('mc.col.wd_amt','提款金额')}</th>
               <th className="right">{T('mc.col.cvr','充值转化率')}</th>
               <th className="right">{T('mc.col.gap','充提差')}</th>
-              <th className="right">{T('mc.col.balance','玩家余额')}</th>
-              <th className="right">{T('mc.col.commission','佣金')}</th>
             </tr></thead>
             <tbody>
               {paged.map(c => {
@@ -462,13 +458,11 @@ function MyCodesModule() {
                         {(gap>=0?'+':'-')}₹{F.money(Math.abs(gap))}
                       </span>
                     </td>
-                    <td className="right">{moneyCell(c.playerBalance)}</td>
-                    <td className="right">{moneyCell(c.commission)}</td>
                   </tr>
                 );
               })}
               {paged.length === 0 && (
-                <tr><td colSpan={11} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{T('mc.empty','暂无邀请 Code，请去「运营 → Code 与链接管理」创建')}</td></tr>
+                <tr><td colSpan={9} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{T('mc.empty','暂无邀请 Code，请去「运营 → Code 与链接管理」创建')}</td></tr>
               )}
             </tbody>
           </table>

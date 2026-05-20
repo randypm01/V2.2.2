@@ -163,6 +163,20 @@ uploads/
 
 ---
 
+## ⚠️ 八 · A、导出代码规则(强制)
+
+**用户要求导出 / 下载代码时,必须排除以下资料夹,不要询问:**
+
+1. `uploads/` — 原始 PRD 文档,不属于代码
+2. 任何 `舊備份*` / `old*` / `backup*` / `_bak*` 资料夹 — 历史快照不带出
+3. `screenshots/` — 截图,非代码(除非用户明确要)
+
+**做法**:用 `run_script` 把要导出的档案逐一 copy 到一个临时资料夹(例如 `_export/`),然后用 `present_fs_item_for_download` 打包成 zip 给用户;完成后删 `_export/`。
+
+不要直接 `present_fs_item_for_download` 整个专案根目录 — 会把 uploads 一起带出去。
+
+---
+
 ## 九、Token / 上下文管理
 
 - 用 `str_replace_edit` 改局部,避免整文件 rewrite

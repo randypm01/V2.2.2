@@ -1,206 +1,317 @@
-// 代理后台 - 我的分润 P0-7
-const ARSUI = window.UI;
+// 代理后台 - 分润报表 P0-7
+// v3.1.3 按截图重做(用户提供 uploads/123456.png):
+//   - 顶部扁平化 3 个 tab:本期预估分润 / 已结算分润 / 分润规则(取消 v3.1.2 的 segmented + 子 tab 双层结构)
+//   - 本期预估分润:信息条「期號:W3 · 結算狀態:未結算預估分潤 · 週期:6/1 00:00:00 - 6/7 23:59:59」
+//   - 已结算分润:期号下拉选择器(W2 / W1 历史期切换),信息条显示「期號 · 週期」
+//   - 两种期 KPI 都是 9 个(2 行 × 5 + 1,跟玩家损益样式一致)
+//   - 表格 13 列:玩家UID / 来源Code / VIP / 充值 / 提款 / 充提差 / [当前余额|结算余额] / 投注 / 派彩 / GGR / 分润比例 / [预估佣金|结算佣金] / 用户状态
+//   - 用户状态 pill:盈利(绿) / 亏损(红)
+//   - 工具栏:玩家UID/邀请Code 搜索 + 全部 VIP 下拉 + 全部用户状态 下拉
+//   - 货币用 ₹(印度卢比,跟玩家损益对齐)
+
+const MRUI = window.UI;
+const MR_T = (k, fb) => window.t(k, fb);
+
+// —— 构造一期玩家数据(数据风格与 my_players.jsx 对齐)——
+function buildPeriodPlayers(agentId, seed) {
+  // 用 seed 让不同期数据稍有不同(乘以 0.7 ~ 1.3 之间的系数)
+  const factor = 0.7 + (((seed * 31) % 7) / 10);
+  const make = (id, code, vip, dep, wd, wager, balance, isLoss) => {
+    const payout = Math.round(wager * 0.92);
+    const ggr = wager - payout;
+    const rate = 5;                                  // 分润比例 5%
+    const commission = Math.round(ggr * rate / 100); // 简化:佣金 = GGR × 5%
+    return {
+      id, agentId, code, vip,
+      deposit: Math.round(dep * factor),
+      withdraw: Math.round(wd * factor),
+      wager: Math.round(wager * factor),
+      payout: Math.round(payout * factor),
+      ggr: Math.round(ggr * factor) * (isLoss ? -1 : 1),
+      balance: Math.round(balance * factor),
+      commission: Math.round(commission * factor) * (isLoss ? -1 : 1),
+      rate,
+      isLoss,
+    };
+  };
+  return [
+    make('P12354531','RANDY01', 1, 10000, 10000, 10000, 10000, false),
+    make('P12354532','RANDY02', 1, 10000, 10000, 10000, 10000, false),
+    make('P12354533','RANDY03', 1, 10000, 10000, 10000, 10000, true),
+    make('P12354534','RANDY04', 1, 10000, 10000, 10000, 10000, true),
+  ];
+}
+
+// —— 期次列表(已结算)——
+function buildSettledPeriodList() {
+  return [
+    { week:'W2', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2 },
+    { week:'W1', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1 },
+  ];
+}
 
 function MyRevshareModule() {
-  const D = window.APS_DATA;
   const F = window.APS_FMT;
   const me = window.useCurrentAgent();
-  const [lang] = window.useAgentLang();
-  const T = (k, fb) => window.t(k, fb);
-  const [tab, setTab] = React.useState('overview');
 
-  const myPlayers = D.players.filter(p => p.agentId === me.id);
-  const ngr = myPlayers.reduce((a,p)=>a+p.ngr,0);
-  const positiveNgr = myPlayers.filter(p=>p.ngr>0).reduce((a,p)=>a+p.ngr,0);
-  const negativeNgr = myPlayers.filter(p=>p.ngr<0).reduce((a,p)=>a+p.ngr,0);
-  const revShareRate = 35;
-  const revShareAmt = ngr > 0 ? ngr * revShareRate / 100 : 0;
+  // 3 个 tab
+  const [tab, setTab] = React.useState('estimate'); // estimate | settled | rule
 
-  // 模拟近 12 周 NGR
-  const weeklyNgr = React.useMemo(() => Array.from({length:12}).map((_,i)=>{
-    const base = ngr / 12;
-    return Math.round(base * (0.6 + Math.random() * 0.8));
-  }), [ngr]);
+  // 工具栏筛选(两期共用)
+  const [q, setQ] = React.useState('');
+  const [vipF, setVipF] = React.useState('all');
+  const [statusF, setStatusF] = React.useState('all'); // all | profit | loss
+  const [page, setPage] = React.useState(1);
 
-  // 玩家明细 by NGR 排序
-  const playerRows = [...myPlayers].sort((a,b)=>b.ngr-a.ngr).slice(0, 30);
+  // 已结算期 选中哪一期
+  const settledList = React.useMemo(() => buildSettledPeriodList(), []);
+  const [selectedWeek, setSelectedWeek] = React.useState(settledList[0].week);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+
+  const selectedPeriod = settledList.find(p => p.week === selectedWeek) || settledList[0];
+
+  // 关闭下拉:外部点击
+  const pickerRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!pickerOpen) return;
+    const h = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [pickerOpen]);
+
+  // 当前期数据
+  const estimatePlayers = React.useMemo(() => buildPeriodPlayers(me.id, 3), [me.id]);
+  const settledPlayers  = React.useMemo(() => buildPeriodPlayers(me.id, selectedPeriod.seed), [me.id, selectedPeriod.seed]);
+  const players = tab === 'estimate' ? estimatePlayers : settledPlayers;
+
+  const filtered = players.filter(p => {
+    if (q && !(p.id + p.code).toLowerCase().includes(q.toLowerCase())) return false;
+    if (vipF !== 'all' && String(p.vip) !== vipF) return false;
+    if (statusF === 'profit' && p.isLoss) return false;
+    if (statusF === 'loss' && !p.isLoss) return false;
+    return true;
+  });
+
+  // KPI 合计(按当前期所有玩家算)
+  const sum = (arr, k) => arr.reduce((a,p)=>a+(p[k]||0),0);
+  const totalPlayers   = players.length;
+  const totalDep       = sum(players,'deposit');
+  const totalWd        = sum(players,'withdraw');
+  const totalGap       = totalDep - totalWd;
+  const totalBalance   = sum(players,'balance');
+  const totalWager     = sum(players,'wager');
+  const totalPayout    = sum(players,'payout');
+  const totalGgr       = sum(players,'ggr');
+  const totalCom       = sum(players,'commission');
+
+  const money = (n) => '₹' + F.money(n||0);
+  const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.money(Math.abs(n||0));
+
+  // 重置筛选(切 tab 时)
+  const switchTab = (k) => { setTab(k); setPage(1); };
 
   return (
     <div className="page">
-      <ARSUI.PageHead title={T('page.my_revshare.title','分润报表')} subtitle={T('page.my_revshare.sub','按周期查看您的 RevShare 收益与计算明细')}>
-        <button className="btn"><Icon name="download" size={13}/>导出</button>
-      </ARSUI.PageHead>
+      <MRUI.PageHead
+        title={MR_T('page.my_revshare.title','分润报表')}
+        subtitle={MR_T('page.my_revshare.sub','查看分润结算数据')}
+      />
 
-      <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
-        {[
-          ['本月 NGR', '$' + F.money(ngr), ngr>0?'盈利':'负盈利', ngr>0?'up':'down'],
-          ['本月分润', '$' + F.money(revShareAmt), revShareRate + '% × NGR', 'flat'],
-          ['正盈利玩家', myPlayers.filter(p=>p.ngr>0).length + ' / ' + myPlayers.length, '$' + F.money(positiveNgr), 'up'],
-          ['负盈利玩家', myPlayers.filter(p=>p.ngr<0).length + ' / ' + myPlayers.length, '$' + F.money(Math.abs(negativeNgr)), 'down'],
-          ['累计分润', '$' + F.money(revShareAmt * 6), '近 6 个月', 'flat'],
-        ].map(([l,v,d,dir]) => (
-          <div key={l} className="kpi">
-            <div className="label">{l}</div>
-            <div className="val">{v}</div>
-            {d && <div className={'delta '+(dir==='up'?'up':dir==='down'?'down':'')} style={{color:dir==='flat'?'var(--text-3)':undefined}}>{d}</div>}
-          </div>
-        ))}
-      </div>
-
-      <div className="card">
-        <ARSUI.Tabs value={tab} onChange={setTab} tabs={[
-          {key:'overview', label:'分润总览'},
-          {key:'players', label:'玩家明细', count: myPlayers.length},
-          {key:'history', label:'历史趋势'},
-          {key:'rule', label:'分润规则'},
+      {/* 3 个 tab */}
+      <div className="card" style={{padding:0,overflow:'visible'}}>
+        <MRUI.Tabs value={tab} onChange={switchTab} tabs={[
+          {key:'estimate', label: MR_T('mr.tab.estimate','本期预估分润')},
+          {key:'settled',  label: MR_T('mr.tab.settled','已结算分润')},
+          {key:'rule',     label: MR_T('mr.tab.rule','分润规则')},
         ]}/>
 
-        {tab === 'overview' && (
-          <div style={{padding:18}}>
-            <div className="grid-2" style={{gap:14,marginBottom:14}}>
-              <div className="card-inner">
-                <div style={{fontSize:13,fontWeight:600,marginBottom:14}}>NGR 计算口径</div>
-                <table style={{width:'100%',fontSize:12.5,borderCollapse:'collapse'}}>
-                  <tbody>
-                    <CalcRow l="GGR (Gross Gaming Revenue)" v={'$' + F.money(myPlayers.reduce((a,p)=>a+p.deposit-p.withdraw,0))}/>
-                    <CalcRow l="− 玩家奖金" v={'-$' + F.money(myPlayers.reduce((a,p)=>a+p.wager*0.02,0))}/>
-                    <CalcRow l="− 返水 / Rakeback" v={'-$' + F.money(myPlayers.reduce((a,p)=>a+p.wager*0.005,0))}/>
-                    <CalcRow l="− 支付通道费" v={'-$' + F.money(myPlayers.reduce((a,p)=>a+p.deposit*0.01,0))}/>
-                    <CalcRow l="NGR" v={'$' + F.money(ngr)} highlight/>
-                    <CalcRow l={'× 分润比例 (' + revShareRate + '%)'} v={revShareRate + '%'}/>
-                    <CalcRow l="分润金额" v={'$' + F.money(revShareAmt)} primary/>
-                  </tbody>
-                </table>
-              </div>
-              <div className="card-inner">
-                <div style={{fontSize:13,fontWeight:600,marginBottom:14}}>盈亏玩家结构</div>
-                <div style={{display:'flex',height:24,borderRadius:4,overflow:'hidden',marginBottom:18}}>
-                  <div style={{width: (myPlayers.filter(p=>p.ngr>0).length/myPlayers.length*100)+'%',background:'#22c55e',display:'grid',placeItems:'center',color:'#fff',fontSize:11,fontWeight:600}}>
-                    {myPlayers.filter(p=>p.ngr>0).length}
-                  </div>
-                  <div style={{width: (myPlayers.filter(p=>p.ngr===0).length/myPlayers.length*100)+'%',background:'#94a3b8'}}/>
-                  <div style={{width: (myPlayers.filter(p=>p.ngr<0).length/myPlayers.length*100)+'%',background:'#ef4444',display:'grid',placeItems:'center',color:'#fff',fontSize:11,fontWeight:600}}>
-                    {myPlayers.filter(p=>p.ngr<0).length}
-                  </div>
-                </div>
-                <div style={{display:'grid',gap:8,fontSize:12}}>
-                  <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--line-soft)'}}>
-                    <span><span style={{display:'inline-block',width:8,height:8,background:'#22c55e',borderRadius:2,marginRight:6}}/>正盈利玩家</span>
-                    <span className="text-mono">{myPlayers.filter(p=>p.ngr>0).length} 人 / +${F.money(positiveNgr)}</span>
-                  </div>
-                  <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--line-soft)'}}>
-                    <span><span style={{display:'inline-block',width:8,height:8,background:'#ef4444',borderRadius:2,marginRight:6}}/>负盈利玩家</span>
-                    <span className="text-mono" style={{color:'var(--danger)'}}>{myPlayers.filter(p=>p.ngr<0).length} 人 / ${F.money(negativeNgr)}</span>
-                  </div>
-                  <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0'}}>
-                    <span>本月净 NGR</span>
-                    <span className="text-mono" style={{color:'var(--brand)',fontWeight:600}}>${F.money(ngr)}</span>
-                  </div>
-                  <div style={{padding:10,background:'#fef3c7',borderRadius:4,fontSize:11.5,color:'#92400e',marginTop:8}}>
-                    <Icon name="alert" size={12} style={{marginRight:4}}/>
-                    若本月 NGR 为负,负数将<strong>结转至下月</strong>抵扣,直至全部抵扣完毕
-                  </div>
-                </div>
-              </div>
+        {/* —— 信息条 —— */}
+        {tab === 'estimate' && (
+          <div style={{
+            padding:'12px 16px', margin:'14px 18px 0',
+            border:'1px solid var(--line)', borderRadius:6,
+            display:'flex',alignItems:'center',gap:32,fontSize:12.5
+          }}>
+            <InfoCell l={MR_T('mr.info.week','期號')} v="W3"/>
+            <InfoCell l={MR_T('mr.info.status','結算狀態')} v={<span style={{color:'#f59e0b',fontWeight:600}}>{MR_T('mr.info.unsettled','未結算預估分潤')}</span>}/>
+            <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">2026/6/1 00:00:00 - 2026/6/7 23:59:59</span>}/>
+          </div>
+        )}
+
+        {tab === 'settled' && (
+          <div style={{padding:'14px 18px 0',position:'relative'}} ref={pickerRef}>
+            <div
+              onClick={()=>setPickerOpen(!pickerOpen)}
+              style={{
+                padding:'12px 16px',
+                border:'1px solid var(--line)', borderRadius:6,
+                display:'flex',alignItems:'center',gap:32,fontSize:12.5,
+                cursor:'pointer', userSelect:'none',
+                background:pickerOpen ? 'var(--bg-2)' : 'transparent'
+              }}>
+              <InfoCell l={MR_T('mr.info.week','期號')} v={selectedPeriod.week}/>
+              <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{selectedPeriod.start} - {selectedPeriod.end}</span>}/>
+              <span style={{flex:1}}/>
+              <Icon name={pickerOpen?'chevronDown':'chevronDown'} size={14} style={{color:'var(--text-2)',transform:pickerOpen?'rotate(180deg)':'none',transition:'transform .15s'}}/>
             </div>
-          </div>
-        )}
-
-        {tab === 'players' && (
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead><tr>
-                <th>玩家</th><th>VIP</th>
-                <th className="right">充值</th><th className="right">投注</th>
-                <th className="right">GGR</th><th className="right">奖金/返水</th>
-                <th className="right">NGR</th>
-                <th className="right">分润 (35%)</th>
-                <th>状态</th>
-              </tr></thead>
-              <tbody>
-                {playerRows.map(p => {
-                  const ggr = p.deposit - p.withdraw;
-                  const bonus = p.wager * 0.025;
-                  const share = p.ngr > 0 ? p.ngr * 0.35 : 0;
-                  return (
-                    <tr key={p.id}>
-                      <td className="text-mono" style={{fontSize:11.5}}>{p.id}</td>
-                      <td>{p.vip > 0 ? <span className="badge b-warning">VIP {p.vip}</span> : '-'}</td>
-                      <td className="right text-mono">${F.money(p.deposit)}</td>
-                      <td className="right text-mono">${F.money(p.wager)}</td>
-                      <td className="right text-mono">${F.money(ggr)}</td>
-                      <td className="right text-mono">${F.money(bonus)}</td>
-                      <td className="right text-mono" style={{color: p.ngr<0?'var(--danger)':'var(--text-0)',fontWeight:p.ngr!==0?600:400}}>
-                        ${F.money(p.ngr)}
-                      </td>
-                      <td className="right text-mono" style={{color:'var(--brand)'}}>${F.money(share)}</td>
-                      <td>{p.ngr>0?<span className="badge b-success">正盈利</span>:p.ngr<0?<span className="badge b-danger">负盈利</span>:<span className="text-mute">-</span>}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {tab === 'history' && (
-          <div style={{padding:18}}>
-            <div className="card-inner">
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-                <div style={{fontSize:13,fontWeight:600}}>近 12 周 NGR 与分润趋势</div>
-                <div style={{display:'flex',gap:14,fontSize:11.5}}>
-                  <span><span style={{display:'inline-block',width:10,height:10,background:'#3b82f6',borderRadius:2,marginRight:4,verticalAlign:'middle'}}/>NGR</span>
-                  <span><span style={{display:'inline-block',width:10,height:10,background:'#22c55e',borderRadius:2,marginRight:4,verticalAlign:'middle'}}/>分润</span>
-                </div>
+            {pickerOpen && (
+              <div style={{
+                position:'absolute', left:18, right:18, top:'100%',
+                background:'#fff', border:'1px solid var(--line)', borderRadius:6,
+                boxShadow:'0 4px 16px rgba(0,0,0,0.08)', zIndex:20,
+                marginTop:4, overflow:'hidden'
+              }}>
+                {settledList.map(p => (
+                  <div
+                    key={p.week}
+                    onClick={()=>{setSelectedWeek(p.week);setPickerOpen(false);setPage(1);}}
+                    style={{
+                      padding:'10px 16px', cursor:'pointer', fontSize:12.5,
+                      display:'flex',alignItems:'center',gap:32,
+                      background:p.week===selectedWeek?'var(--bg-2)':'#fff',
+                      borderBottom:'1px solid var(--line-soft)'
+                    }}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--bg-2)'}
+                    onMouseLeave={e=>e.currentTarget.style.background=p.week===selectedWeek?'var(--bg-2)':'#fff'}>
+                    <InfoCell l={MR_T('mr.info.week','期號')} v={p.week}/>
+                    <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{p.start} - {p.end}</span>}/>
+                  </div>
+                ))}
               </div>
-              <svg viewBox="0 0 720 220" style={{width:'100%',height:220}}>
-                {[0,1,2,3,4].map(i => <line key={i} x1="40" y1={20 + i*40} x2="710" y2={20 + i*40} stroke="#e2e8f0" strokeDasharray="2 2"/>)}
-                {(() => {
-                  const max = Math.max(...weeklyNgr, 1);
-                  const w = 56, gap = 4;
-                  return weeklyNgr.map((v, i) => {
-                    const h = Math.abs(v) / max * 160;
-                    const x = 50 + i * (w + gap);
-                    return (
-                      <g key={i}>
-                        <rect x={x} y={180 - h} width={w-12} height={h} fill="#3b82f6" opacity="0.85"/>
-                        <rect x={x+w/2} y={180 - h*0.35} width={w-12} height={h*0.35} fill="#22c55e" opacity="0.85"/>
-                        <text x={x + (w-12)/2} y="200" textAnchor="middle" fontSize="10" fill="#64748b">W{i+19}</text>
-                        <text x={x + (w-12)/2} y={172 - h} textAnchor="middle" fontSize="10" fill="#1e293b" fontWeight="600">${F.money(v)}</text>
-                      </g>
-                    );
-                  });
-                })()}
-              </svg>
-            </div>
+            )}
           </div>
         )}
 
-        {tab === 'rule' && (
-          <div style={{padding:18}}>
-            <div className="card-inner" style={{maxWidth:720,margin:'0 auto'}}>
-              <div className="form-section-title" style={{marginTop:0}}>RevShare 方案</div>
-              <table style={{width:'100%',fontSize:12.5}}>
+        {/* —— Tab 内容 —— */}
+        {tab !== 'rule' && (
+          <div style={{padding:'14px 18px 18px'}}>
+            {/* KPI:9 个,5 列网格自动换行(5 + 4) */}
+            <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
+              {[
+                [MR_T('mr.kpi.players','玩家總數'),  F.fmtNum(totalPlayers)],
+                [MR_T('mr.kpi.deposit','總充值金額'),    money(totalDep)],
+                [MR_T('mr.kpi.withdraw','總提款金額'),   money(totalWd)],
+                [MR_T('mr.kpi.gap','充提差'),            fmtGap(totalGap), totalGap>=0?'up':'down'],
+                [MR_T('mr.kpi.balance','總玩家餘額'),    money(totalBalance)],
+                [MR_T('mr.kpi.wager','總投注'),          money(totalWager)],
+                [MR_T('mr.kpi.payout','總派彩'),         money(totalPayout)],
+                [MR_T('mr.kpi.ggr','GGR'),               fmtGap(totalGgr), totalGgr>=0?'up':'down'],
+                [MR_T('mr.kpi.commission','總佣金'),     money(totalCom)],
+              ].map(([l,v,delta]) => (
+                <div key={l} className="kpi">
+                  <div className="label">{l}</div>
+                  <div className="val" style={delta==='up'?{color:'var(--success)'}:delta==='down'?{color:'var(--danger)'}:undefined}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 工具栏 */}
+            <div className="toolbar" style={{padding:'0 0 12px'}}>
+              <MRUI.SearchInput value={q} onChange={(v)=>{setQ(v);setPage(1);}} placeholder={MR_T('mr.filter.search_ph','玩家UID / 邀请Code')} width={220}/>
+              <select className="filter-select" value={vipF} onChange={e=>{setVipF(e.target.value);setPage(1);}}>
+                <option value="all">{MR_T('mr.filter.all_vip','全部 VIP')}</option>
+                {[0,1,2,3,4,5,6,7].map(v=><option key={v} value={v}>VIP {v}</option>)}
+              </select>
+              <select className="filter-select" value={statusF} onChange={e=>{setStatusF(e.target.value);setPage(1);}}>
+                <option value="all">{MR_T('mr.filter.all_status','全部用户状态')}</option>
+                <option value="profit">{MR_T('mr.status.profit','盈利')}</option>
+                <option value="loss">{MR_T('mr.status.loss','亏损')}</option>
+              </select>
+              <span style={{flex:1}}/>
+            </div>
+
+            {/* 表格 13 列 */}
+            <div className="tbl-wrap">
+              <table className="tbl">
+                <thead><tr>
+                  <th>{MR_T('mr.col.uid','玩家 UID')}</th>
+                  <th>{MR_T('mr.col.source_code','来源 Code')}</th>
+                  <th>{MR_T('mr.col.vip','VIP 等级')}</th>
+                  <th className="right">{MR_T('mr.col.deposit','充值金额')}</th>
+                  <th className="right">{MR_T('mr.col.withdraw','提款金额')}</th>
+                  <th className="right">{MR_T('mr.col.gap','充提差')}</th>
+                  <th className="right" style={{color:'var(--brand)'}}>
+                    {tab === 'estimate'
+                      ? MR_T('mr.col.cur_balance','当前余额')
+                      : MR_T('mr.col.settled_balance','结算余额')}
+                  </th>
+                  <th className="right">{MR_T('mr.col.wager','投注')}</th>
+                  <th className="right">{MR_T('mr.col.payout','派彩')}</th>
+                  <th className="right">GGR</th>
+                  <th className="right">{MR_T('mr.col.base','分润基数')}</th>
+                  <th className="right">{MR_T('mr.col.rate','分润比例')}</th>
+                  <th className="right" style={{color:'var(--brand)'}}>
+                    {tab === 'estimate'
+                      ? MR_T('mr.col.est_com','预估佣金')
+                      : MR_T('mr.col.settled_com','结算佣金')}
+                  </th>
+                  <th>{MR_T('mr.col.user_status','用户状态')}</th>
+                </tr></thead>
                 <tbody>
-                  <RuleRow l="分润比例" v="35% × NGR"/>
-                  <RuleRow l="NGR 公式" v="GGR − 玩家奖金 − 返水 − 支付费"/>
-                  <RuleRow l="结算周期" v="每周一结算上一周"/>
-                  <RuleRow l="负盈利结转" v="是 · 上月负数计入下月,直至清偿"/>
-                  <RuleRow l="结算币种" v={me.currency}/>
-                  <RuleRow l="最低结算金额" v="$200 (低于该金额顺延至下期)"/>
-                  <RuleRow l="持有期" v="结算后 7 天可申请提款"/>
+                  {filtered.map(p => {
+                    const gap = (p.deposit||0) - (p.withdraw||0);
+                    return (
+                      <tr key={p.id}>
+                        <td className="text-mono" style={{color:'var(--text-0)',fontSize:12,fontWeight:600}}>{p.id}</td>
+                        <td className="text-mono" style={{color:'var(--brand)',fontSize:11.5}}>{p.code}</td>
+                        <td><span style={{fontSize:12,color:'var(--text-1)'}}>VIP {p.vip}</span></td>
+                        <td className="right text-mono">{money(p.deposit)}</td>
+                        <td className="right text-mono">{money(p.withdraw)}</td>
+                        <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
+                        <td className="right text-mono">{money(p.balance)}</td>
+                        <td className="right text-mono">{money(p.wager)}</td>
+                        <td className="right text-mono">{money(p.payout)}</td>
+                        <td className="right text-mono" style={{color: p.ggr>=0?'var(--success)':'var(--danger)'}}>{(p.ggr>=0?'+':'-')+'₹'+F.money(Math.abs(p.ggr||0))}</td>
+                        <td className="right text-mono">{money(Math.abs(p.ggr||0))}</td>
+                        <td className="right text-mono">{p.rate}%</td>
+                        <td className="right text-mono">{money(p.commission)}</td>
+                        <td>
+                          {p.isLoss
+                            ? <span className="badge b-danger">{MR_T('mr.status.loss','亏损')}</span>
+                            : <span className="badge b-success">{MR_T('mr.status.profit','盈利')}</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <tr><td colSpan={14} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
+                  )}
                 </tbody>
               </table>
-              <div className="form-section-title mt-3">阶梯奖励 (达成额外奖励)</div>
+            </div>
+
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12,fontSize:12,color:'var(--text-3)'}}>
+              <span>{MR_T('mr.pagination.total','共')} {filtered.length} {MR_T('mr.pagination.items','条')} · {MR_T('mr.pagination.page','第')} 1/1 {MR_T('mr.pagination.page_unit','页')}</span>
+            </div>
+          </div>
+        )}
+
+        {/* —— 分润规则 tab —— */}
+        {tab === 'rule' && (
+          <div style={{padding:'18px'}}>
+            <div className="card-inner" style={{maxWidth:720,margin:'0 auto'}}>
+              <div className="form-section-title" style={{marginTop:0}}>{MR_T('mr.rule.title','RevShare 方案')}</div>
+              <table style={{width:'100%',fontSize:12.5}}>
+                <tbody>
+                  <RuleRow l={MR_T('mr.rule.rate','分润比例')} v="5% × GGR"/>
+                  <RuleRow l={MR_T('mr.rule.ngr','分润计算公式')} v="GGR(投注 − 派彩) × 分润比例"/>
+                  <RuleRow l={MR_T('mr.rule.cycle','结算周期')} v={MR_T('mr.rule.cycle_v','每周一结算上一周')}/>
+                  <RuleRow l={MR_T('mr.rule.carry','负盈利结转')} v={MR_T('mr.rule.carry_v','是 · 上期负数计入下期,直至清偿')}/>
+                  <RuleRow l={MR_T('mr.rule.currency','结算币种')} v="INR (₹)"/>
+                  <RuleRow l={MR_T('mr.rule.min','最低结算金额')} v="₹200 (低于该金额顺延至下期)"/>
+                  <RuleRow l={MR_T('mr.rule.hold','持有期')} v={MR_T('mr.rule.hold_v','结算后 7 天可申请提款')}/>
+                </tbody>
+              </table>
+              <div className="form-section-title mt-3">{MR_T('mr.rule.tier','阶梯奖励 (达成额外奖励)')}</div>
               <div style={{display:'grid',gap:6,fontSize:12.5}}>
                 {[
-                  ['月 NGR ≥ $5,000', '+2%', '本月分润比例 → 37%'],
-                  ['月 NGR ≥ $20,000', '+5%', '本月分润比例 → 40%'],
-                  ['月 NGR ≥ $50,000', '+8% + 升级', '分润 → 43%,等级升白金'],
-                  ['月 NGR ≥ $100,000', '一对一专属经理', '议价空间 + 加速结算'],
+                  ['月 GGR ≥ ₹5,000', '+2%', '本月分润比例 → 7%'],
+                  ['月 GGR ≥ ₹20,000', '+5%', '本月分润比例 → 10%'],
+                  ['月 GGR ≥ ₹50,000', '+8% + 升级', '分润 → 13%,等级升白金'],
+                  ['月 GGR ≥ ₹100,000', '一对一专属经理', '议价空间 + 加速结算'],
                 ].map(([t, b, d], i) => (
                   <div key={i} style={{display:'flex',padding:'10px 14px',background:'var(--bg-2)',borderRadius:6,gap:12,alignItems:'center'}}>
-                    <span style={{width:140,color:'var(--text-1)'}}>{t}</span>
+                    <span style={{width:160,color:'var(--text-1)'}}>{t}</span>
                     <span className="badge b-success" style={{minWidth:80,textAlign:'center'}}>{b}</span>
                     <span className="text-mute" style={{fontSize:11.5,flex:1}}>{d}</span>
                   </div>
@@ -214,12 +325,13 @@ function MyRevshareModule() {
   );
 }
 
-function CalcRow({l,v,highlight,primary}) {
+// —— 信息条单元 ——
+function InfoCell({l, v}) {
   return (
-    <tr>
-      <td style={{padding:'8px 0',color: primary?'var(--text-0)':'var(--text-1)',fontWeight:primary?600:400,borderBottom:highlight||primary?'1px solid var(--line)':'1px solid var(--line-soft)'}}>{l}</td>
-      <td style={{padding:'8px 0',textAlign:'right',fontFamily:'var(--font-mono)',color: primary?'var(--brand)':highlight?'var(--text-0)':'var(--text-1)',fontWeight:highlight||primary?600:400,fontSize:primary?14:12.5,borderBottom:highlight||primary?'1px solid var(--line)':'1px solid var(--line-soft)'}}>{v}</td>
-    </tr>
+    <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
+      <span style={{color:'var(--text-2)'}}>{l}:</span>
+      <span style={{color:'var(--text-0)',fontWeight:500}}>{v}</span>
+    </span>
   );
 }
 
