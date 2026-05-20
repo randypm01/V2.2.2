@@ -214,9 +214,15 @@ function Pagination({ page, pageSize, total, onPage }) {
   const arr = [];
   const lo = Math.max(1, page - 2),hi = Math.min(totalPages, page + 2);
   for (let i = lo; i <= hi; i++) arr.push(i);
+  // i18n: 简体中文 vs English 段落构造(window.t 优先,fallback 用 lang store)
+  const lang = (typeof window !== 'undefined' && window.APS_LANG_STORE && window.APS_LANG_STORE.get && window.APS_LANG_STORE.get()) || 'zh';
+  const totalStr = total.toLocaleString();
+  const summary = lang === 'en'
+    ? (<><b style={{ color: 'var(--text-1)' }}>{totalStr}</b> total · Page {page} / {totalPages}</>)
+    : (<>共 <b style={{ color: 'var(--text-1)' }}>{totalStr}</b> 条 · 第 {page} / {totalPages} 页</>);
   return (
     <div className="pagination">
-      <span>共 <b style={{ color: 'var(--text-1)' }}>{total.toLocaleString()}</b> 条 · 第 {page} / {totalPages} 页</span>
+      <span>{summary}</span>
       <div className="pg-pages">
         <button disabled={page === 1} onClick={() => onPage(page - 1)}>‹</button>
         {lo > 1 && <><button onClick={() => onPage(1)}>1</button>{lo > 2 && <span style={{ padding: '0 4px', color: 'var(--text-3)' }}>…</span>}</>}

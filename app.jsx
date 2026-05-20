@@ -93,11 +93,12 @@ function App() {
 
   // 专业代理后台 NAV
   const AGENT_NAV = [
-    { section: T('nav.sec.account', '我的账户'), icon:'user', items: [
+    { section: T('nav.sec.ops', '运营'), icon:'pulse', items: [
       { k:'my_profile', l: T('nav.item.my_profile', '我的账户'), icon:'user', prd:'P0-13' },
+      { k:'my_codes_mgmt', l: T('nav.item.my_codes_mgmt', 'Code 与链接管理'), icon:'link', prd:'P0-3' },
     ]},
-    { section: T('nav.sec.promote_earn', '推广&收益'), icon:'link', items: [
-      { k:'my_codes', l: T('nav.item.my_codes', '分享 Code 与链接'), icon:'link', prd:'P0-3' },
+    { section: T('nav.sec.reports', '报表'), icon:'pie', items: [
+      { k:'my_codes', l: T('nav.item.my_codes', '邀请Code与链接'), icon:'link', prd:'P0-3' },
       { k:'my_players', l: T('nav.item.my_players', '玩家损益'), icon:'user', prd:'P0-4' },
       { k:'my_revshare', l: T('nav.item.my_revshare', '分润报表'), icon:'pie', prd:'P0-7' },
     ]},
@@ -146,15 +147,15 @@ function App() {
   };
   const crumbLabel = (rt) => {
     const pr = parseRoute(rt);
-    if (pr.kind === 'home') return '首页';
-    if (pr.kind === 'prd_home') return 'PRD首页';
+    if (pr.kind === 'home') return T('crumb.home', '首页');
+    if (pr.kind === 'prd_home') return T('crumb.prd_home', 'PRD首页');
     if (pr.kind === 'section') return pr.name;
     if (pr.kind === 'mod') {
       const sec = CUR_NAV.find(s => s.items.some(i => i.k === pr.k));
       return sec?.items.find(i => i.k === pr.k)?.l || pr.k;
     }
-    if (pr.kind === 'prd_overview') return '规划优先级';
-    if (pr.kind === 'version') return '版本';
+    if (pr.kind === 'prd_overview') return T('crumb.prd_overview', '规划优先级');
+    if (pr.kind === 'version') return T('crumb.version', '版本');
     if (pr.kind === 'phase') {
       const ph = PHASES.find(x => x.key === pr.key);
       return ph ? `${ph.key}_${ph.label}` : pr.key;
@@ -362,9 +363,9 @@ function App() {
           <aside className="sidebar">
             <div className="sb-nav">
               <div className={'sb-item ' + (isActiveRoute('home')?'active':'')}
-                onClick={()=>setRoute('home')} title="首页" style={{marginBottom:6}}>
+                onClick={()=>setRoute('home')} title={T('crumb.home', '首页')} style={{marginBottom:6}}>
                 <Icon name="dashboard" size={15} className="sb-icon"/>
-                <span>首页</span>
+                <span>{T('crumb.home', '首页')}</span>
               </div>
               <div className={'sb-item ' + (isActiveRoute('prd_home')?'active':'')}
                 onClick={()=>setRoute('prd_home')} title={T('nav.prd_home', 'PRD首页')} style={{marginBottom:6}}>
@@ -419,6 +420,7 @@ function App() {
               {r.kind === 'mod' && r.k === 'my_profile' && <window.AgentProfileModule/>}
               {r.kind === 'mod' && r.k === 'my_notify' && <window.AgentNotifyModule/>}
               {r.kind === 'mod' && r.k === 'my_codes' && <window.MyCodesModule/>}
+              {r.kind === 'mod' && r.k === 'my_codes_mgmt' && <window.MyCodesMgmtModule/>}
               {r.kind === 'mod' && r.k === 'my_players' && <window.MyPlayersModule/>}
               {r.kind === 'mod' && r.k === 'my_cpa' && <window.MyCpaModule/>}
               {r.kind === 'mod' && r.k === 'my_revshare' && <window.MyRevshareModule/>}
@@ -433,7 +435,7 @@ function App() {
               {r.kind === 'mod' && r.k === 'my_app' && <window.MyAppModule/>}
               {r.kind === 'mod' && r.k === 'my_currency' && <window.MyCurrencyModule/>}
               {r.kind === 'mod' && r.k === 'my_ad' && <window.MyAdNetworkModule/>}
-              {r.kind === 'mod' && !['my_profile','my_notify','my_codes','my_players','my_cpa','my_revshare','my_settlement','my_wallet','my_traffic','my_materials','my_campaigns','my_quality','my_api','my_subs','my_app','my_currency','my_ad'].includes(r.k) && (() => {
+              {r.kind === 'mod' && !['my_profile','my_notify','my_codes','my_codes_mgmt','my_players','my_cpa','my_revshare','my_settlement','my_wallet','my_traffic','my_materials','my_campaigns','my_quality','my_api','my_subs','my_app','my_currency','my_ad'].includes(r.k) && (() => {
                 const sec = AGENT_NAV.find(s => s.items.some(i => i.k === r.k));
                 const it = sec?.items.find(i => i.k === r.k);
                 if (!it) return null;

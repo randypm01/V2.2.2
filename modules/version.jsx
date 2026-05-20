@@ -2,9 +2,190 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.0.105',
+    date: '2026-05-20',
+    current: true,
+    changes: [
+      { type: 'modify', text: '代理后台侧栏:删除空的「报表」大项(原先是占位,无子项);原「推广&收益」大项重命名为「报表」— 保留 3 个子项(邀请Code与链接 / 玩家损益 / 分润报表)' },
+    ],
+  },
+  {
+    ver: 'v3.0.104',
+    date: '2026-05-19',
+    changes: [
+      { type: 'modify', text: '玩家损益 KPI「累计提款金额」改为「总提款金额」— 与其他 KPI 前缀「总」对齐' },
+      { type: 'modify', text: '玩家损益 表格列「累计投注 / 累计派彩」去掉「累计」前缀 — 与其他列(充值金额 / 提款金额 / 玩家余额 / GGR / 佣金)对齐' },
+      { type: 'fix', text: '🐛 玩家损益 副标题 i18n 字典未同步:agent_common.jsx page.my_players.sub 仍是「我推广而来的玩家清单与盈亏分析」(v3.0.102 时该改没改);现统一为「查看邀请玩家的清单」/「View list of invited players」' },
+    ],
+  },
+  {
+    ver: 'v3.0.103',
+    changes: [
+      { type: 'modify', text: '玩家损益 GGR 金额改用 +绿 / -红 显色(同 充提差)— KPI 卡片「GGR」+ 表格列「GGR」两处都同步;正数 var(--success) 绿色 + 前缀「+」,负数 var(--danger) 红色 + 前缀「-」' },
+    ],
+  },
+  {
+    ver: 'v3.0.102',
+    changes: [
+      { type: 'modify', text: '玩家损益 页按截图重做(my_players.jsx)— 副标题改「查看邀请玩家的清单」' },
+      { type: 'modify', text: 'KPI 由 6 个扩到 11 个 — 玩家总数 / 总首存人数 / 总首存金额 / 总充值金额 / 累计提款金额 / 充提差 / 总玩家余额 / 总投注 / 总派彩 / GGR / 总佣金' },
+      { type: 'modify', text: '工具栏:玩家 UID / 邀请 Code 搜索框 + 全部 VIP 下拉 + 时间维度选择器(复用 my_codes.jsx 的 TimeRange / RangeCalendar 组件,now exposed as window.TimeRange)' },
+      { type: 'modify', text: '表格 12 列:UID / 来源 Code / VIP 等级 / 首次存款金额 / 充值金额 / 提款金额 / 充提差 / 玩家余额 / 累计投注 / 累计派彩 / GGR / 佣金' },
+      { type: 'remove', text: '移除原 Tabs(全部 / 已首存 / 有效 CPA / VIP 玩家 / 风控中)+ CPA 列 + 风控列 + 注册列 + 首存列 + 国家列 + 玩家详情 Drawer' },
+      { type: 'add', text: '示例 5 条玩家数据补齐新字段:ftdAmt / playerBalance / payout / ggr / commission(payout ≈ 投注 × 92%,佣金 ≈ GGR × 30%)' },
+      { type: 'add', text: 'agent_common.jsx 加 30+ 个 i18n 键(mp.kpi.* / mp.col.* / mp.filter.* / mp.empty),中英文都接好' },
+      { type: 'add', text: 'my_codes.jsx 底部 export window.TimeRange / window.RangeCalendar,让 my_players.jsx 等其他模块可以复用同一个时间范围选择器' },
+    ],
+  },
+  {
+    ver: 'v3.0.101',
+    changes: [
+      { type: 'add', text: 'RangeCalendar 头部加 « 和 » 两个年份导航按钮 — 现在 4 个按钮:« 上一年 / ‹ 上个月 / › 下个月 / » 下一年;tooltip 中英文都接入;原先只能逐月翻,跨年范围要点 10+ 次,现在 1 次点 « 跳一年' },
+    ],
+  },
+  {
+    ver: 'v3.0.100',
+    changes: [
+      { type: 'fix', text: '🐛 RangeCalendar 点完结束日期 自动关弹窗(在用户点 Confirm 之前就生效)— 移除 pickDate 在 end 分支里的 onClose() 调用,只允许「Confirm」/「外部点击」/「Today」3 种方式关闭' },
+    ],
+  },
+  {
+    ver: 'v3.0.99',
+    changes: [
+      { type: 'fix', text: '🐛 TimeRange 双月历弹窗 被 .card { overflow:hidden } 截掉底部(Today / Confirm 按钮看不见)— 改用 ReactDOM.createPortal 挂到 document.body,position:fixed + 实时 getBoundingClientRect 算坐标,完全脱离 .card 包围' },
+      { type: 'add', text: 'recomputePos 监听 scroll(capture)+ resize 事件,弹窗位置跟着触发器移动;靠右贴边时左移避免 viewport 溢出' },
+      { type: 'modify', text: 'mousedown 关闭逻辑同步迁移到 portal 兼容:popRef + ref 双白名单避免点击日历自身误关' },
+    ],
+  },
+  {
+    ver: 'v3.0.98',
+    changes: [
+      { type: 'fix', text: '🐛 时间范围选择器 自定义弹窗用了原生 <input type="date"> — 浏览器原生日历 UI 用 OS locale,英文模式下仍显示中文,且宽度受浏览器限制;改为自绘 RangeCalendar 组件,完全控制 i18n + 宽度' },
+      { type: 'add', text: 'RangeCalendar 自绘双月历:左右两个月份并排显示,周一/周日表头 + 6 行日期网格;点击日期支持范围选择(第 1 次点 = start,第 2 次点 = end,反向自动交换);hover 时显示中间灰底预览;选中端点高亮品牌色;跨月份的日期淡灰色显示' },
+      { type: 'add', text: '日历底部:左侧「今天」按钮(回到近 7 日默认)/ 右侧「确定」按钮关闭;顶部带 ‹ › 月份切换 + 中间提示「选择开始日期 / 选择结束日期」' },
+      { type: 'add', text: '所有日历文字接 i18n:月份名(1 月~12 月 / January~December)、周名(日一二三四五六 / Sun-Sat)、提示语 / 按钮文字 — 切到 EN 整套换英文' },
+      { type: 'modify', text: '时间范围文本框最小宽度 280px → 300px;点击 chevron 后弹出 560px 宽双月历,不再被浏览器原生 picker 卡住' },
+    ],
+  },
+  {
+    ver: 'v3.0.97',
+    changes: [
+      { type: 'add', text: '邀请Code与链接 页 新增「时间维度搜索」— 工具栏加 TimeRange 组件:文本框显示当前范围 "YYYY/M/D HH:MM:SS - YYYY/M/D HH:MM:SS"(可点击展开自定义起止日期);右侧 3 个快选按钮 近 7 日 / 近 14 日 / 近 30 日,active 状态用品牌色高亮' },
+      { type: 'add', text: '默认范围 近 7 日 — start = 今天 00:00:00 倒推 6 天 / end = 今天 23:59:59' },
+      { type: 'add', text: '点击文本框弹出小 popover,放两个原生 <input type="date"> 让用户选自定义起止;preset 自动切换到 custom 不再高亮快选' },
+      { type: 'add', text: 'agent_common.jsx 加 3 个 i18n 键 mc.tr.7d / mc.tr.14d / mc.tr.30d(中/英)' },
+    ],
+  },
+  {
+    ver: 'v3.0.96',
+    changes: [
+      { type: 'fix', text: '🐛 切到 English 时,Code 与链接管理 页面 + 编辑弹窗 + 创建弹窗 + 删除确认弹窗 + 各种 toast 仍硬编码中文 — 接入完整 i18n,新增 60+ 个键(page.my_codes_mgmt.* / mcm.btn.* / mcm.col.* / mcm.action.* / mcm.status.* / mcm.empty / mcm.create.* / mcm.edit.* / mcm.form.* / mcm.del.* / mcm.toast.* / mcm.tip.*),agent_common.jsx 字典 + my_codes_mgmt.jsx 同步' },
+      { type: 'fix', text: '🐛 面包屑「首页 / PRD首页 / 规划优先级 / 版本」全部硬编码中文 — app.jsx crumbLabel 改用 T(crumb.home / crumb.prd_home / crumb.prd_overview / crumb.version);代理后台 侧栏「首页」item 也同步接入 T()' },
+      { type: 'fix', text: '🐛 分页器「共 N 条 · 第 N / N 页」硬编码中文 — ui.jsx Pagination 加 lang 探测,英文模式渲染「N total · Page X / Y」' },
+      { type: 'add', text: 'modules/my_codes_mgmt.jsx 顶部加 const MCM_T = (k, fb) => window.t(k, fb),让 CreateModalMgmt + EditModalMgmt 两个内部函数也能用 i18n(它们不在主组件作用域内)' },
+    ],
+  },
+  {
+    ver: 'v3.0.95',
+    changes: [
+      { type: 'modify', text: '全站表格表头(.tbl thead th)样式改为 Title Case + 常规字重 — 移除 text-transform:uppercase 和 letter-spacing:.5px;font-weight 由 600 降到 500;font-size 由 11px 升到 11.5px。原有所有表头(i18n 字典里的 Title Case 文本如 "Invite Code" / "Total Codes")现在直接展示,不再被强制转大写' },
+    ],
+  },
+  {
+    ver: 'v3.0.94',
+    changes: [
+      { type: 'modify', text: 'Code 与链接管理 创建弹窗 + 邀请Code与链接 CodeForm 校验提示行 与 注册页(reg.s3.pw.*)统一样式 — 去掉自绘的实心圆背景 + ✓/× 字符,改为通用 <Icon name="check|x"/>;颜色 ok=#22c55e / not=#94a3b8(同 reg.s3 passChecks 渲染)' },
+    ],
+  },
+  {
+    ver: 'v3.0.93',
+    changes: [
+      { type: 'remove', text: '邀请Code与链接 页 工具栏「全部状态」下拉删掉 — 状态列既然没了,筛选也跟着撤;同步移除 statusF state + 过滤逻辑' },
+      { type: 'modify', text: '表格 5 个列名去掉「累计」前缀:累计注册人数 → 注册人数 / 累计充值人数 → 充值人数 / 累计充值金额 → 充值金额 / 累计提款人数 → 提款人数 / 累计提款金额 → 提款金额(agent_common.jsx i18n 字典同步更新)' },
+    ],
+  },
+  {
+    ver: 'v3.0.92',
+    changes: [
+      { type: 'remove', text: '邀请Code与链接 页 删除「状态」列(纯报表页不需要显示状态)— 表格列从 12 列再精简到 11 列;空态 colSpan 同步 11' },
+      { type: 'fix', text: '🐛 语言切换下拉「繁體中文」改为「简体中文」— 项目 UI 一直是简体中文,标签也应该是简体' },
+      { type: 'fix', text: '🐛 当语言切换为 English 时,邀请Code与链接 页面 KPI / 表头 / 筛选 / 空态 全部硬编码中文不切换 — 给 my_codes.jsx 所有可见 Chinese 字符串接入 i18n,新增 28 个键(mc.kpi.* / mc.col.* / mc.filter.* / mc.status.* / mc.empty)+ 英文翻译;agent_common.jsx 字典同步' },
+    ],
+  },
+  {
+    ver: 'v3.0.91',
+    date: '2026-05-19',
+    changes: [
+      { type: 'modify', text: '专业代理后台「邀请 Code 与链接」页改造为纯报表查看页 — 标题去空格改「邀请Code与链接」,副标题改「查看各 Code 推广链接累计数据」(对应 app.jsx NAV / agent_common.jsx i18n / my_codes.jsx PageHead)' },
+      { type: 'remove', text: 'PageHead 移除「导出报表」按钮;移除「创建 邀请 Code」独立按钮行 — 创建/编辑/删除 统一在「运营 → Code 与链接管理」' },
+      { type: 'modify', text: '表格列由 14 列精简到 12 列:邀请 Code / 描述 / 状态 / 累计注册人数 / 累计充值人数 / 累计充值金额 / 累计提款人数 / 累计提款金额 / 充值转化率 / 充提差 / 玩家余额 / 佣金' },
+      { type: 'remove', text: '表格 删除「备注」列、删除「操作」列 — 报表页不需要;状态列从位置 4 移到位置 3' },
+      { type: 'modify', text: '「累计佣金」列名改为「佣金」' },
+      { type: 'modify', text: 'StatusBadge 由 .badge pill 改为纯彩色文字(启用绿/冻结青/暂停橙/停用红)— 停用色从 b-muted 灰改为 var(--danger) 红' },
+      { type: 'modify', text: '空态文案改「暂无邀请 Code,请去「运营 → Code 与链接管理」创建」' },
+    ],
+  },
+  {
+    ver: 'v3.0.90',
+    date: '2026-05-19',
+    changes: [
+      { type: 'modify', text: 'Code 与链接管理 列表页「创建 邀请 Code」按钮 从 toolbar 内 改回 PageHead 右侧(与标题同行右对齐)— 按用户截图位置对齐' },
+      { type: 'modify', text: 'Code 与链接管理 状态列「启用 / 停用」改用 .badge pill 样式 — 启用 b-success(绿底)/ 停用 b-danger(红底);去掉前面的小圆点' },
+      { type: 'modify', text: '邀请 Code 与链接 页 StatusBadge 同步去掉前面的 <span className="dot"/> — 保留 b-success / b-info / b-warning / b-muted 色底,只有文字' },
+    ],
+  },
+  {
+    ver: 'v3.0.89',
+    date: '2026-05-19',
+    changes: [
+      { type: 'fix', text: '🐛 my_codes_mgmt.jsx QR Code 渲染成 3 条横线 — 原伪随机公式 (r*13 + c*7) % 7 的 c*7 mod 7 = 0,导致列没影响,整行同色;改用 FNV-1a hash + xorshift32 让 行/列 都参与,并加 3 个角定位方块让它看起来更像真 QR' },
+      { type: 'modify', text: 'Code 与链接管理 列表页「创建 邀请 Code」按钮 由独立浮在顶部右上 改为放进 toolbar 行右对齐 — 减少垂直空白,与筛选条同行' },
+      { type: 'modify', text: '列表页状态列「启用 / 停用」加 6px 小圆点(同色)— 增强视觉锚点,不再只是纯文字' },
+      { type: 'modify', text: '编辑弹窗 grid 加 alignItems:start — 让右栏 QR Code 卡片对齐顶部,不再被左栏 5 个字段撑高,避免下载 PNG 按钮飘到中间' },
+    ],
+  },
+  {
+    ver: 'v3.0.88',
+    date: '2026-05-19',
+    changes: [
+      { type: 'add', text: '专业代理后台「运营 → Code 与链接管理」新建独立模块 modules/my_codes_mgmt.jsx — 比「邀请 Code 与链接」更轻量(无 KPI,只做 Code 管理)' },
+      { type: 'add', text: '表格 7 列:邀请 Code(复制)/ 邀请短链接(复制)/ QR Code(下载 PNG 链接)/ 描述 / 备注 / 状态(启用/停用)/ 操作(编辑/删除)' },
+      { type: 'add', text: '创建弹窗:Code + 描述 + 备注 + 三条实时校验(必填 / 最少 4 字符 / 4-10 字符仅字母大写数字)+ 重名校验' },
+      { type: 'add', text: '编辑弹窗:左栏表单(Code/创建时间/短链 只读;描述/备注 可改)+ 右栏 QR + 下载 PNG;底部「Code 使用状态」红/绿切换按钮(停用 ↔ 再次启用)' },
+      { type: 'add', text: '4 条示例 Code(RANDY01~04)覆盖 启用 + 停用 两种状态' },
+      { type: 'modify', text: 'index.html 加 my_codes_mgmt.jsx 引用;app.jsx my_codes_mgmt 路由由原先指向 MyCodesModule 改为指向新建 MyCodesMgmtModule' },
+    ],
+  },
+  {
+    ver: 'v3.0.87',
+    date: '2026-05-19',
+    changes: [
+      { type: 'modify', text: '专业代理后台 侧栏「我的账户」大项改名为「运营」(app.jsx AGENT_NAV section + agent_common.jsx i18n nav.sec.ops)' },
+      { type: 'add', text: '「运营」大项 新增子项「Code 与链接管理」— 暂时路由到 my_codes_mgmt key,渲染同 MyCodesModule(后续如需独立页面再拆)' },
+      { type: 'add', text: '新增第 3 个大项「报表」(空)— 占位,后续内容由用户告知再填入' },
+      { type: 'add', text: 'app.jsx 路由分发 增加 my_codes_mgmt 分支 + 排除列表同步,避免落入 fallback 渲染' },
+      { type: 'add', text: 'agent_common.jsx i18n 新增 nav.sec.ops / nav.sec.reports / nav.item.my_codes_mgmt 三个键' },
+    ],
+  },
+  {
+    ver: 'v3.0.86',
+    date: '2026-05-19',
+    changes: [
+      { type: 'modify', text: '专业代理后台 侧栏「分享 Code 与链接」改名为「邀请 Code 与链接」(app.jsx NAV + agent_common.jsx i18n nav.item.my_codes / page.my_codes.title 同步)' },
+      { type: 'modify', text: 'my_codes.jsx 按截图重做:KPI 由 5 个扩到 10 个(2 行 × 5)— Code 总数量 / 总注册人数 / 总充值人数 / 总充值金额 / 总提款人数 / 总提款金额 / 充值转化率 / 充提差 / 玩家余额 / 总佣金' },
+      { type: 'modify', text: '表格列重构为 14 列:邀请Code / 描述 / 备注 / 状态 / 累计注册人数 / 累计充值人数 / 累计充值金额 / 累计提款人数 / 累计提款金额 / 充值转化率 / 充提差 / 玩家余额 / 累计佣金 / 操作' },
+      { type: 'modify', text: '操作列由 6 个图标按钮改成 3 个文字按钮:邀请链接&QR Code(蓝)/ 编辑 / 删除(红)— 紧凑且符合截图样式' },
+      { type: 'modify', text: '链接弹窗 与 QR 弹窗合并为单个「邀请链接 & QR Code」弹窗(短链 + QR + 下载 PNG)' },
+      { type: 'add', text: '状态扩展为 4 种:启用(绿)/ 冻结(蓝)/ 暂停(橙)/ 停用(灰),并加 StatusBadge 组件统一渲染' },
+      { type: 'modify', text: '创建弹窗:Code 必填 + 实时校验提示三条(请填写此栏位 / 最少 4 个字符 / Code 必须 4-10 个字符仅字母大写数字)+ 重名校验;描述必填' },
+      { type: 'modify', text: '编辑弹窗:自定义 Code 与 创建时间 都改为只读灰底;只允许改描述 / 备注' },
+      { type: 'remove', text: '移除原有 Tabs(Code 列表 / 渠道对比)— 截图只有列表;移除 DateRange 筛选(同截图)' },
+      { type: 'modify', text: '示例数据补全新字段:depositUsers / withdrawUsers / playerBalance — 4 条示例 Code(RANDY01~04)对应 4 种状态' },
+    ],
+  },
+  {
     ver: 'v3.0.85',
     date: '2026-05-18',
-    current: true,
     changes: [
       { type: 'add', text: '自行申请代理「查看&审核」抽屉 申请资料下方 新增「备注」textarea — 只读模式显示「(未填写备注)」灰色占位;编辑模式可输入,保存后写入 _formSnapshot.remark' },
       { type: 'remove', text: '已创建代理「查看&配置」抽屉 删除「申请理由 / 推广渠道说明 *」整段 textarea — 由「自行申请代理」的「备注」字段取代' },

@@ -49,9 +49,12 @@ window.CURRENT_AGENT_ID = 'AG100007';
 
   // 侧栏 sections + items
   add('nav.sec.account', '我的账户', 'My Account');
+  add('nav.sec.ops', '运营', 'Operations');
+  add('nav.sec.reports', '报表', 'Reports');
   add('nav.sec.promote_earn', '推广&收益', 'Promotion & Earnings');
   add('nav.item.my_profile', '我的账户', 'My Account');
-  add('nav.item.my_codes', '分享 Code 与链接', 'Codes & Links');
+  add('nav.item.my_codes', '邀请Code与链接', 'Codes & Links');
+  add('nav.item.my_codes_mgmt', 'Code 与链接管理', 'Code & Link Management');
   add('nav.item.my_players', '玩家损益', 'Player P&L');
   add('nav.item.my_revshare', '分润报表', 'RevShare Report');
   add('nav.item.my_cpa', 'CPA 报表', 'CPA Report');
@@ -90,10 +93,138 @@ window.CURRENT_AGENT_ID = 'AG100007';
   // PageHead 通用 — 各模块标题/副标题
   add('page.my_profile.title', '我的账户', 'My Account');
   add('page.my_profile.sub', '管理您的个人资料、安全设置与合作方案', 'Manage your profile, security and partnership terms');
-  add('page.my_codes.title', '分享 Code 与链接', 'Codes & Links');
-  add('page.my_codes.sub', '创建与管理您的专属推广链接和短链', 'Create and manage your referral codes and short links');
+  add('page.my_codes.title', '邀请Code与链接', 'Invite Codes & Links');
+  add('page.my_codes.sub', '查看各 Code 推广链接累计数据', 'View accumulated stats per code');
+  // my_codes 页 KPI / 表头 / 筛选 / 空态
+  add('mc.kpi.codes_total', 'Code 总数量', 'Total Codes');
+  add('mc.kpi.reg', '总注册人数', 'Total Registrations');
+  add('mc.kpi.dep_users', '总充值人数', 'Depositors');
+  add('mc.kpi.dep_amt', '总充值金额', 'Total Deposits');
+  add('mc.kpi.wd_users', '总提款人数', 'Withdrawers');
+  add('mc.kpi.wd_amt', '总提款金额', 'Total Withdrawals');
+  add('mc.kpi.cvr', '充值转化率', 'Deposit CVR');
+  add('mc.kpi.gap', '充提差', 'Deposit − Withdraw');
+  add('mc.kpi.balance', '玩家余额', 'Player Balance');
+  add('mc.kpi.commission', '总佣金', 'Total Commission');
+  add('mc.col.code', '邀请 Code', 'Invite Code');
+  add('mc.col.desc', '描述', 'Description');
+  add('mc.col.reg', '注册人数', 'Registrations');
+  add('mc.col.dep_users', '充值人数', 'Depositors');
+  add('mc.col.dep_amt', '充值金额', 'Deposit Amount');
+  add('mc.col.wd_users', '提款人数', 'Withdrawers');
+  add('mc.col.wd_amt', '提款金额', 'Withdraw Amount');
+  add('mc.col.cvr', '充值转化率', 'CVR');
+  add('mc.col.gap', '充提差', 'Net');
+  add('mc.col.balance', '玩家余额', 'Player Balance');
+  add('mc.col.commission', '佣金', 'Commission');
+  add('mc.filter.ph', '邀请 Code', 'Invite Code');
+  add('mc.filter.all', '全部状态', 'All Status');
+  add('mc.status.active', '启用', 'Active');
+  add('mc.status.frozen', '冻结', 'Frozen');
+  add('mc.status.paused', '暂停', 'Paused');
+  add('mc.status.disabled', '停用', 'Disabled');
+  add('mc.empty', '暂无邀请 Code,请去「运营 → Code 与链接管理」创建', 'No invite codes. Create one at OPERATIONS → Code & Link Management.');
+  add('mc.tr.7d',  '近 7 日',  'Last 7 Days');
+  add('mc.tr.14d', '近 14 日', 'Last 14 Days');
+  add('mc.tr.30d', '近 30 日', 'Last 30 Days');
+
+  // ===== 玩家损益 (mp.*) =====
   add('page.my_players.title', '玩家损益', 'Player P&L');
-  add('page.my_players.sub', '我推广而来的玩家清单与盈亏分析', 'My referred players and profit & loss analysis');
+  add('page.my_players.sub',   '查看邀请玩家的清单', 'View list of invited players');
+  add('mp.kpi.total_players',  '玩家总数',     'Total Players');
+  add('mp.kpi.ftd_users',      '总首存人数',   'FTD Users');
+  add('mp.kpi.ftd_amt',        '总首存金额',   'Total FTD');
+  add('mp.kpi.deposit',        '总充值金额',   'Total Deposits');
+  add('mp.kpi.withdraw',       '总提款金额',   'Total Withdrawals');
+  add('mp.kpi.gap',            '充提差',       'Net');
+  add('mp.kpi.balance',        '总玩家余额',   'Total Player Balance');
+  add('mp.kpi.wager',          '总投注',       'Total Wager');
+  add('mp.kpi.payout',         '总派彩',       'Total Payout');
+  add('mp.kpi.ggr',            'GGR',          'GGR');
+  add('mp.kpi.commission',     '总佣金',       'Total Commission');
+  add('mp.col.uid',            '玩家 UID',     'Player UID');
+  add('mp.col.source_code',    '来源 Code',    'Source Code');
+  add('mp.col.vip',            'VIP 等级',     'VIP Level');
+  add('mp.col.ftd_amt',        '首次存款金额', 'First Deposit');
+  add('mp.col.deposit',        '充值金额',     'Deposit');
+  add('mp.col.withdraw',       '提款金额',     'Withdraw');
+  add('mp.col.gap',            '充提差',       'Net');
+  add('mp.col.balance',        '玩家余额',     'Player Balance');
+  add('mp.col.wager',          '投注',         'Wager');
+  add('mp.col.payout',         '派彩',         'Payout');
+  add('mp.col.ggr',            'GGR',          'GGR');
+  add('mp.col.commission',     '佣金',         'Commission');
+  add('mp.filter.search_ph',   '玩家 UID / 邀请 Code', 'Player UID / Invite Code');
+  add('mp.filter.all_vip',     '全部 VIP',     'All VIP');
+  add('mp.empty',              '暂无玩家数据', 'No player data');
+
+  // ===== Code 与链接管理 页 (mcm.*) =====
+  add('page.my_codes_mgmt.title', 'Code 与链接管理', 'Code & Link Management');
+  add('page.my_codes_mgmt.sub', '创建与管理您的专属邀请 Code 和推广链接', 'Create and manage your invite codes and tracking links');
+  add('mcm.btn.create', '创建 邀请 Code', 'Create Invite Code');
+  add('mcm.col.code', '邀请 Code', 'Invite Code');
+  add('mcm.col.short_url', '邀请短链接', 'Invite Short Link');
+  add('mcm.col.qr', 'QR Code', 'QR Code');
+  add('mcm.col.desc', '描述', 'Description');
+  add('mcm.col.remark', '备注', 'Remark');
+  add('mcm.col.status', '状态', 'Status');
+  add('mcm.col.actions', '操作', 'Actions');
+  add('mcm.action.edit', '编辑', 'Edit');
+  add('mcm.action.delete', '删除', 'Delete');
+  add('mcm.action.download_png', '下载 PNG', 'Download PNG');
+  add('mcm.status.active', '启用', 'Active');
+  add('mcm.status.disabled', '停用', 'Disabled');
+  add('mcm.filter.all', '全部状态', 'All Status');
+  add('mcm.empty', '暂无邀请 Code,点击「创建 邀请 Code」开始', 'No invite codes. Click "Create Invite Code" to start.');
+  add('mcm.create.title', '创建 邀请 Code', 'Create Invite Code');
+  add('mcm.create.sub', '为新推广场景创建专属 Code', 'Create a dedicated code for a new promotion');
+  add('mcm.edit.title', '编辑 邀请 Code', 'Edit Invite Code');
+  add('mcm.edit.sub', '修改 Code 信息与使用状态', 'Update code info and status');
+  add('mcm.form.code', '自定义 Code', 'Custom Code');
+  add('mcm.form.code.ph', '如:AGlatam', 'e.g. AGlatam');
+  add('mcm.form.code.req', '请填写此栏位', 'Required');
+  add('mcm.form.code.min', '最少 4 个字符', 'At least 4 characters');
+  add('mcm.form.code.pattern', 'Code 必须包含 4-10 个字符,仅字母大写、数字', 'Must be 4-10 chars, uppercase letters and digits only');
+  add('mcm.form.code.dup', '该 Code 已存在,请更换', 'This code already exists');
+  add('mcm.form.created', '创建时间', 'Created At');
+  add('mcm.form.short_url', '邀请短链接', 'Invite Short Link');
+  add('mcm.form.desc', '描述', 'Description');
+  add('mcm.form.desc.ph_create', '如:Youtube专用、世界杯活动', 'e.g. Youtube only, World Cup campaign');
+  add('mcm.form.desc.ph_edit', '如:Twitch专用', 'e.g. Twitch only');
+  add('mcm.form.remark', '备注 (选填)', 'Remark (Optional)');
+  add('mcm.form.remark.ph_create', '如:长期使用,不限推广地方', 'e.g. Long-term use, any channel');
+  add('mcm.form.remark.ph_edit', '使用场景说明', 'Usage notes');
+  add('mcm.form.qr_code', 'QR Code', 'QR Code');
+  add('mcm.form.code_status', 'Code 使用状态', 'Code Status');
+  add('mcm.form.current_status', '当前状态:', 'Current:');
+  add('mcm.btn.disable', '停用', 'Disable');
+  add('mcm.btn.reenable', '再次启用', 'Re-enable');
+  add('mcm.btn.cancel', '取消', 'Cancel');
+  add('mcm.btn.save', '保存', 'Save');
+  add('mcm.btn.create_submit', '创建', 'Create');
+  add('mcm.del.title', '确认删除邀请 Code', 'Confirm Delete Invite Code');
+  add('mcm.del.sub', '删除后该 Code 的统计数据保留,但新点击将不再计入', 'Stats will be preserved, but no new clicks will be counted');
+  add('mcm.del.body_a', '将删除邀请 Code', 'About to delete invite code');
+  add('mcm.del.body_b', ',确定继续吗?', '. Continue?');
+  add('mcm.del.confirm', '确认删除', 'Confirm Delete');
+  add('mcm.toast.copied_code', '已复制', 'copied');
+  add('mcm.toast.copied_link', '短链已复制', 'Link copied');
+  add('mcm.toast.png_downloaded', 'PNG 已下载', 'PNG downloaded');
+  add('mcm.toast.created', '创建成功', 'created');
+  add('mcm.toast.updated', '已更新', 'updated');
+  add('mcm.toast.deleted', '已删除', 'deleted');
+  add('mcm.tip.copy_code', '复制 Code', 'Copy Code');
+  add('mcm.tip.copy_link', '复制短链', 'Copy link');
+  add('mcm.tip.copy', '复制', 'Copy');
+
+  // 通用面包屑 / 框架
+  add('crumb.home', '首页', 'Home');
+  add('crumb.prd_home', 'PRD首页', 'PRD Home');
+  add('crumb.prd_overview', '规划优先级', 'PRD Roadmap');
+  add('crumb.version', '版本', 'Version');
+  add('pg.summary', '共 {total} 条 · 第 {page} / {totalPages} 页', '{total} total · Page {page} / {totalPages}');
+  add('page.my_players.title', '玩家损益', 'Player P&L');
+  add('page.my_players.sub',   '查看邀请玩家的清单', 'View list of invited players');
   add('page.my_revshare.title', '分润报表', 'RevShare Report');
   add('page.my_revshare.sub', '按周期查看您的 RevShare 收益与计算明细', 'View your RevShare earnings and calculation details');
 
@@ -198,7 +329,7 @@ function ensureLangSwitchStyle() {
 }
 
 const APS_LANG_LABELS = {
-  zh: { short: '中', long: '繁體中文' },
+  zh: { short: '中', long: '简体中文' },
   en: { short: 'EN', long: 'English' },
 };
 

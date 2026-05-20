@@ -1,192 +1,155 @@
-// 代理后台 - 玩家损益 P0-4 (v2.5.10 重命名:我的玩家 → 玩家损益)
+// 代理后台 - 玩家损益 P0-4
+// v3.0.102 按截图重做:
+//   - 副标题改「查看邀请玩家的清单」
+//   - KPI 由 6 个改为 11 个(玩家总数 / 总首存人数 / 总首存金额 / 总充值金额 / 累计提款金额 / 充提差 / 总玩家余额 / 总投注 / 总派彩 / GGR / 总佣金)
+//   - 工具栏:玩家UID / 邀请Code 搜索 + 全部 VIP 下拉 + 时间维度(复用 my_codes 的 TimeRange)
+//   - 表格 12 列:UID / 来源 Code / VIP 等级 / 首次存款金额 / 充值金额 / 提款金额 / 充提差 / 玩家余额 / 累计投注 / 累计派彩 / GGR / 佣金
+//   - 移除 tabs / CPA / 风控 / 注册 / 首存 / 国家 列
 const APUI = window.UI;
+const MP_T = (k, fb) => window.t(k, fb);
 
-// v2.5.10 固定 5 条示例玩家 — 保证页面有数据,即便当前代理无关联玩家
-function buildSamplePlayers(agentId, agentCodePrefix) {
+// v3.0.102 5 条固定示例玩家 — 字段配合新表格列(增加 ftdAmt / playerBalance / payout / commission)
+function buildSamplePlayers(agentId) {
   const days = (n) => Date.now() - n * 86400000;
+  const make = (id, code, vip, ftdAmt, dep, wd, wager, balance) => {
+    const payout = Math.round(wager * 0.92);  // 玩家累计赢回(派彩)≈ 投注 × 92%
+    const ggr = wager - payout;                 // 平台毛利 = 投注 − 派彩
+    const commission = Math.round(ggr * 0.30);  // 代理佣金 ≈ GGR × 30%
+    return { id, agentId, code, vip, ftdAmt, deposit:dep, withdraw:wd, wager, payout, ggr, balance, commission };
+  };
   return [
-    { id:'P88001001', agentId, code:agentCodePrefix+'-MAIN', country:'BR', currency:'USD',
-      vip:0, ftd:true, deposit:1200, withdraw:350, wager:8400, ngr:420,
-      cpaStatus:'approved', risk:'none', regAt:days(28), ftdAt:days(27) },
-    { id:'P88001002', agentId, code:agentCodePrefix+'-IG2026', country:'IN', currency:'USD',
-      vip:3, ftd:true, deposit:5800, withdraw:2100, wager:48000, ngr:1820,
-      cpaStatus:'approved', risk:'none', regAt:days(20), ftdAt:days(20) },
-    { id:'P88001003', agentId, code:agentCodePrefix+'-TG', country:'PH', currency:'USD',
-      vip:5, ftd:true, deposit:18500, withdraw:7200, wager:124000, ngr:6450,
-      cpaStatus:'approved', risk:'low', regAt:days(45), ftdAt:days(44) },
-    { id:'P88001004', agentId, code:agentCodePrefix+'-MAIN', country:'KR', currency:'USD',
-      vip:0, ftd:true, deposit:240, withdraw:0, wager:980, ngr:-80,
-      cpaStatus:'pending', risk:'none', regAt:days(6), ftdAt:days(5) },
-    { id:'P88001005', agentId, code:agentCodePrefix+'-WC2026', country:'BR', currency:'USD',
-      vip:2, ftd:true, deposit:3200, withdraw:1500, wager:21000, ngr:780,
-      cpaStatus:'rejected', risk:'medium', regAt:days(35), ftdAt:days(34) },
+    make('P12354531','RANDY01',1, 100,   1200,  350,   8400,  730),
+    make('P12354532','RANDY02',3, 500,   5800,  2100, 48000, 2150),
+    make('P12354533','RANDY03',5, 2000, 18500,  7200,124000, 4100),
+    make('P12354534','RANDY01',0, 50,    240,   0,    980,   240),
+    make('P12354535','RANDY04',2, 300,   3200,  1500, 21000, 980),
   ];
 }
 
 function MyPlayersModule() {
-  const D = window.APS_DATA;
-  const F = window.APS_FMT;
-  const [lang] = window.useAgentLang();
-  const T = (k, fb) => window.t(k, fb);
   const me = window.useCurrentAgent();
-  const [tab, setTab] = React.useState('all');
+  const F = window.APS_FMT;
   const [q, setQ] = React.useState('');
+  const [vipF, setVipF] = React.useState('all');
+  const [timeRange, setTimeRange] = React.useState(() => {
+    const end = new Date(); end.setHours(23,59,59,0);
+    const start = new Date(end); start.setDate(end.getDate() - 6); start.setHours(0,0,0,0);
+    return { preset:'7d', start, end };
+  });
   const [page, setPage] = React.useState(1);
-  const [detail, setDetail] = React.useState(null);
 
-  // v2.5.10 当前代理的玩家:实际数据 + 5 条示例(示例放最前)
-  const codePrefix = me.id.replace(/^A[GP]/, 'AF');
-  const my = React.useMemo(() => {
-    const real = D.players.filter(p => p.agentId === me.id);
-    return [...buildSamplePlayers(me.id, codePrefix), ...real];
-  }, [me.id]);
+  const players = React.useMemo(() => buildSamplePlayers(me.id), [me.id]);
 
-  const filtered = React.useMemo(() => my.filter(p => {
-    if (tab === 'ftd' && !p.ftd) return false;
-    if (tab === 'cpa' && p.cpaStatus !== 'approved') return false;
-    if (tab === 'risk' && p.risk === 'none') return false;
-    if (tab === 'vip' && p.vip < 4) return false;
-    if (q && !p.id.toLowerCase().includes(q.toLowerCase())) return false;
+  const filtered = players.filter(p => {
+    if (q && !(p.id + p.code).toLowerCase().includes(q.toLowerCase())) return false;
+    if (vipF !== 'all' && String(p.vip) !== vipF) return false;
     return true;
-  }), [my, tab, q]);
+  });
   const pageSize = 14;
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
-  const counts = {
-    all: my.length,
-    ftd: my.filter(p=>p.ftd).length,
-    cpa: my.filter(p=>p.cpaStatus==='approved').length,
-    vip: my.filter(p=>p.vip>=4).length,
-    risk: my.filter(p=>p.risk!=='none').length,
-  };
+  // KPI 合计
+  const sum = (k) => players.reduce((a,p)=>a+(p[k]||0),0);
+  const totalFtdUsers = players.length;  // 全部都已首存
+  const totalFtdAmt   = sum('ftdAmt');
+  const totalDep      = sum('deposit');
+  const totalWd       = sum('withdraw');
+  const totalGap      = totalDep - totalWd;
+  const totalBalance  = sum('balance');
+  const totalWager    = sum('wager');
+  const totalPayout   = sum('payout');
+  const totalGgr      = sum('ggr');
+  const totalCom      = sum('commission');
 
-  const totalDeposit = my.reduce((a,p)=>a+p.deposit,0);
-  const totalNgr = my.reduce((a,p)=>a+p.ngr,0);
+  const money = (n) => '₹' + F.money(n||0);
+  const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.money(Math.abs(n||0));
 
   return (
     <div className="page">
-      <APUI.PageHead title={T('page.my_players.title','玩家损益')} subtitle={T('page.my_players.sub','我推广而来的玩家清单与盈亏分析 — 充值 / 提款 / 投注 / NGR')}>
-        <button className="btn"><Icon name="download" size={13}/>导出</button>
-      </APUI.PageHead>
+      <APUI.PageHead
+        title={MP_T('page.my_players.title','玩家损益')}
+        subtitle={MP_T('page.my_players.sub','查看邀请玩家的清单')}
+      />
 
-      <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(6,1fr)'}}>
+      {/* KPI:2 行 × 5 + 1 个 = 11 个;用 5 列网格自动换行 */}
+      <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
         {[
-          ['玩家总数', F.fmtNum(my.length)],
-          ['首存玩家', F.fmtNum(counts.ftd)],
-          ['有效 CPA', F.fmtNum(counts.cpa)],
-          ['VIP 玩家', F.fmtNum(counts.vip)],
-          ['累计充值', '$' + F.money(totalDeposit)],
-          ['累计 NGR', '$' + F.money(totalNgr)],
-        ].map(([l,v]) => (
-          <div key={l} className="kpi"><div className="label">{l}</div><div className="val">{v}</div></div>
+          [MP_T('mp.kpi.total_players','玩家总数'),  F.fmtNum(players.length)],
+          [MP_T('mp.kpi.ftd_users','总首存人数'),    F.fmtNum(totalFtdUsers)],
+          [MP_T('mp.kpi.ftd_amt','总首存金额'),      money(totalFtdAmt)],
+          [MP_T('mp.kpi.deposit','总充值金额'),      money(totalDep)],
+          [MP_T('mp.kpi.withdraw','总提款金额'),     money(totalWd)],
+          [MP_T('mp.kpi.gap','充提差'),              fmtGap(totalGap), totalGap>=0?'up':'down'],
+          [MP_T('mp.kpi.balance','总玩家余额'),      money(totalBalance)],
+          [MP_T('mp.kpi.wager','总投注'),            money(totalWager)],
+          [MP_T('mp.kpi.payout','总派彩'),           money(totalPayout)],
+          [MP_T('mp.kpi.ggr','GGR'),                 fmtGap(totalGgr), totalGgr>=0?'up':'down'],
+          [MP_T('mp.kpi.commission','总佣金'),       money(totalCom)],
+        ].map(([l,v,delta]) => (
+          <div key={l} className="kpi">
+            <div className="label">{l}</div>
+            <div className="val" style={delta==='up'?{color:'var(--success)'}:delta==='down'?{color:'var(--danger)'}:undefined}>{v}</div>
+          </div>
         ))}
       </div>
 
       <div className="card">
-        <APUI.Tabs value={tab} onChange={setTab} tabs={[
-          {key:'all', label:'全部', count: counts.all},
-          {key:'ftd', label:'已首存', count: counts.ftd},
-          {key:'cpa', label:'有效 CPA', count: counts.cpa},
-          {key:'vip', label:'VIP 玩家', count: counts.vip},
-          {key:'risk', label:'风控中', count: counts.risk},
-        ]}/>
         <div className="toolbar">
-          <APUI.SearchInput value={q} onChange={setQ} placeholder="玩家 ID" width={200}/>
-          <select className="filter-select"><option>全部 Code</option>{D.codes.filter(c=>c.agent===me.id).map(c=><option key={c.id}>{c.code}</option>)}</select>
-          <select className="filter-select"><option>全部 VIP</option>{[0,1,2,3,4,5,6,7].map(v=><option key={v}>VIP {v}</option>)}</select>
-          <APUI.DateRange value="30d" onChange={()=>{}}/>
+          <APUI.SearchInput value={q} onChange={setQ} placeholder={MP_T('mp.filter.search_ph','玩家 UID / 邀请 Code')} width={220}/>
+          <select className="filter-select" value={vipF} onChange={e=>{setVipF(e.target.value);setPage(1);}}>
+            <option value="all">{MP_T('mp.filter.all_vip','全部 VIP')}</option>
+            {[0,1,2,3,4,5,6,7].map(v=><option key={v} value={v}>VIP {v}</option>)}
+          </select>
+          {window.TimeRange && <window.TimeRange value={timeRange} onChange={(v)=>{setTimeRange(v);setPage(1);}}/>}
           <span style={{flex:1}}/>
         </div>
+
         <div className="tbl-wrap">
           <table className="tbl">
             <thead><tr>
-              <th>玩家</th><th>Code</th><th>VIP</th>
-              <th className="right">充值</th><th className="right">提款</th>
-              <th className="right">投注</th><th className="right">NGR</th>
-              <th>CPA</th><th>风控</th><th>注册</th><th>首存</th>
+              <th>{MP_T('mp.col.uid','玩家 UID')}</th>
+              <th>{MP_T('mp.col.source_code','来源 Code')}</th>
+              <th>{MP_T('mp.col.vip','VIP 等级')}</th>
+              <th className="right">{MP_T('mp.col.ftd_amt','首次存款金额')}</th>
+              <th className="right">{MP_T('mp.col.deposit','充值金额')}</th>
+              <th className="right">{MP_T('mp.col.withdraw','提款金额')}</th>
+              <th className="right">{MP_T('mp.col.gap','充提差')}</th>
+              <th className="right">{MP_T('mp.col.balance','玩家余额')}</th>
+              <th className="right">{MP_T('mp.col.wager','投注')}</th>
+              <th className="right">{MP_T('mp.col.payout','派彩')}</th>
+              <th className="right">{MP_T('mp.col.ggr','GGR')}</th>
+              <th className="right">{MP_T('mp.col.commission','佣金')}</th>
             </tr></thead>
             <tbody>
-              {paged.map(p => (
-                <tr key={p.id} onClick={()=>setDetail(p)} style={{cursor:'pointer'}}>
-                  <td>
-                    <span className="id" style={{color:'var(--text-0)'}}>{p.id}</span>
-                    <span className="text-mute" style={{fontSize:10,marginLeft:6}}>{D.LABELS.countries[p.country]||p.country}</span>
-                  </td>
-                  <td className="text-mono" style={{fontSize:11}}>{p.code}</td>
-                  <td>{p.vip > 0 ? <span className="badge b-warning">VIP {p.vip}</span> : <span className="text-mute" style={{fontSize:11}}>-</span>}</td>
-                  <td className="right text-mono">${F.money(p.deposit)}</td>
-                  <td className="right text-mono">${F.money(p.withdraw)}</td>
-                  <td className="right text-mono">${F.money(p.wager)}</td>
-                  <td className="right text-mono" style={{color: p.ngr<0?'var(--danger)':'var(--text-0)'}}>${F.money(p.ngr)}</td>
-                  <td>
-                    {p.cpaStatus === 'approved' && <span className="badge b-success"><span className="dot"/>已通过</span>}
-                    {p.cpaStatus === 'pending' && <span className="badge b-warning"><span className="dot"/>待审</span>}
-                    {p.cpaStatus === 'rejected' && <span className="badge b-danger"><span className="dot"/>已拒</span>}
-                    {p.cpaStatus === 'none' && <span className="text-mute" style={{fontSize:11}}>-</span>}
-                  </td>
-                  <td>
-                    {p.risk === 'high' && <span className="badge b-danger">高风险</span>}
-                    {p.risk === 'medium' && <span className="badge b-warning">中风险</span>}
-                    {p.risk === 'low' && <span className="badge b-neutral">低</span>}
-                    {p.risk === 'none' && <span className="text-mute" style={{fontSize:11}}>-</span>}
-                  </td>
-                  <td className="text-mute" style={{fontSize:11}}>{new Date(p.regAt).toLocaleDateString('zh-CN')}</td>
-                  <td className="text-mute" style={{fontSize:11}}>{p.ftd ? new Date(p.ftdAt).toLocaleDateString('zh-CN') : '-'}</td>
-                </tr>
-              ))}
+              {paged.map(p => {
+                const gap = (p.deposit||0) - (p.withdraw||0);
+                return (
+                  <tr key={p.id}>
+                    <td className="text-mono" style={{color:'var(--text-0)',fontSize:12,fontWeight:600}}>{p.id}</td>
+                    <td className="text-mono" style={{color:'var(--brand)',fontSize:11.5}}>{p.code}</td>
+                    <td><span style={{fontSize:12,color:'var(--text-1)'}}>VIP {p.vip}</span></td>
+                    <td className="right text-mono">{money(p.ftdAmt)}</td>
+                    <td className="right text-mono">{money(p.deposit)}</td>
+                    <td className="right text-mono">{money(p.withdraw)}</td>
+                    <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
+                    <td className="right text-mono">{money(p.balance)}</td>
+                    <td className="right text-mono">{money(p.wager)}</td>
+                    <td className="right text-mono">{money(p.payout)}</td>
+                    <td className="right text-mono" style={{color: p.ggr>=0?'var(--success)':'var(--danger)'}}>{(p.ggr>=0?'+':'-')+'₹'+F.money(Math.abs(p.ggr||0))}</td>
+                    <td className="right text-mono">{money(p.commission)}</td>
+                  </tr>
+                );
+              })}
+              {paged.length === 0 && (
+                <tr><td colSpan={12} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MP_T('mp.empty','暂无玩家数据')}</td></tr>
+              )}
             </tbody>
           </table>
         </div>
         <APUI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
       </div>
-
-      <APUI.Drawer open={!!detail} onClose={()=>setDetail(null)} title={detail?'玩家详情 · '+detail.id:''} width={520}>
-        {detail && (
-          <div style={{padding:'18px 22px'}}>
-            <div className="form-section-title" style={{marginTop:0}}>基本信息</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 16px',fontSize:12.5}}>
-              <KV l="玩家 ID" v={detail.id}/>
-              <KV l="国家 / 货币" v={(D.LABELS.countries[detail.country]||detail.country)+' / '+detail.currency}/>
-              <KV l="推广 Code" v={detail.code}/>
-              <KV l="VIP 等级" v={'VIP ' + detail.vip}/>
-              <KV l="注册时间" v={new Date(detail.regAt).toLocaleString('zh-CN')}/>
-              <KV l="首存时间" v={detail.ftd?new Date(detail.ftdAt).toLocaleString('zh-CN'):'未首存'}/>
-            </div>
-
-            <div className="form-section-title mt-3">财务概览</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
-              {[
-                ['累计充值', '$' + F.money(detail.deposit)],
-                ['累计提款', '$' + F.money(detail.withdraw)],
-                ['累计投注', '$' + F.money(detail.wager)],
-                ['NGR', '$' + F.money(detail.ngr)],
-              ].map(([l,v]) => (
-                <div key={l} style={{padding:10,background:'var(--bg-2)',borderRadius:6}}>
-                  <div className="text-mute" style={{fontSize:11}}>{l}</div>
-                  <div className="text-mono" style={{fontSize:14,fontWeight:600,color:'var(--text-0)',marginTop:2}}>{v}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="form-section-title mt-3">CPA / 风控</div>
-            <div style={{display:'flex',gap:8,marginBottom:8}}>
-              {detail.cpaStatus === 'approved' && <span className="badge b-success">CPA 已通过 · $50</span>}
-              {detail.cpaStatus === 'pending' && <span className="badge b-warning">CPA 审核中</span>}
-              {detail.cpaStatus === 'rejected' && <span className="badge b-danger">CPA 已拒绝</span>}
-              {detail.risk !== 'none' && <span className="badge b-warning">风控:{detail.risk}</span>}
-            </div>
-            <div className="text-mute" style={{fontSize:11.5}}>
-              代理仅可见聚合数据,无法看到玩家敏感信息(姓名 / 手机 / 银行卡 / IP 等)
-            </div>
-          </div>
-        )}
-      </APUI.Drawer>
     </div>
   );
-}
-
-function KV({l,v}) {
-  return <div><div className="text-mute" style={{fontSize:11}}>{l}</div><div style={{color:'var(--text-0)',marginTop:2}}>{v}</div></div>;
 }
 
 window.MyPlayersModule = MyPlayersModule;
