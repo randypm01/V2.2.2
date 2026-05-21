@@ -92,25 +92,26 @@ Step5 結算本期剩餘損失基數:
     本期用戶損失基數 - 本期平台盈利金額 = 本期剩餘用戶損失基數,本期剩餘用戶損失基數到下一期結算時成為上期用戶損失基數`;
 
 const FORMULA_PERIOD_ASSET = `STEP-1:計算用戶本期行為判斷平台是否虧損的基數
-    (上期未結算餘額 + (上期佣金基數)) + (本期充值 - 本期提現 - 本期結算餘額) = 本期佣金基數
-    · 上期結算餘額 ≥ 0,不計入本期計算
-    · 上期佣金基數為 0 < 0,不帶入本期計算
+    (上期期末餘額 + (上期佣金基數)) + (本期充值 - 本期提現 - 本期期末餘額) = 本期佣金基數
 
-STEP-2:校驗本期是否虧損
-    2-1 本期佣金基數 ≤ 0,代表平台虧損或持平,不計算佣金,本期佣金基數帶入下期
-    2-2 本期佣金基數 > 0,代表平台盈利,計算佣金,本期佣金基數不帶入下期
-    (佣金計算公式 = 本期佣金基數 × 佣金分潤比例)
+STEP-2:校驗本期平台是盈利或虧損 / 持平
+    2-1 本期佣金基數 ≤ 0,代表平台虧損或持平,不計算佣金,接 STEP-4
+    2-2 本期佣金基數 > 0,代表平台盈利,計算佣金,接 STEP-3、STEP-4
 
-STEP-3:本期結算餘額,始終帶入下期`;
+STEP-3:計算本期佣金
+    本期佣金基數 × 佣金分潤比例 = 本期佣金
+
+STEP-4:本期帶入下期值
+    · 本期期末餘額
+    · 本期佣金基數
+      (如果本期佣金基數是負值則帶入下期該負值;如果為正值則將 0 帶入下期)`;
 
 const REV_TYPES = [
-  { key: 'loss',   label: '用戶損失基數分潤', formula: FORMULA_LOSS_BASE },
   { key: 'period', label: '週期資產變動分潤', formula: FORMULA_PERIOD_ASSET },
 ];
 
 const SEED_REVENUE = [
-  { id: 'RV-001', type: 'loss',   name: '建議個人代理適用', ratio: 0.05, cap: 100000, remark: '此方案為與 XXX 談過的合作內容,經上級批准配置的' },
-  { id: 'RV-002', type: 'period', name: '團隊代理適用',     ratio: 0.05, cap: 100000, remark: '此方案為與 XXX 談過的合作內容,經上級批准配置的' },
+  { id: 'RV-001', type: 'period', name: '建議個人代理適用', ratio: 0.05, remark: '此方案為與 XXX 談過的合作內容,經上級批准配置的' },
 ];
 
 // =================== 主模块 ===================
@@ -304,7 +305,6 @@ function RevenuePanel() {
               <th>方案名稱</th>
               <th className="right">代理分成比例</th>
               <th>計算口徑流程</th>
-              <th className="right">封頂金額</th>
               <th>備註</th>
               <th style={{width:100}}>操作</th>
             </tr>
@@ -318,7 +318,6 @@ function RevenuePanel() {
                   <td style={{fontWeight:500,color:'var(--text-0)'}}>{r.name}</td>
                   <td className="right" style={{fontFamily:'var(--font-mono)'}}>{(r.ratio*100).toFixed(0)}%</td>
                   <td><LinkBtn onClick={()=>setViewFormula(t)}>查看</LinkBtn></td>
-                  <td className="right" style={{fontFamily:'var(--font-mono)'}}>{r.cap.toLocaleString()}</td>
                   <td style={{maxWidth:240,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--text-2)'}} title={r.remark}>{r.remark}</td>
                   <td>
                     <div style={{display:'flex',gap:10}}>
@@ -349,20 +348,19 @@ function RevenuePanel() {
 
 function RevenueFormModal({ mode, data, onClose, onSave }) {
   const isEdit = mode === 'edit';
-  const init = data || { type:'', name:'', ratio:'', cap:'', remark:'' };
+  const init = data || { type:'', name:'', ratio:'', remark:'' };
   const [f, setF] = React.useState({
     type: init.type || '',
     name: init.name || '',
     ratio: init.ratio !== undefined && init.ratio !== '' ? String(init.ratio) : '',
-    cap: init.cap !== undefined && init.cap !== '' ? String(init.cap) : '',
     remark: init.remark || '',
   });
   const set = (k, v) => setF(prev => ({...prev, [k]:v}));
   const t = REV_TYPES.find(x => x.key === f.type);
-  const canSubmit = f.type && f.name && f.ratio !== '' && f.cap !== '';
+  const canSubmit = f.type && f.name && f.ratio !== '';
 
   const handleSave = () => {
-    onSave({ type:f.type, name:f.name, ratio:Number(f.ratio), cap:Number(f.cap), remark:f.remark });
+    onSave({ type:f.type, name:f.name, ratio:Number(f.ratio), remark:f.remark });
   };
 
   return (
@@ -387,14 +385,9 @@ function RevenueFormModal({ mode, data, onClose, onSave }) {
         <Field label="方案名稱" required>
           <input className="input" value={f.name} onChange={e=>set('name', e.target.value)} placeholder="請輸入"/>
         </Field>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
-          <Field label="代理分潤比例" required hint="例:輸入 0.01 = 1%">
-            <input className="input" type="number" step="0.01" value={f.ratio} onChange={e=>set('ratio', e.target.value)} placeholder="例:輸入 0.01=1%"/>
-          </Field>
-          <Field label="封頂金額" required>
-            <input className="input" type="number" value={f.cap} onChange={e=>set('cap', e.target.value)} placeholder="請輸入"/>
-          </Field>
-        </div>
+        <Field label="代理分潤比例" required hint="例:輸入 0.01 = 1%">
+          <input className="input" type="number" step="0.01" value={f.ratio} onChange={e=>set('ratio', e.target.value)} placeholder="例:輸入 0.01=1%"/>
+        </Field>
 
         <Field label="計算口徑流程" hint={!f.type ? '請先選擇方案類型' : '依方案類型自動帶出,不可編輯'}>
           <pre style={{
@@ -414,7 +407,7 @@ function RevenueFormModal({ mode, data, onClose, onSave }) {
         </Field>
 
         <Field label="備註" hint="選填">
-          <textarea className="textarea" rows={3} value={f.remark} onChange={e=>set('remark', e.target.value)} placeholder="此方案為與 XXX 談過的合作內容,經上級批准配置的"/>
+          <textarea className="textarea" rows={3} value={f.remark} onChange={e=>set('remark', e.target.value)} placeholder="請輸入"/>
         </Field>
       </div>
     </RVM>
@@ -475,34 +468,34 @@ window.RV_PLANS = buildPlanStore(SEED_SINGLE, SEED_REVENUE);
 window.RevShareModule = RevShareModule;
 
 // =================== 共享:创建代理 / 编辑分润模式 表单组件 ===================
-// v2.4.43 props: value = {kind, weekday, monthday, plans:[key]}; onChange(next); onJumpPlanMgr?: ()=>跳到分润管理页
-window.CommissionModeForm = function CommissionModeForm({ value, onChange, onJumpPlanMgr, compact }) {
+// v3.1.59 按图1 简化:
+//   - 「結算/分潤時間」→「結算時間」,移除星期/日期下拉 — 每周固定为周一,每月固定为 1 号
+//   - 新增「結算幣種」(只读 INR (₹))
+//   - 新增「最低結算佣金金額」(默认 ₹200) + 「最高結算佣金上限」(空)
+//   - 分潤方案類型:「最少配置 1 種」→「僅能配置 1 種」;只渲染 1 个下拉,无 + 新增 / − 删除按钮
+// props: value = {kind, weekday, monthday, plans:[key], minCommission?, maxCommission?}; onChange(next)
+window.CommissionModeForm = function CommissionModeForm({ value, onChange, onJumpPlanMgr, compact, errors }) {
+  const E = errors || {};
   const store = window.RV_PLANS || { flatOptions: [] };
   const opts = store.flatOptions;
-  const v = value || { kind:'weekly', weekday:1, monthday:1, plans:[''] };
+  const D = window.RV_PLATFORM_DEFAULTS || { currency:'INR', symbol:'₹', minSettleAmount:200 };
+  const v = value || { kind:'weekly', weekday:1, monthday:1, plans:[''], minCommission: D.minSettleAmount, maxCommission: '' };
   const set = (patch) => onChange({ ...v, ...patch });
-  const setPlan = (idx, key) => {
-    const next = v.plans.slice();
-    next[idx] = key;
-    set({ plans: next });
+  const setPlan = (key) => {
+    // 始终保持 plans 数组,长度 1
+    set({ plans: [key] });
   };
-  const addPlan = () => set({ plans: [...(v.plans||[]), ''] });
-  const delPlan = (idx) => {
-    const next = v.plans.filter((_, i) => i !== idx);
-    set({ plans: next.length ? next : [''] });
-  };
-
-  const WD = ['每周一','每周二','每周三','每周四','每周五','每周六','每周日'];
-  const MD = Array.from({length:31}, (_,i)=>`每月${i+1}號`);
-  const wdLabel = WD[(v.weekday||1)-1];
-  const mdLabel = `每月${v.monthday||1}號`;
+  const planVal = (v.plans && v.plans[0]) || '';
+  const minComm = v.minCommission != null ? v.minCommission : D.minSettleAmount;
+  const maxComm = v.maxCommission != null ? v.maxCommission : '';
 
   const gap = compact ? 14 : 18;
   const radioRow = (active, label, sub) => (
-    <div style={{display:'flex',alignItems:'flex-start',gap:10,paddingBottom:8}}>
+    <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
       <div style={{width:16,height:16,borderRadius:'50%',marginTop:2,
         border:'1.5px solid '+(active?'var(--brand)':'#cbd5e1'),
-        display:'grid',placeItems:'center',flexShrink:0}}>
+        display:'grid',placeItems:'center',flexShrink:0,
+        background: active ? '#fff' : '#fff'}}>
         {active && <div style={{width:8,height:8,background:'var(--brand)',borderRadius:'50%'}}/>}
       </div>
       <div style={{fontSize:13.5,color:'var(--text-0)',lineHeight:1.5}}>
@@ -514,57 +507,110 @@ window.CommissionModeForm = function CommissionModeForm({ value, onChange, onJum
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap}}>
-      {/* —— 结算/分润时间 —— */}
+      {/* —— 結算時間 —— */}
       <div>
         <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:10}}>
-          結算/分潤時間 <span style={{color:'var(--danger)'}}>*</span>
+          結算時間<span style={{color:'var(--danger)'}}>*</span>
           <span style={{color:'var(--text-3)',fontWeight:400,marginLeft:6}}>(2選1)</span>
         </div>
-        <div style={{border:'1px solid var(--line)',borderRadius:8,padding:'14px 16px',background:'#f1f5f9'}}>
-          {/* 每周 */}
-          <div onClick={()=>set({kind:'weekly'})} style={{cursor:'pointer'}}>
-            {radioRow(
-              v.kind==='weekly',
-              '每周固定結算時間',
-              `:${wdLabel} 00:00:00,結算上周一 00:00:00 ~ 周日 23:59:59`
-            )}
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <div onClick={()=>set({kind:'weekly', weekday:1})}
+            style={{cursor:'pointer',padding:'12px 14px',
+              border:'1px solid '+(v.kind==='weekly'?'var(--brand)':'var(--line)'),
+              borderRadius:8,
+              background: v.kind==='weekly' ? '#eff6ff' : '#fff'}}>
+            {radioRow(v.kind==='weekly', '每周結算', '· 每周一 00:00:00,結算上周一 00:00:00 ~ 周日 23:59:59')}
           </div>
-          <div style={{paddingLeft:26,paddingBottom:14,opacity:v.kind==='weekly'?1:.45,pointerEvents:v.kind==='weekly'?'auto':'none'}}>
-            <div style={{fontSize:12,color:'var(--text-2)',marginBottom:6}}>
-              每周固定星期分潤時間 00:00:00~23:59:59 <span style={{color:'var(--danger)'}}>*</span>
-            </div>
-            <select className="select" value={v.weekday||1} onChange={e=>set({weekday:Number(e.target.value)})}>
-              {WD.map((w,i)=><option key={i} value={i+1}>{w}</option>)}
-            </select>
-          </div>
-
-          <div style={{borderTop:'1px dashed var(--line-soft)'}}/>
-
-          {/* 每月 */}
-          <div onClick={()=>set({kind:'monthly'})} style={{cursor:'pointer',marginTop:14}}>
-            {radioRow(
-              v.kind==='monthly',
-              '每月固定結算時間',
-              `:${mdLabel} 00:00:00,結算上周一 00:00:00 ~ 周日 23:59:59`
-            )}
-          </div>
-          <div style={{paddingLeft:26,opacity:v.kind==='monthly'?1:.45,pointerEvents:v.kind==='monthly'?'auto':'none'}}>
-            <div style={{fontSize:12,color:'var(--text-2)',marginBottom:6}}>
-              每月固定日分潤時間 00:00:00~23:59:59 <span style={{color:'var(--danger)'}}>*</span>
-            </div>
-            <select className="select" value={v.monthday||1} onChange={e=>set({monthday:Number(e.target.value)})}>
-              {MD.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
-            </select>
+          <div onClick={()=>set({kind:'monthly', monthday:1})}
+            style={{cursor:'pointer',padding:'12px 14px',
+              border:'1px solid '+(v.kind==='monthly'?'var(--brand)':'var(--line)'),
+              borderRadius:8,
+              background: v.kind==='monthly' ? '#eff6ff' : '#fff'}}>
+            {radioRow(v.kind==='monthly', '每月結算', '· 每月1號 00:00:00,結算上月1號 00:00:00 ~ 月底 23:59:59')}
           </div>
         </div>
       </div>
 
-      {/* —— 分润方案类型 —— */}
+      {/* —— 結算幣種(只读) —— */}
+      <div>
+        <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+          結算幣種<span style={{color:'var(--danger)'}}>*</span>
+        </div>
+        <input
+          readOnly
+          value={`${D.currency} (${D.symbol})`}
+          style={{
+            width:'100%', padding:'9px 12px', fontSize:13, height:38,
+            border:'1px solid var(--line)', borderRadius:6,
+            background:'var(--bg-2)', color:'var(--text-1)',
+            outline:'none', cursor:'not-allowed', boxSizing:'border-box',
+          }}
+        />
+      </div>
+
+      {/* —— 最低結算佣金金額 —— */}
+      <div>
+        <div style={{display:'flex',alignItems:'baseline',marginBottom:8}}>
+          <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,flex:1}}>
+            最低結算佣金金額<span style={{color:'var(--danger)'}}>*</span>
+          </div>
+          <div style={{fontSize:12,color:'var(--text-3)'}}>低於該金額順延至下期</div>
+        </div>
+        <div style={{position:'relative'}}>
+          <span style={{
+            position:'absolute', left:12, top:'50%', transform:'translateY(-50%)',
+            color:'var(--text-2)', fontSize:13, pointerEvents:'none',
+          }}>{D.symbol}</span>
+          <input
+            type="number"
+            value={minComm}
+            onChange={e => set({ minCommission: e.target.value === '' ? '' : Number(e.target.value) })}
+            placeholder="請輸入"
+            style={{
+              width:'100%', padding:'9px 12px 9px 24px', fontSize:13, height:38,
+              border:'1px solid ' + (E.minCommission ? 'var(--danger)' : 'var(--line)'), borderRadius:6,
+              background:'#fff', color:'var(--text-0)',
+              outline:'none', boxSizing:'border-box',
+            }}
+          />
+        </div>
+        {E.minCommission && <div className="field-error" style={{marginTop:4}}>{E.minCommission}</div>}
+      </div>
+
+      {/* —— 最高結算佣金上限 —— */}
+      <div>
+        <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+          最高結算佣金上限<span style={{color:'var(--danger)'}}>*</span>
+        </div>
+        <div style={{position:'relative'}}>
+          <span style={{
+            position:'absolute', left:12, top:'50%', transform:'translateY(-50%)',
+            color:'var(--text-2)', fontSize:13, pointerEvents:'none',
+            display: maxComm === '' ? 'none' : 'inline',
+          }}>{D.symbol}</span>
+          <input
+            type="number"
+            value={maxComm}
+            onChange={e => set({ maxCommission: e.target.value === '' ? '' : Number(e.target.value) })}
+            placeholder="請輸入"
+            style={{
+              width:'100%', padding: maxComm === '' ? '9px 12px' : '9px 12px 9px 24px',
+              fontSize:13, height:38,
+              border:'1px solid ' + (E.maxCommission ? 'var(--danger)' : 'var(--line)'), borderRadius:6,
+              background:'#fff', color:'var(--text-0)',
+              outline:'none', boxSizing:'border-box',
+            }}
+          />
+        </div>
+        {E.maxCommission && <div className="field-error" style={{marginTop:4}}>{E.maxCommission}</div>}
+      </div>
+
+      {/* —— 分潤方案類型 —— */}
       <div>
         <div style={{display:'flex',alignItems:'center',marginBottom:10}}>
           <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,flex:1}}>
-            分潤方案類型 <span style={{color:'var(--danger)'}}>*</span>
-            <span style={{color:'var(--text-3)',fontWeight:400,marginLeft:6}}>(最少配置 1 種方案類型)</span>
+            分潤方案類型<span style={{color:'var(--danger)'}}>*</span>
+            <span style={{color:'var(--text-3)',fontWeight:400,marginLeft:6}}>(僅能配置 1 種方案類型)</span>
           </div>
           {onJumpPlanMgr && (
             <span onClick={onJumpPlanMgr} style={{
@@ -573,38 +619,61 @@ window.CommissionModeForm = function CommissionModeForm({ value, onChange, onJum
                onMouseOut={e=>e.currentTarget.style.textDecoration='none'}>分潤管理</span>
           )}
         </div>
-
-        <div style={{display:'flex',flexDirection:'column',gap:8}}>
-          {(v.plans||['']).map((pk, idx) => (
-            <div key={idx} style={{display:'flex',alignItems:'center',gap:8}}>
-              <select className="select" style={{flex:1}} value={pk} onChange={e=>setPlan(idx, e.target.value)}>
-                <option value="">請選擇</option>
-                {opts
-                  .filter(o => o.key === pk || !(v.plans||[]).includes(o.key))
-                  .map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-              </select>
-              <button
-                onClick={()=>delPlan(idx)}
-                disabled={(v.plans||[]).length<=1}
-                title={(v.plans||[]).length<=1 ? '至少保留 1 項' : '刪除'}
-                style={{
-                  width:28,height:28,borderRadius:'50%',
-                  border:'none',
-                  background:(v.plans||[]).length<=1 ? '#fecaca' : '#ef4444',
-                  color:'#fff',cursor:(v.plans||[]).length<=1?'not-allowed':'pointer',
-                  display:'grid',placeItems:'center',flexShrink:0,fontSize:14,fontWeight:600,lineHeight:1
-                }}>−</button>
-            </div>
-          ))}
-        </div>
-
-        <button onClick={addPlan} style={{
-          marginTop:10,width:'100%',padding:'10px 0',
-          border:'1.5px dashed #93c5fd',background:'#eff6ff',
-          color:'var(--brand)',borderRadius:6,fontSize:13,cursor:'pointer',
-          fontWeight:500
-        }}>+ 新增分潤方案</button>
+        <select className="select" style={{
+          width:'100%',
+          color: planVal ? 'var(--text-0)' : 'var(--text-3)',
+          borderColor: E.plan ? 'var(--danger)' : undefined,
+        }}
+          value={planVal} onChange={e => setPlan(e.target.value)}>
+          <option value="">請選擇分潤方案</option>
+          {opts.map(o => <option key={o.key} value={o.key} style={{color:'var(--text-0)'}}>{o.label}</option>)}
+        </select>
+        {E.plan && <div className="field-error" style={{marginTop:4}}>{E.plan}</div>}
       </div>
+
+      {/* —— v3.1.68 代理分潤比例 — 不可编辑,根据已选方案 ratio 自动带出 —— */}
+      {(() => {
+        const detail = planVal ? window.resolvePlan(planVal) : null;
+        const ratio = detail?.plan?.ratio;
+        const ratioText = ratio != null
+          ? `${(ratio * 100).toFixed(ratio * 100 % 1 === 0 ? 0 : 2)}%`
+          : '請先選擇分潤方案';
+        return (
+          <div>
+            <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+              代理分潤比例
+            </div>
+            <input readOnly value={ratioText} style={{
+              width:'100%', padding:'9px 12px', fontSize:13, height:38,
+              border:'1px solid var(--line)', borderRadius:6,
+              background:'var(--bg-2)', color: ratio != null ? 'var(--text-1)' : 'var(--text-3)',
+              outline:'none', cursor:'not-allowed', boxSizing:'border-box',
+              fontFamily: ratio != null ? 'JetBrains Mono' : undefined,
+            }}/>
+          </div>
+        );
+      })()}
+
+      {/* —— v3.1.70 計算口徑流程 — 未选方案时显示提示 —— */}
+      {(() => {
+        const detail = planVal ? window.resolvePlan(planVal) : null;
+        const formula = detail?.formula;
+        return (
+          <div>
+            <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+              計算口徑流程
+            </div>
+            <pre style={{
+              margin:0, padding:'12px 14px',
+              background:'var(--bg-2)', border:'1px solid var(--line)', borderRadius:6,
+              fontSize: formula ? 12 : 13, lineHeight: formula ? 1.85 : 1.5,
+              color: formula ? 'var(--text-1)' : 'var(--text-3)',
+              fontFamily: formula ? 'JetBrains Mono, monospace' : 'inherit',
+              whiteSpace:'pre-wrap',
+            }}>{formula || '請先選擇分潤方案'}</pre>
+          </div>
+        );
+      })()}
     </div>
   );
 };
@@ -648,102 +717,144 @@ window.RV_PLATFORM_DEFAULTS = {
   negativeCarry: true,
 };
 
-// =================== v3.0.86 共享:分潤模式 只讀視圖 ===================
-// 用于「查看&配置 → 分润模式」非编辑态展示;比 form 半透明态更清晰
-// v3.1.14 props.hideHeader:为 true 时不渲染内部「分润规则 + badge」标题(代理后台「我的帐户」用外层 section title)
-window.CommissionReadOnly = function CommissionReadOnly({ value, hideHeader }) {
-  const v = value || { kind:'weekly', weekday:1, monthday:1, plans:[] };
+// =================== v3.0.86 / v3.1.66 共享:分潤模式 只讀視圖 ===================
+// v3.1.66 重做:布局完全镜像 CommissionModeForm,但所有控件 disabled —
+//   - 結算時間:只显示「已选中」的那一行 radio(不显示另一选项 + 不显示「2选1」hint)
+//   - 結算幣種 / 最低結算佣金金額 / 最高結算佣金上限:disabled input,值带出
+//   - 分潤方案類型:disabled select,显示已选方案的 label;右侧「分潤管理」链接(灰色 onJumpPlanMgr 时可点)
+// props.hideHeader 保留(老用法兼容),但已无内部标题需要隐藏
+window.CommissionReadOnly = function CommissionReadOnly({ value, hideHeader, onJumpPlanMgr }) {
+  const store = window.RV_PLANS || { flatOptions: [] };
+  const opts = store.flatOptions;
   const D = window.RV_PLATFORM_DEFAULTS || { currency:'INR', symbol:'₹', minSettleAmount:200, negativeCarry:true };
-  const WD = ['每週一','每週二','每週三','每週四','每週五','每週六','每週日'];
-
-  // 結算周期描述
-  const cycleText = v.kind === 'weekly'
-    ? `每週結算 · ${WD[(v.weekday||1)-1]} 00:00:00,結算上週一 00:00:00 ~ 週日 23:59:59`
-    : `每月結算 · 每月${v.monthday||1}號 00:00:00,結算上月1號 00:00:00 ~ 月底 23:59:59`;
-
-  const plans = (v.plans || []).filter(Boolean);
+  const v = value || { kind:'weekly', weekday:1, monthday:1, plans:[], minCommission:D.minSettleAmount, maxCommission:'' };
+  const planVal = (v.plans && v.plans[0]) || '';
+  const planLabel = (opts.find(o => o.key === planVal)?.label) || '收益分潤方案 · 週期資產變動分潤 · 方案名稱';
+  const minComm = v.minCommission != null && v.minCommission !== '' ? v.minCommission : D.minSettleAmount;
+  const maxComm = v.maxCommission != null && v.maxCommission !== '' ? v.maxCommission : 1000000;
   const fmtMoney = (n) => `${D.symbol}${Number(n).toLocaleString()}`;
 
-  // 字段-值 一行
-  const Row = ({ k, children, mono, multiline }) => (
-    <div style={{
-      display:'flex', alignItems: multiline?'flex-start':'baseline',
-      padding:'10px 0', borderBottom:'1px dashed var(--line-soft)',
-      fontSize:13, lineHeight:1.7,
-    }}>
-      <div style={{width:120,flexShrink:0,color:'var(--text-2)'}}>{k}</div>
-      <div style={{flex:1,color:'var(--text-0)',fontFamily: mono?'JetBrains Mono':undefined}}>{children}</div>
+  // 单行 radio(只读 — 必定 active)
+  const radioRow = (label, sub) => (
+    <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+      <div style={{width:16,height:16,borderRadius:'50%',marginTop:2,
+        border:'1.5px solid var(--brand)',
+        display:'grid',placeItems:'center',flexShrink:0,background:'#fff'}}>
+        <div style={{width:8,height:8,background:'var(--brand)',borderRadius:'50%'}}/>
+      </div>
+      <div style={{fontSize:13.5,color:'var(--text-0)',lineHeight:1.5}}>
+        <span style={{fontWeight:500}}>{label}</span>
+        {sub && <span style={{color:'var(--text-3)',fontSize:12.5,marginLeft:6}}>{sub}</span>}
+      </div>
     </div>
   );
 
-  const renderSingle = (detail, idx) => {
-    const p = detail.plan;
-    return (
-      <PlanCard key={idx} title="分潤規則" badge={detail.modeLabel} hideHeader={hideHeader}>
-        <Row k="分潤方案">{detail.modeLabel} · <b style={{fontWeight:500}}>{p.name}</b></Row>
-        <Row k="結算週期">{cycleText}</Row>
-        <Row k="結算幣種">{D.currency} ({D.symbol})</Row>
-        <Row k="最低結算金額">{fmtMoney(D.minSettleAmount)} <span style={{color:'var(--text-3)',fontSize:12}}>(低於該金額順延至下期)</span></Row>
-        <Row k="最低首存金額" mono>{fmtMoney(p.minDeposit)}</Row>
-        <Row k="最低流水倍數" mono>{p.minTurnover}</Row>
-        <Row k="最低 NGR" mono>{p.minNGR < 0 ? <span style={{color:'var(--danger)'}}>{p.minNGR}</span> : p.minNGR}</Row>
-        <Row k="有效天數" mono>{p.validDays} 天</Row>
-        <Row k="活躍留存">{p.needRetain ? `是 · ${p.retainDays} 天` : '否'}</Row>
-        <Row k="排除提款過玩家">{p.excludeWithdrawn ? '是' : '否'}</Row>
-        <Row k="負盈利結轉">{D.negativeCarry ? '是,上月負數計入下月' : '否'}</Row>
-        {p.remark && <Row k="備註" multiline><span style={{color:'var(--text-2)'}}>{p.remark}</span></Row>}
-      </PlanCard>
-    );
+  // 只读输入框公共样式
+  const roInputStyle = {
+    width:'100%', padding:'9px 12px', fontSize:13, height:38,
+    border:'1px solid var(--line)', borderRadius:6,
+    background:'var(--bg-2)', color:'var(--text-1)',
+    outline:'none', cursor:'not-allowed', boxSizing:'border-box',
   };
-
-  const renderRevenue = (detail, idx) => {
-    const p = detail.plan;
-    return (
-      <PlanCard key={idx} title="分潤規則" badge={detail.modeLabel} hideHeader={hideHeader}>
-        <Row k="分潤方案">{detail.typeLabel} · <b style={{fontWeight:500}}>{p.name}</b></Row>
-        <Row k="結算週期">{cycleText}</Row>
-        <Row k="結算幣種">{D.currency} ({D.symbol})</Row>
-        <Row k="最低結算金額">{fmtMoney(D.minSettleAmount)} <span style={{color:'var(--text-3)',fontSize:12}}>(低於該金額順延至下期)</span></Row>
-        <Row k="分潤比例" mono>{(p.ratio * 100).toFixed(p.ratio*100 % 1 === 0 ? 0 : 2)}%</Row>
-        <Row k="結算佣金上限" mono>{fmtMoney(p.cap)}</Row>
-        <Row k="負盈利結轉">{D.negativeCarry ? '是,上月負數計入下月' : '否'}</Row>
-        {detail.formula && (
-          <Row k="分潤計算公式流程" multiline>
-            <pre style={{
-              margin:'2px 0 0',padding:'10px 12px',
-              background:'#f8fafc',border:'1px solid var(--line-soft)',borderRadius:6,
-              fontSize:12,lineHeight:1.85,color:'var(--text-1)',
-              fontFamily:'JetBrains Mono, monospace',whiteSpace:'pre-wrap',
-            }}>{detail.formula}</pre>
-          </Row>
-        )}
-        {p.remark && <Row k="備註" multiline><span style={{color:'var(--text-2)'}}>{p.remark}</span></Row>}
-      </PlanCard>
-    );
-  };
-
-  if (plans.length === 0) {
-    return (
-      <div style={{padding:'40px 0',textAlign:'center',color:'var(--text-3)',fontSize:13,
-        background:'#f8fafc',border:'1px dashed var(--line)',borderRadius:8}}>
-        尚未配置分潤方案
-      </div>
-    );
-  }
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:14}}>
-      {plans.map((key, idx) => {
-        const detail = window.resolvePlan(key);
-        if (!detail) {
-          return (
-            <PlanCard key={idx} title="分潤規則" badge="未知方案">
-              <div style={{padding:'14px 0',color:'var(--text-3)',fontSize:13}}>方案不存在或已被刪除(key: {key})</div>
-            </PlanCard>
-          );
-        }
-        return detail.mode === 'single' ? renderSingle(detail, idx) : renderRevenue(detail, idx);
-      })}
+    <div style={{display:'flex',flexDirection:'column',gap:18}}>
+      {/* —— 結算時間 — 只显示已选中那一行 —— */}
+      <div>
+        <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:10}}>
+          結算時間<span style={{color:'var(--danger)'}}>*</span>
+        </div>
+        <div style={{padding:'12px 14px',border:'1px solid var(--brand)',borderRadius:8,background:'#eff6ff'}}>
+          {v.kind === 'weekly'
+            ? radioRow('每周結算', '· 每周一 00:00:00,結算上周一 00:00:00 ~ 周日 23:59:59')
+            : radioRow('每月結算', '· 每月1號 00:00:00,結算上月1號 00:00:00 ~ 月底 23:59:59')}
+        </div>
+      </div>
+
+      {/* —— 結算幣種 —— */}
+      <div>
+        <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+          結算幣種<span style={{color:'var(--danger)'}}>*</span>
+        </div>
+        <input readOnly value={`${D.currency} (${D.symbol})`} style={roInputStyle}/>
+      </div>
+
+      {/* —— 最低結算佣金金額 —— */}
+      <div>
+        <div style={{display:'flex',alignItems:'baseline',marginBottom:8}}>
+          <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,flex:1}}>
+            最低結算佣金金額<span style={{color:'var(--danger)'}}>*</span>
+          </div>
+          <div style={{fontSize:12,color:'var(--text-3)'}}>低於該金額順延至下期</div>
+        </div>
+        <input readOnly value={fmtMoney(minComm)} style={roInputStyle}/>
+      </div>
+
+      {/* —— 最高結算佣金上限 —— */}
+      <div>
+        <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+          最高結算佣金上限<span style={{color:'var(--danger)'}}>*</span>
+        </div>
+        <input readOnly value={fmtMoney(maxComm)} style={roInputStyle}/>
+      </div>
+
+      {/* —— 分潤方案類型 —— */}
+      <div>
+        <div style={{display:'flex',alignItems:'center',marginBottom:10}}>
+          <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,flex:1}}>
+            分潤方案類型<span style={{color:'var(--danger)'}}>*</span>
+            <span style={{color:'var(--text-3)',fontWeight:400,marginLeft:6}}>(僅能配置 1 種方案類型)</span>
+          </div>
+          {onJumpPlanMgr && (
+            <span onClick={onJumpPlanMgr} style={{
+              fontSize:12.5,color:'var(--brand)',cursor:'pointer',userSelect:'none',
+            }}>分潤管理</span>
+          )}
+        </div>
+        <input readOnly value={planLabel} style={{
+          ...roInputStyle,
+          color: planVal ? 'var(--text-1)' : 'var(--text-3)',
+        }}/>
+      </div>
+
+      {/* —— v3.1.68 代理分潤比例 — 只读视图同步显示 —— */}
+      {(() => {
+        const detail = planVal ? window.resolvePlan(planVal) : null;
+        const ratio = detail?.plan?.ratio;
+        const ratioText = ratio != null
+          ? `${(ratio * 100).toFixed(ratio * 100 % 1 === 0 ? 0 : 2)}%`
+          : '—';
+        return (
+          <div>
+            <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+              代理分潤比例
+            </div>
+            <input readOnly value={ratioText} style={{
+              ...roInputStyle,
+              fontFamily: ratio != null ? 'JetBrains Mono' : undefined,
+            }}/>
+          </div>
+        );
+      })()}
+
+      {/* —— v3.1.69 計算口徑流程 — 只读公式块 —— */}
+      {(() => {
+        const detail = planVal ? window.resolvePlan(planVal) : null;
+        const formula = detail?.formula || FORMULA_PERIOD_ASSET;
+        return (
+          <div>
+            <div style={{fontSize:13,color:'var(--text-0)',fontWeight:500,marginBottom:8}}>
+              計算口徑流程
+            </div>
+            <pre style={{
+              margin:0, padding:'12px 14px',
+              background:'var(--bg-2)', border:'1px solid var(--line)', borderRadius:6,
+              fontSize:12, lineHeight:1.85, color:'var(--text-1)',
+              fontFamily:'JetBrains Mono, monospace', whiteSpace:'pre-wrap',
+            }}>{formula}</pre>
+          </div>
+        );
+      })()}
     </div>
   );
 };

@@ -310,7 +310,7 @@ function App() {
                 // v3.1.35 P0 简化版:整個系統只剩 AC(代理後台自行申請),头像统一显示 AC + 黄色
                 return <div className="av" style={{background:'#f59e0b',color:'#fff'}}>AC</div>;
               })()}
-              <div className="who"><b>{loggedInAgent.loginName}</b><small className="mono">{loggedInAgent.agentId}</small></div>
+              <div className="who"><b>{loggedInAgent.name || loggedInAgent.loginName}</b><small className="mono">{loggedInAgent.agentId}</small></div>
               <Icon name="chevronDown" size={12} className="text-mute"/>
             </div>
             {agentUserMenuOpen && (
@@ -362,16 +362,6 @@ function App() {
         <div className="app-body">
           <aside className="sidebar">
             <div className="sb-nav">
-              <div className={'sb-item ' + (isActiveRoute('home')?'active':'')}
-                onClick={()=>setRoute('home')} title={T('crumb.home', '首页')} style={{marginBottom:6}}>
-                <Icon name="dashboard" size={15} className="sb-icon"/>
-                <span>{T('crumb.home', '首页')}</span>
-              </div>
-              <div className={'sb-item ' + (isActiveRoute('prd_home')?'active':'')}
-                onClick={()=>setRoute('prd_home')} title={T('nav.prd_home', 'PRD首页')} style={{marginBottom:6}}>
-                <Icon name="folder" size={15} className="sb-icon"/>
-                <span>{T('nav.prd_home', 'PRD首页')}</span>
-              </div>
               {AGENT_NAV.map(sec => {
                 const isOpen = openSections[sec.section] !== false;
                 return (

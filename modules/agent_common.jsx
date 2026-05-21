@@ -93,7 +93,7 @@ window.CURRENT_AGENT_ID = 'AC100006';
 
   // PageHead 通用 — 各模块标题/副标题
   add('page.my_profile.title', '我的账户', 'My Account');
-  add('page.my_profile.sub', '管理您的个人资料、安全设置与合作方案', 'Manage your profile, security and partnership terms');
+  add('page.my_profile.sub', '查看您的个人资料、合作方案、安全设置', 'View your profile, partnership and security settings');
   add('page.my_codes.title', '邀请Code与链接', 'Invite Codes & Links');
   add('page.my_codes.sub', '查看各 Code 推广链接累计数据', 'View accumulated stats per code');
   // my_codes 页 KPI / 表头 / 筛选 / 空态
@@ -268,7 +268,7 @@ window.CURRENT_AGENT_ID = 'AC100006';
   // Step 2
   add('reg.s2.welcome', '请简单介绍一下你的流量。请选择你觉得方便的付款方式', 'Tell us about your traffic. Choose your preferred payment method.');
   add('reg.s2.url', '流量来源链接', 'Traffic Source URL');
-  add('reg.s2.url.ph', 'https://domain.com', 'https://domain.com');
+  add('reg.s2.url.ph', '如 https://www.youtube.com/beans....', 'e.g. https://www.youtube.com/beans...');
   add('reg.s2.pay', '偏好付款方式', 'Preferred Payment');
   add('reg.s2.payEmail', '电子邮箱', 'Payment Email');
   add('reg.s2.payEmail.ph', '电子邮箱', 'Payment email');

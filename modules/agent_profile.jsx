@@ -34,19 +34,18 @@ function AgentProfileModule() {
     ];
   })();
   // v3.1.12 收款方式 字段按截图扩展:method / IFSC / Account / Real Name / Email
+  // v3.1.80 Email 仅取 payEmail / _payment.email,不再 fallback 到 联系方式 Email
   const payment = {
     method: snap.payMethod || 'UPI',
     ifsc:   snap.ifsc      || '123123',
     account:snap.account   || '123123',
     realName: snap.holder  || me._payment?.holder || me.name || 'Nick An',
-    email:  snap.email     || (me._appData?.contacts?.find(c => c.type === 'Email')?.value) || me.email || '123@gmail.com',
+    email:  snap.payEmail  || me._payment?.email  || '',
   };
 
   return (
     <div className="page">
-      <PFUI.PageHead title={T('page.my_profile.title','我的账户')} subtitle={T('page.my_profile.sub','基本资料 · 合作方案 · 安全设置')}>
-        <button className="btn"><Icon name="download" size={13}/>下载合作协议</button>
-      </PFUI.PageHead>
+      <PFUI.PageHead title={T('page.my_profile.title','我的账户')} subtitle={T('page.my_profile.sub','查看您的个人资料、合作方案、安全设置')}/>
 
       <div className="card">
         <PFUI.Tabs value={tab} onChange={setTab} tabs={[
@@ -141,12 +140,60 @@ function AgentProfileModule() {
           );
         })()}
 
-        {tab === 'commission' && (
-          <div style={{padding:'18px 22px'}}>
-            <div className="ad-section-title">分润规则</div>
-            <window.CommissionReadOnly value={comm} hideHeader={true}/>
-          </div>
-        )}
+        {tab === 'commission' && (() => {
+          const v = comm || { kind:'weekly', plans:[], minCommission:200, maxCommission:'' };
+          const D = window.RV_PLATFORM_DEFAULTS || { currency:'INR', symbol:'₹', minSettleAmount:200 };
+          const planVal = (v.plans && v.plans[0]) || '';
+          const detail = planVal ? window.resolvePlan(planVal) : null;
+          const ratio = detail?.plan?.ratio;
+          const formula = detail?.formula;
+          const cycleText = v.kind === 'weekly'
+            ? '每周結算 · 每周一 00:00:00,結算上周一 00:00:00 ~ 周日 23:59:59'
+            : '每月結算 · 每月1號 00:00:00,結算上月1號 00:00:00 ~ 月底 23:59:59';
+          const minComm = v.minCommission != null && v.minCommission !== '' ? v.minCommission : D.minSettleAmount;
+          const maxComm = v.maxCommission != null && v.maxCommission !== '' ? v.maxCommission : 1000000;
+          const fmtMoney = (n) => `${D.symbol}${Number(n).toLocaleString()}`;
+
+          const Row = ({ k, children }) => (
+            <div style={{display:'flex',alignItems:'baseline',padding:'8px 0',fontSize:13.5,lineHeight:1.7}}>
+              <div style={{width:160,flexShrink:0,color:'var(--text-2)'}}>{k}</div>
+              <div style={{flex:1,color:'var(--text-0)'}}>{children}</div>
+            </div>
+          );
+
+          return (
+            <div style={{padding:'18px 22px'}}>
+              {/* —— 平台结算配置 —— */}
+              <Row k="結算周期">{cycleText}</Row>
+              <Row k="結算幣種"><b style={{fontWeight:500}}>{D.currency} ({D.symbol})</b></Row>
+              <Row k="最低結算佣金金額"><b style={{fontWeight:500}}>{fmtMoney(minComm)}</b> <span style={{color:'var(--text-3)',fontSize:12.5,marginLeft:4}}>(低于该金额顺延至下期)</span></Row>
+              <Row k="最高結算佣金上限"><b style={{fontWeight:500}}>{fmtMoney(maxComm)}</b></Row>
+
+              <div style={{height:1,background:'var(--line-soft)',margin:'14px 0'}}/>
+
+              {/* —— 分润方案 —— */}
+              <Row k="分潤方案">{detail?.typeLabel || detail?.modeLabel || '—'}</Row>
+              <Row k="分潤比例">
+                <span style={{fontFamily:'JetBrains Mono',fontWeight:600,color:'var(--brand)'}}>
+                  {ratio != null ? `${(ratio*100).toFixed(ratio*100 % 1 === 0 ? 0 : 2)}%` : '—'}
+                </span>
+              </Row>
+
+              {/* —— 计算口径流程 —— */}
+              <div style={{padding:'10px 0 4px',fontSize:13.5,color:'var(--text-2)'}}>計算口徑流程</div>
+              {formula ? (
+                <pre style={{
+                  margin:0, padding:0,
+                  fontSize:12.5, lineHeight:1.85, color:'var(--text-1)',
+                  fontFamily:'inherit', whiteSpace:'pre-wrap',
+                  background:'transparent', border:'none',
+                }}>{formula}</pre>
+              ) : (
+                <div style={{fontSize:13,color:'var(--text-3)'}}>—</div>
+              )}
+            </div>
+          );
+        })()}
 
         {tab === 'perms' && (
           <div style={{padding:'18px 22px'}}>
@@ -199,17 +246,8 @@ function AgentProfileModule() {
 
         {tab === 'payment' && (
           <div style={{padding:'18px 22px'}}>
-            <div className="ad-section-title">收款方式</div>
-            <div className="ad-info-card">
-              <div className="ad-info-grid" style={{gridTemplateColumns:'1fr'}}>
-                <div><span className="ad-k">收款方式:</span><span className="ad-v">{payment.method}</span></div>
-                <div><span className="ad-k">IFSC:</span><span className="ad-v text-mono">{payment.ifsc || '-'}</span></div>
-                <div><span className="ad-k">Account:</span><span className="ad-v text-mono">{payment.account || '-'}</span></div>
-                <div><span className="ad-k">Real Name:</span><span className="ad-v">{payment.realName || '-'}</span></div>
-                <div><span className="ad-k">Email:</span><span className="ad-v text-mono">{payment.email || '-'}</span></div>
-              </div>
-            </div>
-            <div style={{marginTop:12,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
+            <window.PaymentInfoView editing={false} value={payment}/>
+            <div style={{marginTop:14,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
               <Icon name="info" size={12}/> 如需修改收款方式,请联系商户运营
             </div>
           </div>

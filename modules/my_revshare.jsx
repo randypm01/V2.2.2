@@ -12,55 +12,73 @@
 const MRUI = window.UI;
 const MR_T = (k, fb) => window.t(k, fb);
 
-// —— 构造一期玩家数据(数据风格与 my_players.jsx 对齐)——
-// v3.1.7 佣金/基数重新计算:
-//   预估佣金 = max(0, 充值 - 提款 - 余额)
-//   分润基数(仅已结算期) = max(0, 上期未结算余额 + 上期佣金基数 + (本期充值 - 本期提款 - 本期结算余额))
-//   结算佣金 = 分润基数 × 分润比例
+// —— 构造一期玩家数据 v3.1.56 改为 5 笔示例,精心设计覆盖 5 种结算场景
+// 公式口径:
+//   预估佣金 = max(0, 本期充值 - 本期提现 - 本期期末余额)
+//   本期佣金基数(已结算) = (上期期末余额 + 上期佣金基数) + (本期充值 - 本期提现 - 本期期末余额)
+//   本期佣金 = max(0, 本期佣金基数) × 分润比例
+// 约束:上期期末余额 ≥ 0,上期佣金基数 ≤ 0
 function buildPeriodPlayers(agentId, seed) {
-  // 用 seed 让不同期数据稍有不同(乘以 0.7 ~ 1.3 之间的系数)
-  const factor = 0.7 + (((seed * 31) % 7) / 10);
-  const fixedReg = ['2026/5/12 10:24:31','2026/5/05 16:08:54','2026/4/18 22:41:09','2026/5/14 09:15:42'];
-  const make = (id, code, vip, dep, wd, wager, balance, isLoss, prevUnsettled, prevBase, regAt) => {
-    const deposit  = Math.round(dep * factor);
-    const withdraw = Math.round(wd * factor);
-    const wagerV   = Math.round(wager * factor);
-    const payout   = Math.round(wagerV * 0.92);
-    const ggrSign  = isLoss ? -1 : 1;
+  const fixedReg = [
+    '2026/5/12 10:24:31',
+    '2026/5/05 16:08:54',
+    '2026/4/18 22:41:09',
+    '2026/5/14 09:15:42',
+    '2026/4/28 13:07:18',
+  ];
+  // 五笔预设范例 — 每笔的 dep/wd/balance/wager/payout/prevUnsettled/prevBase 已手算好,
+  // 落入 base 公式后正好覆盖:大盈利 / 小盈利 / 大亏损 / 小亏损 / 持平 5 种状态
+  // seed 仅用于轻微缩放(±15%),且 prev* 与 dep/wd/balance 同步缩放 — 保证缩放后等式依然成立
+  const k = 0.85 + (((Math.abs(seed) * 37) % 31) / 100); // 0.85 ~ 1.15
+  const r = (n) => Math.round(n * k);
+  const rate = 5;
+
+  // 模板数据(k=1 时):
+  //   #1 大盈利:dep 12000 - wd 4000 - bal 1500 = +6500 当期亏损;prev 500 + (-300) = +200 → base 6700
+  //   #2 小盈利:dep 8000 - wd 3000 - bal 3500 = +1500;prev 200 + 0 = +200          → base 1700
+  //   #3 大亏损:dep 5000 - wd 7000 - bal 3000 = -5000;prev 0 + (-500) = -500        → base -5500(不计)
+  //   #4 小亏损:dep 6000 - wd 6000 - bal 800  = -800; prev 600 + (-200) = +400       → base -400(不计)
+  //   #5 持  平:dep 4000 - wd 4000 - bal 0    = 0;    prev 0 + 0 = 0                → base 0(不计)
+  const tpl = [
+    { id:'P12354531', code:'RANDY01', vip:1, dep:12000, wd:4000, bal:1500, wager:35000, payout:28500, isLoss:false, prevU:500, prevB:-300 },
+    { id:'P12354532', code:'RANDY02', vip:1, dep:8000,  wd:3000, bal:3500, wager:10000, payout:8500,  isLoss:false, prevU:200, prevB:0    },
+    { id:'P12354533', code:'RANDY03', vip:1, dep:5000,  wd:7000, bal:3000, wager:15000, payout:20000, isLoss:true,  prevU:0,   prevB:-500 },
+    { id:'P12354534', code:'RANDY04', vip:1, dep:6000,  wd:6000, bal:800,  wager:8000,  payout:8800,  isLoss:true,  prevU:600, prevB:-200 },
+    { id:'P12354535', code:'RANDY05', vip:1, dep:4000,  wd:4000, bal:0,    wager:5000,  payout:5000,  isLoss:false, prevU:0,   prevB:0    },
+  ];
+
+  return tpl.map((t, i) => {
+    const deposit  = r(t.dep);
+    const withdraw = r(t.wd);
+    const balanceV = r(t.bal);
+    const wagerV   = r(t.wager);
+    const payout   = r(t.payout);
+    const ggrSign  = t.isLoss ? -1 : 1;
     const ggr      = (wagerV - payout) * ggrSign;
-    const rate     = 5;
-    const balanceV = Math.round(balance * factor);
-    // 分润基数(仅已结算期用):(上期未结算余额 + 上期佣金基数) + (本期充值 - 本期提款 - 本期结算余额)
-    const baseRaw = (prevUnsettled || 0) + (prevBase || 0) + (deposit - withdraw - balanceV);
-    const base    = Math.max(0, baseRaw);
-    // 预估佣金(仅预估期用):max(0, 充值 - 提款 - 余额)
+    const prevUnsettled = r(t.prevU);
+    const prevBase      = r(t.prevB);
+    // 公式严格按 CLAUDE.md 规则 — 缩放后整数化可能引入 ±1 误差,这不影响示例展示
+    const baseRaw   = prevUnsettled + prevBase + (deposit - withdraw - balanceV);
+    const base      = Math.max(0, baseRaw);
     const estComRaw = deposit - withdraw - balanceV;
     const estCom    = Math.max(0, estComRaw);
-    // 结算佣金 = 分润基数 × 分润比例
     const settledCom = Math.round(base * rate / 100);
     return {
-      id, agentId, code, vip,
-      registered: regAt,
+      id: t.id, agentId, code: t.code, vip: t.vip,
+      registered: fixedReg[i] || fixedReg[0],
       deposit, withdraw, wager: wagerV, payout, ggr,
       balance: balanceV,
       rate,
-      estCom,            // 预估佣金
-      base,              // 分润基数(已 max(0))
-      baseRaw,           // 原始分润基数(含负)— 预留以防未来需要
-      prevUnsettled: prevUnsettled || 0,
-      prevBase: prevBase || 0,
-      settledCom,        // 结算佣金
-      commission: settledCom, // 兼容原字段(KPI 总佣金用)
-      isLoss,
+      estCom,
+      base,
+      baseRaw,
+      prevUnsettled,
+      prevBase,
+      settledCom,
+      commission: settledCom,
+      isLoss: t.isLoss,
     };
-  };
-  // 参数增加 prevUnsettled / prevBase — 模拟上期结转数据
-  return [
-    make('P12354531','RANDY01', 1, 10000, 10000, 10000, 10000, false,  200,  500, fixedReg[0]),
-    make('P12354532','RANDY02', 1, 10000, 10000, 10000, 10000, false,  -100, 300, fixedReg[1]),
-    make('P12354533','RANDY03', 1, 10000, 10000, 10000, 10000, true,   0,    0,   fixedReg[2]),
-    make('P12354534','RANDY04', 1, 10000, 10000, 10000, 10000, true,   -800, 0,   fixedReg[3]),
-  ];
+  });
 }
 
 // —— 期次列表(已结算) v3.1.46 按结算周期拆分为 周 / 月 两套
@@ -95,6 +113,8 @@ function MyRevshareModule() {
   const [q, setQ] = React.useState('');
   const [statusF, setStatusF] = React.useState('all'); // all | profit | loss
   const [page, setPage] = React.useState(1);
+  // v3.1.57 已结算记录查询 弹窗
+  const [historyRow, setHistoryRow] = React.useState(null);
 
   // 已结算期 选中哪一期 — 随 cycleType 重算
   const settledList = React.useMemo(() => buildSettledPeriodList(cycleType), [cycleType]);
@@ -144,7 +164,7 @@ function MyRevshareModule() {
   const totalGgr       = sum(players,'ggr');
   const totalCom       = sum(players,'commission');
 
-  const money = (n) => '₹' + F.money(n||0);
+  const money = (n) => (n < 0 ? '-₹' : '₹') + F.money(Math.abs(n||0));
   const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.money(Math.abs(n||0));
 
   // 重置筛选(切 tab 时)
@@ -187,40 +207,65 @@ function MyRevshareModule() {
           {key:'rule',     label: MR_T('mr.tab.rule','分润规则')},
         ]}/>
 
-        {/* —— 信息条 —— */}
+        {/* —— 信息条 v3.1.50 与商户后台样式统一(灰色外层 + 白底内层) —— */}
         {tab === 'estimate' && (
           <div style={{
-            padding:'12px 16px', margin:'14px 18px 0',
-            border:'1px solid var(--line)', borderRadius:6,
-            display:'flex',alignItems:'center',gap:32,fontSize:12.5
+            padding:'14px 18px',
+            background:'var(--bg-2)',
+            borderTop:'1px solid var(--line)',
+            borderBottom:'1px solid var(--line)',
           }}>
-            <InfoCell l={MR_T('mr.info.week','期號')} v={estimateInfo.week}/>
-            <InfoCell l={MR_T('mr.info.status','結算狀態')} v={<span style={{color:'#f59e0b',fontWeight:600}}>{MR_T('mr.info.unsettled','未結算預估分潤')}</span>}/>
-            <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{estimateInfo.period}</span>}/>
+            <div style={{
+              padding:'14px 18px',
+              background:'#fff',
+              border:'1px solid var(--line)', borderRadius:8,
+              boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
+              display:'flex',alignItems:'center',gap:32,fontSize:12.5,
+            }}>
+              <InfoCell l={MR_T('mr.info.week','期號')} v={estimateInfo.week}/>
+              <InfoCell l={MR_T('mr.info.status','結算狀態')} v={<span style={{color:'#f59e0b',fontWeight:600}}>{MR_T('mr.info.unsettled','未結算預估分潤')}</span>}/>
+              <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{estimateInfo.period}</span>}/>
+            </div>
           </div>
         )}
 
         {tab === 'settled' && (
-          <div style={{padding:'14px 18px 0',position:'relative'}} ref={pickerRef}>
+          <div style={{
+            padding:'14px 18px',
+            background:'var(--bg-2)',
+            borderTop:'1px solid var(--line)',
+            borderBottom:'1px solid var(--line)',
+            position:'relative',
+          }} ref={pickerRef}>
             <div
               onClick={()=>setPickerOpen(!pickerOpen)}
               style={{
-                padding:'12px 16px',
-                border:'1px solid var(--line)', borderRadius:6,
+                padding:'14px 18px',
+                background: pickerOpen ? '#eff6ff' : '#fff',
+                border:'1.5px solid ' + (pickerOpen ? 'var(--brand)' : '#93c5fd'),
+                borderRadius:8,
+                boxShadow: pickerOpen ? '0 0 0 3px rgba(59,130,246,0.12)' : '0 1px 3px rgba(59,130,246,0.08)',
                 display:'flex',alignItems:'center',gap:32,fontSize:12.5,
-                cursor:'pointer', userSelect:'none',
-                background:pickerOpen ? 'var(--bg-2)' : 'transparent'
+                cursor:'pointer', userSelect:'none', transition:'all .15s',
               }}>
               <InfoCell l={MR_T('mr.info.week','期號')} v={selectedPeriod.week}/>
               <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{selectedPeriod.start} - {selectedPeriod.end}</span>}/>
               <span style={{flex:1}}/>
-              <Icon name={pickerOpen?'chevronDown':'chevronDown'} size={14} style={{color:'var(--text-2)',transform:pickerOpen?'rotate(180deg)':'none',transition:'transform .15s'}}/>
+              <span style={{
+                display:'inline-flex',alignItems:'center',gap:6,
+                padding:'6px 12px',borderRadius:6,
+                background:'var(--brand)',color:'#fff',
+                fontSize:12,fontWeight:600,
+              }}>
+                {MR_T('mr.info.switch','切換期號')}
+                <Icon name="chevronDown" size={14} style={{transform:pickerOpen?'rotate(180deg)':'none',transition:'transform .15s'}}/>
+              </span>
             </div>
             {pickerOpen && (
               <div style={{
-                position:'absolute', left:18, right:18, top:'100%',
-                background:'#fff', border:'1px solid var(--line)', borderRadius:6,
-                boxShadow:'0 4px 16px rgba(0,0,0,0.08)', zIndex:20,
+                position:'absolute', left:18, right:18, top:'calc(100% - 2px)',
+                background:'#fff', border:'1px solid var(--line)', borderRadius:8,
+                boxShadow:'0 8px 24px rgba(0,0,0,0.10)', zIndex:20,
                 marginTop:4, overflow:'hidden'
               }}>
                 {settledList.map(p => (
@@ -293,13 +338,19 @@ function MyRevshareModule() {
                   <th className="right" style={{color:'var(--brand)'}}>
                     {tab === 'estimate'
                       ? MR_T('mr.col.cur_balance','当前余额')
-                      : MR_T('mr.col.settled_balance','结算余额')}
+                      : MR_T('mr.col.end_balance','期末余额')}
                   </th>
+                  {tab === 'settled' && (
+                    <th className="right">{MR_T('mr.col.prev_balance','上期期末余额')}</th>
+                  )}
                   <th className="right">{MR_T('mr.col.wager','投注')}</th>
                   <th className="right">{MR_T('mr.col.payout','派彩')}</th>
                   <th className="right">GGR</th>
                   {tab === 'settled' && (
-                    <th className="right">{MR_T('mr.col.base','分润基数')}</th>
+                    <th className="right">{MR_T('mr.col.prev_base','上期佣金基数')}</th>
+                  )}
+                  {tab === 'settled' && (
+                    <th className="right">{MR_T('mr.col.base','佣金基数')}</th>
                   )}
                   <th className="right">{MR_T('mr.col.rate','分润比例')}</th>
                   <th className="right" style={{color:'var(--brand)'}}>
@@ -308,6 +359,9 @@ function MyRevshareModule() {
                       : MR_T('mr.col.settled_com','结算佣金')}
                   </th>
                   <th>{MR_T('mr.col.user_status','用户状态')}</th>
+                  {tab === 'settled' && (
+                    <th>{MR_T('mr.col.history','结算记录')}</th>
+                  )}
                 </tr></thead>
                 <tbody>
                   {filtered.map(p => {
@@ -321,9 +375,15 @@ function MyRevshareModule() {
                         <td className="right text-mono">{money(p.withdraw)}</td>
                         <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
                         <td className="right text-mono">{money(p.balance)}</td>
+                        {tab === 'settled' && (
+                          <td className="right text-mono" style={{color:'var(--text-2)'}}>{money(p.prevUnsettled || 0)}</td>
+                        )}
                         <td className="right text-mono">{money(p.wager)}</td>
                         <td className="right text-mono">{money(p.payout)}</td>
                         <td className="right text-mono" style={{color: p.ggr>=0?'var(--success)':'var(--danger)'}}>{(p.ggr>=0?'+':'-')+'₹'+F.money(Math.abs(p.ggr||0))}</td>
+                        {tab === 'settled' && (
+                          <td className="right text-mono" style={{color: (p.prevBase||0) < 0 ? 'var(--danger)' : 'var(--text-2)'}}>{money(p.prevBase || 0)}</td>
+                        )}
                         {tab === 'settled' && (
                           <td className="right text-mono">{money(p.base)}</td>
                         )}
@@ -334,11 +394,22 @@ function MyRevshareModule() {
                             ? <span className="badge b-danger">{MR_T('mr.status.loss','亏损')}</span>
                             : <span className="badge b-success">{MR_T('mr.status.profit','盈利')}</span>}
                         </td>
+                        {tab === 'settled' && (
+                          <td>
+                            <button
+                              onClick={() => setHistoryRow(p)}
+                              style={{
+                                background:'none', border:'none', cursor:'pointer',
+                                color:'var(--brand)', fontSize:12.5, fontWeight:500, padding:0,
+                              }}
+                            >{MR_T('mr.action.query','查询')}</button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={tab === 'settled' ? 14 : 13} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
+                    <tr><td colSpan={tab === 'settled' ? 17 : 13} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -386,6 +457,18 @@ function MyRevshareModule() {
           </div>
         )}
       </div>
+
+      {/* v3.1.57 已结算记录查询 */}
+      {window.SettlementHistoryModal && (
+        <window.SettlementHistoryModal
+          open={!!historyRow}
+          onClose={() => setHistoryRow(null)}
+          agentId={me?._displayId || me?.id}
+          agentName={me?.name}
+          code={historyRow?.code}
+          uid={historyRow?.id}
+        />
+      )}
     </div>
   );
 }

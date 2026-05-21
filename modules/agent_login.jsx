@@ -721,12 +721,12 @@ function RegInput(props) {
 }
 
 // v3.0.49 带眼睛图标的密码输入框 — 用于注册第 3 步
-function RegPasswordInput({ value, onChange }) {
+function RegPasswordInput({ value, onChange, placeholder }) {
   const { Icon } = window.UI;
   const [show, setShow] = React.useState(false);
   return (
     <div style={{ position:'relative' }}>
-      <RegInput type={show ? 'text' : 'password'} value={value} onChange={onChange} style={{ paddingRight:42 }}/>
+      <RegInput type={show ? 'text' : 'password'} value={value} onChange={onChange} placeholder={placeholder || '請輸入'} style={{ paddingRight:42 }}/>
       <button type="button" onClick={() => setShow(s => !s)} style={{
         position:'absolute', top:'50%', right:10, transform:'translateY(-50%)',
         width:28, height:28, border:'none', background:'transparent',
@@ -1198,14 +1198,14 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
   if (ZH) {
     ZH['reg.s2.payway'] = '收款方式';
     ZH['reg.s2.url'] = '流量来源链接(选填)';
-    ZH['reg.s2.url.ph'] = 'https://domain.com';
+    ZH['reg.s2.url.ph'] = '如 https://www.youtube.com/beans....';
     ZH['reg.s2.url.channels'] = 'Youtube、Tiktok、Telegram、Facebook...';
     ZH['reg.s2.url.add'] = '+ 新增流量来源链接';
   }
   if (EN) {
     EN['reg.s2.payway'] = 'Payment Method';
     EN['reg.s2.url'] = 'Traffic Source URL (optional)';
-    EN['reg.s2.url.ph'] = 'https://domain.com';
+    EN['reg.s2.url.ph'] = 'e.g. https://www.youtube.com/beans...';
     EN['reg.s2.url.channels'] = 'Youtube, Tiktok, Telegram, Facebook...';
     EN['reg.s2.url.add'] = '+ Add Traffic Source';
   }

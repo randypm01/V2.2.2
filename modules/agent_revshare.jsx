@@ -55,10 +55,12 @@ function _ARV_makeRow(agent, code, periodSeed, idxInPool) {
   const isLoss = _ARV_seedFn(seed, 25) < 0.4; // 约 40% 亏损户
   const ggrSign = isLoss ? -1 : 1;
   const ggr = (wager - payout) * ggrSign;
-  const balance = Math.max(0, dep - wd + _ARV_seedInt(seed, 26, -500, 1200));
+  // v3.1.56 期末余额 偏偏偏低于 (dep - wd)，让 baseRaw 偏正 → 5 行样本中会出现明显盈利行
+  const balance = Math.max(0, dep - wd + _ARV_seedInt(seed, 26, -2400, 600));
   const rate = 5;
-  const prevUnsettled = _ARV_seedInt(seed, 27, -800, 1000);
-  const prevBase      = _ARV_seedInt(seed, 28, -200, 800);
+  // v3.1.52 上期期末余额 不会有负数;上期佣金基数 只会有负数或 0
+  const prevUnsettled = Math.max(0, _ARV_seedInt(seed, 27, -800, 1200));
+  const prevBase      = Math.min(0, _ARV_seedInt(seed, 28, -1200, 300));
   const baseRaw = prevUnsettled + prevBase + (dep - wd - balance);
   const base    = Math.max(0, baseRaw);
   const estCom    = Math.max(0, dep - wd - balance);
@@ -77,6 +79,7 @@ function _ARV_makeRow(agent, code, periodSeed, idxInPool) {
     uid,
     registered: regDate,
     deposit: dep, withdraw: wd, wager, payout, ggr, balance, rate,
+    prevUnsettled, prevBase,
     base, estCom, settledCom, isLoss,
     gap: dep - wd,
   };
@@ -87,7 +90,8 @@ function _ARV_buildPeriodRows(agentList, periodSeed) {
   const out = [];
   let poolIdx = 0;
   (agentList || []).forEach(a => {
-    for (let i = 0; i < 2; i++) {
+    // v3.1.56 每个代理展示 5 个玩家示例（之前是 2）
+    for (let i = 0; i < 5; i++) {
       if (poolIdx >= ARV_CODE_POOL.length) break;
       const code = ARV_CODE_POOL[poolIdx++];
       out.push(_ARV_makeRow(a, code, periodSeed, poolIdx));
@@ -107,6 +111,8 @@ function AgentRevshareModule() {
   const pageSize = 12;
   // v3.1.44 说明弹窗
   const [helpOpen, setHelpOpen] = React.useState(false);
+  // v3.1.57 已结算记录查询 弹窗
+  const [historyRow, setHistoryRow] = React.useState(null);
 
   // 期次列表随结算周期切换
   const SETTLED_LIST = cycleType === 'weekly' ? ARV_SETTLED_LIST_WEEKLY : ARV_SETTLED_LIST_MONTHLY;
@@ -241,8 +247,8 @@ function AgentRevshareModule() {
   const totalEstCom = sum('estCom');
   const totalSetCom = sum('settledCom');
 
-  const money = (n) => '₹' + F.fmtNum(n || 0);
-  const moneyDec = (n) => '₹' + F.money(n || 0);
+  const money = (n) => (n < 0 ? '-₹' : '₹') + F.fmtNum(Math.abs(n || 0));
+  const moneyDec = (n) => (n < 0 ? '-₹' : '₹') + F.money(Math.abs(n || 0));
   const fmtGap = (n) => (n >= 0 ? '+' : '-') + '₹' + F.fmtNum(Math.abs(n || 0));
 
   // 排序工具
@@ -422,16 +428,25 @@ function AgentRevshareModule() {
               onClick={() => setPickerOpen(!pickerOpen)}
               style={{
                 padding: '14px 18px',
-                background: '#fff',
-                border: '1px solid var(--line)', borderRadius: 8,
-                boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                background: pickerOpen ? '#eff6ff' : '#fff',
+                border: '1.5px solid ' + (pickerOpen ? 'var(--brand)' : '#93c5fd'),
+                borderRadius: 8,
+                boxShadow: pickerOpen ? '0 0 0 3px rgba(59,130,246,0.12)' : '0 1px 3px rgba(59,130,246,0.08)',
                 display: 'flex', alignItems: 'center', gap: 32, fontSize: 12.5,
-                cursor: 'pointer', userSelect: 'none',
+                cursor: 'pointer', userSelect: 'none', transition: 'all .15s',
               }}>
               <ARV_InfoCell l="期號" v={selectedPeriod.label}/>
               <ARV_InfoCell l="週期" v={<span className="text-mono">{selectedPeriod.start} - {selectedPeriod.end}</span>}/>
               <span style={{ flex: 1 }}/>
-              <Icon name="chevronDown" size={14} style={{ color: 'var(--text-2)', transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}/>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 6,
+                background: 'var(--brand)', color: '#fff',
+                fontSize: 12, fontWeight: 600,
+              }}>
+                切換期號
+                <Icon name="chevronDown" size={14} style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}/>
+              </span>
             </div>
             {pickerOpen && (
               <div style={{
@@ -516,17 +531,20 @@ function AgentRevshareModule() {
                     <Th k="withdraw" right>提款金额</Th>
                     <Th k="gap" right>充提差</Th>
                     <Th k="balance" right highlight>
-                      {tab === 'estimate' ? '当前余额' : '结算余额'}
+                      {tab === 'estimate' ? '当前余额' : '期末余额'}
                     </Th>
+                    {tab === 'settled' && <Th k="prevBalance" right>上期期末余额</Th>}
                     <Th k="wager" right>投注</Th>
                     <Th k="payout" right>派彩</Th>
                     <Th k="ggr" right>GGR</Th>
-                    {tab === 'settled' && <Th k="base" right>分润基数</Th>}
+                    {tab === 'settled' && <Th k="prevBase" right>上期佣金基数</Th>}
+                    {tab === 'settled' && <Th k="base" right>佣金基数</Th>}
                     <Th k="rate" right>分润比例</Th>
                     <Th k={tab === 'estimate' ? 'estCom' : 'settledCom'} right highlight>
                       {tab === 'estimate' ? '预估佣金' : '结算佣金'}
                     </Th>
                     <th>用户状态</th>
+                    {tab === 'settled' && <th>结算记录</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -546,12 +564,18 @@ function AgentRevshareModule() {
                         {fmtGap(r.gap)}
                       </td>
                       <td className="right text-mono">{moneyDec(r.balance)}</td>
+                      {tab === 'settled' && (
+                        <td className="right text-mono" style={{color:'var(--text-2)'}}>{moneyDec(r.prevUnsettled || 0)}</td>
+                      )}
                       <td className="right text-mono">{moneyDec(r.wager)}</td>
                       <td className="right text-mono">{moneyDec(r.payout)}</td>
                       <td className="right text-mono"
                           style={{ color: r.ggr >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
                         {moneyDec(r.ggr)}
                       </td>
+                        {tab === 'settled' && (
+                          <td className="right text-mono" style={{color: (r.prevBase||0) < 0 ? 'var(--danger)' : 'var(--text-2)'}}>{moneyDec(r.prevBase || 0)}</td>
+                        )}
                       {tab === 'settled' && (
                         <td className="right text-mono">{moneyDec(r.base)}</td>
                       )}
@@ -564,10 +588,23 @@ function AgentRevshareModule() {
                           ? <span className="badge b-danger">亏损</span>
                           : <span className="badge b-success">盈利</span>}
                       </td>
+                      {tab === 'settled' && (
+                        <td>
+                          <button
+                            className="btn-link"
+                            onClick={() => setHistoryRow(r)}
+                            style={{
+                              background:'none', border:'none', cursor:'pointer',
+                              color:'var(--brand)', fontSize:12.5, fontWeight:500,
+                              padding:0,
+                            }}
+                          >查询</button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {paged.length === 0 && (
-                    <tr><td colSpan={tab === 'settled' ? 14 : 13} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
+                    <tr><td colSpan={tab === 'settled' ? 17 : 13} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
                   )}
                 </tbody>
               </table>
@@ -604,6 +641,16 @@ function AgentRevshareModule() {
 
       {/* v3.1.44 说明弹窗 */}
       {helpOpen && <ARV_HelpModal onClose={() => setHelpOpen(false)}/>}
+
+      {/* v3.1.57 已结算记录查询 */}
+      <SettlementHistoryModal
+        open={!!historyRow}
+        onClose={() => setHistoryRow(null)}
+        agentId={historyRow?.agentId}
+        agentName={historyRow?.agentName}
+        code={historyRow?.code}
+        uid={historyRow?.uid}
+      />
     </div>
   );
 }
@@ -797,3 +844,189 @@ function ARV_HelpModal({ onClose }) {
     </div>
   );
 }
+
+// =============================================================
+// v3.1.57 已结算记录查询弹窗(商户后台 / 专业代理后台 共用)
+// 通过 window.SettlementHistoryModal 暴露,my_revshare.jsx 直接复用
+// Props: { open, onClose, agentId, agentName, code, uid }
+// =============================================================
+function SettlementHistoryModal({ open, onClose, agentId, agentName, code, uid }) {
+  const F = window.APS_FMT;
+  const [cycleType, setCycleType] = React.useState('weekly');
+  const [q, setQ] = React.useState(uid || '');
+  React.useEffect(() => { if (open) setQ(uid || ''); }, [open, uid]);
+
+  if (!open) return null;
+
+  // —— 手算 5 期链式数据,严格满足公式:
+  //   本期佣金基数 = (上期期末余额 + 上期佣金基数) + (本期充值 - 本期提现 - 本期期末余额)
+  //   本期佣金     = max(0, 本期佣金基数) × 分润比例
+  //   下期上期期末余额 = 本期期末余额
+  //   下期上期佣金基数 = 本期佣金基数 < 0 ? 本期佣金基数 : 0
+  // 显示顺序:最新期在前
+  const WEEKLY = [
+    // 最新 → 最旧
+    { period:'W26061', dep:0,    wd:0,   bal:0,   prevBal:500, prevBase:-300 }, // base=200,  com=10  盈利
+    { period:'W26054', dep:600,  wd:700, bal:500, prevBal:300, prevBase:0    }, // base=-300, com=0   亏损
+    { period:'W26053', dep:1100, wd:0,   bal:300, prevBal:400, prevBase:-500 }, // base=700,  com=35  盈利
+    { period:'W26052', dep:200,  wd:100, bal:400, prevBal:500, prevBase:-700 }, // base=-500, com=0   亏损
+    { period:'W26051', dep:100,  wd:300, bal:500, prevBal:0,   prevBase:0    }, // base=-700, com=0   亏损
+  ];
+  const MONTHLY = [
+    { period:'M2606', dep:200,  wd:100, bal:150, prevBal:600, prevBase:-400 }, // base=150,  com=8   盈利
+    { period:'M2605', dep:1800, wd:300, bal:600, prevBal:500, prevBase:-200 }, // base=1200, com=60  盈利
+    { period:'M2604', dep:400,  wd:900, bal:500, prevBal:300, prevBase:0    }, // base=-700, com=0   亏损
+    { period:'M2603', dep:600,  wd:200, bal:300, prevBal:200, prevBase:-500 }, // base=-200, com=0   亏损
+    { period:'M2602', dep:250,  wd:500, bal:200, prevBal:0,   prevBase:0    }, // base=-450, com=0   亏损
+  ];
+  const rows = (cycleType === 'weekly' ? WEEKLY : MONTHLY).map(r => {
+    const rate = 5;
+    const base = (r.prevBal + r.prevBase) + (r.dep - r.wd - r.bal);
+    const com = Math.max(0, base) * rate / 100;
+    return { ...r, rate, base, com, isLoss: base <= 0 };
+  });
+
+  const money = (n) => '₹' + F.money(n || 0);
+  const moneySigned = (n) => {
+    if (n === 0) return '₹0';
+    return (n > 0 ? '' : '-') + '₹' + F.money(Math.abs(n));
+  };
+
+  return (
+    <div className="modal-mask" onClick={onClose} style={{zIndex:200}}>
+      <div className="modal" style={{ width: 1080, maxHeight:'90vh' }} onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-head">
+          <div>
+            <h3>已结算记录查询</h3>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>查询用户每一期已结算流程</div>
+          </div>
+          <button className="close" onClick={onClose}><Icon name="x" size={14}/></button>
+        </div>
+
+        <div style={{flex:1, overflow:'auto', padding:'18px 22px'}}>
+          {/* 搜索条 */}
+          <div style={{display:'flex', gap:8, marginBottom:14}}>
+            <input
+              className="filter-input"
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="玩家 UID"
+              style={{
+                flex:1, padding:'8px 12px', fontSize:13, height:36,
+                border:'1px solid var(--line)', borderRadius:6, background:'#fff', outline:'none',
+              }}
+            />
+            <button className="btn primary" style={{height:36, padding:'0 18px'}}>
+              <Icon name="search" size={13}/> 查询
+            </button>
+          </div>
+
+          {/* 代理信息条 — 只读 */}
+          <div style={{
+            display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:14,
+          }}>
+            {[
+              { l:'代理ID',    v: agentId || '—' },
+              { l:'代理名称',  v: agentName || '—' },
+              { l:'邀请Code',  v: code || '—' },
+            ].map(c => (
+              <div key={c.l}>
+                <div style={{fontSize:11.5, color:'var(--text-2)', marginBottom:4}}>{c.l}</div>
+                <div style={{
+                  padding:'8px 12px', fontSize:13, height:36, lineHeight:'20px',
+                  border:'1px solid var(--line)', borderRadius:6,
+                  background:'var(--bg-2)', color:'var(--text-0)', fontWeight:500,
+                  fontFamily:'var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)',
+                }}>{c.v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 周期切换 */}
+          <div style={{
+            display:'flex', gap:0, marginBottom:14,
+            border:'1px solid var(--line)', borderRadius:8, padding:4,
+            background:'var(--bg-2)', width:'fit-content',
+          }}>
+            {[
+              { k:'weekly',  l:'每周结算' },
+              { k:'monthly', l:'每月结算' },
+            ].map(c => (
+              <div key={c.k}
+                onClick={() => setCycleType(c.k)}
+                style={{
+                  padding:'7px 22px', fontSize:13, cursor:'pointer', userSelect:'none',
+                  borderRadius:6, fontWeight: cycleType === c.k ? 600 : 500,
+                  background: cycleType === c.k ? '#fff' : 'transparent',
+                  color: cycleType === c.k ? 'var(--brand)' : 'var(--text-2)',
+                  boxShadow: cycleType === c.k ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                  border: cycleType === c.k ? '1px solid var(--brand)' : '1px solid transparent',
+                  transition:'all .15s',
+                }}>{c.l}</div>
+            ))}
+          </div>
+
+          {/* 表格 */}
+          <div className="tbl-wrap" style={{border:'1px solid var(--line)', borderRadius:8}}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>期数</th>
+                  <th className="right">充值</th>
+                  <th className="right">提款</th>
+                  <th className="right">期末余额</th>
+                  <th className="right">上期期末余额</th>
+                  <th className="right">佣金基数</th>
+                  <th className="right">上期佣金基数</th>
+                  <th className="right">分润比例</th>
+                  <th className="right">结算佣金</th>
+                  <th>用户状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.period}>
+                    <td className="text-mono" style={{fontWeight:600, color:'var(--text-0)'}}>{r.period}</td>
+                    <td className="right text-mono">{money(r.dep)}</td>
+                    <td className="right text-mono">{money(r.wd)}</td>
+                    <td className="right text-mono">{money(r.bal)}</td>
+                    <td className="right text-mono" style={{color:'var(--text-2)'}}>{money(r.prevBal)}</td>
+                    <td className="right text-mono" style={{
+                      color: r.base > 0 ? 'var(--success)' : r.base < 0 ? 'var(--danger)' : 'var(--text-1)',
+                      fontWeight: 600,
+                    }}>{moneySigned(r.base)}</td>
+                    <td className="right text-mono" style={{
+                      color: r.prevBase < 0 ? 'var(--danger)' : 'var(--text-2)',
+                    }}>{moneySigned(r.prevBase)}</td>
+                    <td className="right text-mono">{r.rate}%</td>
+                    <td className="right text-mono" style={{
+                      color: r.com > 0 ? 'var(--brand)' : 'var(--text-2)',
+                      fontWeight: r.com > 0 ? 600 : 400,
+                    }}>{money(r.com)}</td>
+                    <td>
+                      {r.isLoss
+                        ? <span className="badge b-danger">亏损</span>
+                        : <span className="badge b-success">盈利</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{marginTop:10, fontSize:11.5, color:'var(--text-3)'}}>
+            * 公式:本期佣金基数 = (上期期末余额 + 上期佣金基数) + (本期充值 - 本期提现 - 本期期末余额);
+            本期佣金 = max(0, 本期佣金基数) × 分润比例。
+          </div>
+        </div>
+
+        <div className="drawer-foot">
+          <button className="btn primary" onClick={onClose}>关闭</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 暴露到 window 供 my_revshare.jsx 复用
+window.SettlementHistoryModal = SettlementHistoryModal;

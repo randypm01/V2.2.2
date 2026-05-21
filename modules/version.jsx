@@ -2,9 +2,316 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.1.84',
+    date: '2026-05-22',
+    current: true,
+    changes: [
+      { type: 'fix', text: '自行申請代理 審核通過後 已創建代理 查看&配置 流量來源 / 收款方式 數據沒關聯過去 — 修复 3 处:① 通过弹窗 onCreateAgent 时 _traffic 优先用 form 里(管理员补填),为空时回落到 app._formSnapshot.trafficUrls(用户注册时填的);_payment 各字段同样回落到 _formSnapshot.ifsc/account/realName/payEmail' },
+      { type: 'fix', text: '② 新代理 _appData._formSnapshot 写入时把 form 里的 trafficUrls / payment 字段合并进去(原来只浅拷贝 app._formSnapshot,丢失管理员在弹窗里补的内容)' },
+      { type: 'fix', text: '③ AgentDetail _defaultTraffic 移除默认假数据(原来没数据时会显示 https://youtube.com/@xxx + https://t.me/xxx_channel,让用户以为关联了但其实是假的),改为返回 [\'\'] 一行空 input' },
+    ],
+  },
+  {
+    ver: 'v3.1.82',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '创建专业代理账户弹窗 Step 2/3/4 错误提示 stale 问题 — 用户已选/已填后,inline 错误提示仍显示。修复:在 onChange 里检测当前值是否满足必填,满足则从 errors 里删除对应 key,实时清除错误' },
+      { type: 'modify', text: 'Step 2:分润方案选了即清 errors.plan / 最低佣金有值清 errors.minCommission / 最高佣金有值清 errors.maxCommission;Step 3:codeManage 关闭或 codeLimit ≥ 1 清 errors.codeLimit;Step 4:流量来源任一行有值清 errors.trafficUrls,Account/IFSC/Email/Real Name 各自有值清对应 errors' },
+    ],
+  },
+  {
+    ver: 'v3.1.82',
+    date: '2026-05-22',
+    current: true,
+    changes: [
+      { type: 'fix', text: '修复 创建专业代理账户弹窗 Step 3「可創建邀請Code上限數量」输入框每次输入一个数字后必须重新点击才能继续输入的 BUG — 原因:AgentPermsForm 内部把 PermRow / SectionCard 定义在函数体里,每次 render 都创建新的组件类型,React 把 input 当作新组件挂载导致失焦。修复:把两个子组件提取到 AgentPermsForm 外面,重命名为 _AgentPermRow / _AgentPermSectionCard,只创建一次' },
+      { type: 'fix', text: '修复 创建专业代理账户弹窗 选择分潤方案 / 填入合法值后 错误提示不消失的 BUG — 新增 useEffect 监听 form + step,每次表单变化时自动清除已修正字段的 errors(不引入新错误,只删除);分潤方案 / 最低結算佣金 / 最高結算佣金 / 可創建邀請Code上限 / Account/IFSC/Email/Real Name / 流量来源链接 等全部字段实时响应' },
+    ],
+  },
+  {
+    ver: 'v3.1.82',
+    date: '2026-05-22',
+    current: true,
+    changes: [
+      { type: 'modify', text: '创建专业代理账户弹窗 全部非必填字段调整 — Step 4 流量/收款 整页非必填(流量來源鏈接 + 收款方式 4 字段);Step 2 分潤方案類型 非必填(代理分潤比例 由方案带出,方案没选时为空也不报错);只保留 最低結算佣金金額 / 最高結算佣金上限 必填' },
+      { type: 'remove', text: 'validateStep 删除 Step 2 plan 校验、Step 3 codeLimit 校验、Step 4 全部校验;Step 4 各 input 移除红 *、移除 errors.pay_xxx inline 报错、移除 onChange 内清错代码,流量來源鏈接 label 加灰色「(選填)」hint' },
+    ],
+  },
+  {
+    ver: 'v3.1.81',
+    date: '2026-05-22',
+    changes: [
+      { type: 'modify', text: '分润模式表单(CommissionModeForm)最低結算佣金金額 输入框 placeholder 从「200」改为「請輸入」(原以 200 作示例值容易和实际值混淆);最高結算佣金上限 已是「請輸入」不变。影响:创建专业代理弹窗 Step 2 + 已创建代理「查看&配置」分润模式编辑态' },
+    ],
+  },
+  {
+    ver: 'v3.1.80',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '聯繫方式的 Email 与 收款方式的 Email 不再混淆 — 收款方式 Email 是用户银行账户的 email(用于打款),与联系方式 Email 不是同一个。修复 3 处 fallback 链:① 创建专业代理账户弹窗 prefill payment.email 仅取 _formSnapshot.payEmail,不再 fallback 到 contacts.Email / prefill.contact;② AgentDetail _defaultPayment.email 仅取 _payment.email / _formSnapshot.payEmail;③ 代理后台「我的账户 → 收款方式」payment.email 仅取 _formSnapshot.payEmail / me._payment.email,删除 contacts.Email / me.email 兜底' },
+    ],
+  },
+  {
+    ver: 'v3.1.79',
+    date: '2026-05-21',
+    changes: [
+      { type: 'fix', text: '创建专业代理账户弹窗 Step 2 误报「最低結算佣金金額必填」— form.commission 初始化时未带 minCommission/maxCommission,只在 CommissionModeForm 内部 fallback 显示了默认值 200,但状态里仍为 null。修复:form.commission 初始化时直接带入 { minCommission: 200, maxCommission: 1000000 }' },
+      { type: 'modify', text: '所有步骤的错误提示从顶部红色 banner 改为 inline field-error 显示在对应输入框下方:CommissionModeForm 接受 errors prop,在 分潤方案 / 最低結算佣金 / 最高結算佣金 输入框下渲染错误文本 + 红色边框;AgentPermsForm 同样接受 errors,在 codeLimit 输入框下渲染;Step 4 流量来源链接 / Account / IFSC / Email / Real Name 各自渲染 inline 错误' },
+      { type: 'modify', text: 'Step 4 流量來源鏈接 label 加红 *(必填);Account/IFSC/Email/Real Name 同样加红 *;布局改为 收款方式独占 + 4 字段 2x2(原 收款方式|IFSC,Account|Real Name,Email|空)' },
+    ],
+  },
+  {
+    ver: 'v3.1.78',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: 'PaymentInfoView Account / IFSC / Email / Real Name 4 个输入框 placeholder 改为「請輸入」(原 123123 / Nick An / 123@gmail.com);只读态没有值时显示 placeholder「請輸入」灰色(原 fallback 默认示例值)— 反映用户在注册时这几项确实未填写' },
+      { type: 'modify', text: '创建专业代理账户弹窗 自行申请走的场景(isApplied=true)— Step 1「登录账号 / 初始密码」改为只读灰底显示(登录账号 mono 字体,密码显示 ••••••••);商户主动创建场景仍可编辑 input' },
+      { type: 'modify', text: '自行申请审核场景 Step 4 流量/收款 prefill 默认值改空 — trafficUrls 默认 [\'\']、payment 4 字段 fallback 全空,让管理员补填' },
+      { type: 'feat', text: '创建专业代理账户弹窗 每步必填校验:validateStep(s) 按 step 1/2/3/4 分别校验 — Step 1 代理名称/登录账号/初始密码/联系方式;Step 2 分润方案/最低/最高佣金;Step 3 codeManage 开启时 codeLimit;Step 4 trafficUrls ≥ 1 + Account/IFSC/Email/Real Name 必填' },
+      { type: 'add', text: 'Step 2/3/4 顶部红色错误提示条(fef2f2 底 + fecaca 边),把当步所有错误一起展示;只有当前步骤全部通过才允许进入下一步(next),Step 4 校验通过才允许提交' },
+    ],
+  },
+  {
+    ver: 'v3.1.77',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 注册弹窗 Step 2 流量来源链接输入框 placeholder 改为「如 https://www.youtube.com/beans....」(原「https://domain.com」)— 同步改 agent_common.jsx + agent_login.jsx 内联 ZH/EN 字典(英文 e.g. https://...)' },
+      { type: 'modify', text: '专业代理后台 注册弹窗 Step 3 密码 / 重新输入密码 输入框 placeholder 默认改为「請輸入」(RegPasswordInput 接受 placeholder prop,默认值 "請輸入")— 原无 placeholder 显示空白' },
+    ],
+  },
+  {
+    ver: 'v3.1.76',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '商户后台 → 分润管理 → 收益分润 新增/编辑弹窗 删除「封頂金額」字段(原代理分潤比例 + 封頂金額 2 列网格,改回单列只剩 代理分潤比例);canSubmit 校验同步移除 cap 必填条件;handleSave 不再传 cap' },
+      { type: 'modify', text: '備註 textarea placeholder 从「此方案為與 XXX 談過的合作內容,經上級批准配置的」改为「請輸入」' },
+      { type: 'remove', text: 'SEED_REVENUE 删除 RV-002「團隊代理適用」示例,只保留 RV-001「建議個人代理適用」一条;两条 seed 的 cap:100000 字段一并删除' },
+    ],
+  },
+  {
+    ver: 'v3.1.75',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: 'app.jsx 顶栏代理胶囊 改为显示「代理名称(name) / 代理ID(agentId)」,原显示「loginName / agentId」(loggedInAgent.name 取不到时降级到 loginName)' },
+      { type: 'modify', text: '专业代理后台 → 首页 按图重做(modules/agent_dashboard.jsx):垂直居中 60px 顶 padding 布局 — ① 大标题「你好,代理名称」36px;② 168×168 大圆头像(琥珀色 #f59e0b 实心边框 + 18% 透明底,56px AC 文字,mono 字体);③ 代理ID 28px mono + 旁边复制按钮(成功时变绿色 check icon,1.6s 后还原);④ 副标题「欢迎回来 · 上次登录 时间」15px,时间用 mono' },
+    ],
+  },
+  {
+    ver: 'v3.1.74',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 首页 欢迎页改用登入账号(loginName)显示,与顶栏右上角的代理名称一致 — 原显示 me.name(如 Sara_Network),改为 me._appData?.loginName || me.loginName || me.name 优先级(如 rajeshmedia)' },
+      { type: 'modify', text: '欢迎页字号放大:标题「你好,xxx」从 PageHead 默认 19px → 32px;副标题「欢迎回来 · 上次登录」从 12px → 15px;时间用 JetBrains Mono 强调;改为自定义 div + h1 排版,不再用 PageHead 通用组件' },
+    ],
+  },
+  {
+    ver: 'v3.1.73',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '专业代理后台 → 我的账户 PageHead 右上角「下载合作协议」按钮删除' },
+      { type: 'remove', text: '专业代理后台 侧栏顶部「首页」「PRD首页」两个大项删除 — 代理登入后侧栏直接从「运营」section 开始,「首页」仪表盘仍可通过顶栏 logo 返回访问' },
+      { type: 'modify', text: '专业代理后台 → 首页 重做(modules/agent_dashboard.jsx)— 按图精简为纯欢迎页:只显示 PageHead「你好,Randy」+ 副标题「欢迎回来 · 上次登录 2026/5/21 HH:MM:SS」' },
+      { type: 'remove', text: '删除原首页全部内容:通知中心 + 创建 Code 按钮、AgentHero、4 张 KPI 大卡(总玩家/有效CPA/月佣金/FTD)、近30天趋势图、快速入口、最近结算单、风险提醒等;modules/agent_dashboard.jsx 从 254 行 → 27 行' },
+    ],
+  },
+  {
+    ver: 'v3.1.72',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 我的账户 → 分润模式 tab 按图重做(不再复用 CommissionReadOnly)— 改为简洁的 label-value 列表:結算周期 / 結算幣種 / 最低結算佣金金額 (含「低于该金额顺延至下期」灰色注) / 最高結算佣金上限 / [分隔线] / 分潤方案 / 分潤比例 (蓝色 mono) / 計算口徑流程 (pre 文本块,无边框)' },
+      { type: 'remove', text: '删除原 ad-section-title「分润规则」标题 + CommissionReadOnly 调用(form 风格的灰底输入框列表),改为更接近「合约条款」的呈现形式,代理后台只读视图独立于商户后台编辑表单' },
+    ],
+  },
+  {
+    ver: 'v3.1.71',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 我的账户 副标题改为「查看您的个人资料、合作方案、安全设置」(原「管理您的个人资料、安全设置与合作方案」)— 文案更平易、动词改为「查看」、顺序调整为 个人资料 → 合作方案 → 安全设置' },
+      { type: 'modify', text: '专业代理后台 → 我的账户 → 收款方式 tab 改用 window.PaymentInfoView 共享组件(editing=false 只读)— 与商户后台「查看&配置」/「自行申请代理 查看&审核」视觉完全一致:收款方式 整宽 UPI / Account + IFSC / Email + Real Name;下方保留黄色提示「如需修改收款方式,请联系商户运营」' },
+      { type: 'remove', text: '删除原 ad-section-title「收款方式」标题 + ad-info-card 单列 5 行键值对结构(已统一到 PaymentInfoView)' },
+    ],
+  },
+  {
+    ver: 'v3.1.70',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '分润模式表单 分潤方案類型 下拉占位文案改为「請選擇分潤方案」(原「收益分潤方案 · 週期資產變動分潤 · 方案名稱」太具体易误解);占位文字 var(--text-3) 灰色,选中方案后变为 text-0 正常色' },
+      { type: 'modify', text: '計算口徑流程 未选方案时显示灰色提示「請先選擇分潤方案」(原即使未选也带出默认 STEP-1~4 公式),避免给出和当前未选状态不一致的信息;选了方案再带出对应公式' },
+    ],
+  },
+  {
+    ver: 'v3.1.69',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '分润模式 表单(CommissionModeForm + CommissionReadOnly)代理分潤比例 下方新增「計算口徑流程」只读公式块:无 * 号必填、灰底 pre 文本框,显示选中方案对应类型的公式(FORMULA_PERIOD_ASSET — 即上次更新的 STEP-1~4 流程);未选方案时显示默认公式' },
+      { type: 'modify', text: '影响:创建专业代理弹窗 Step 2 / 已创建代理 → 查看&配置 → 分润模式(编辑+只读)/ 代理后台 → 我的帐户 → 分润模式,3 处同步' },
+    ],
+  },
+  {
+    ver: 'v3.1.68',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '分润模式 表单(CommissionModeForm + CommissionReadOnly)分潤方案類型 下拉下方新增「代理分潤比例」必填只读字段:disabled 灰底 input,根据当前选中的方案 ratio 自动带出(例 5%);未选方案时显示「請先選擇分潤方案」灰字占位' },
+      { type: 'modify', text: '影响位置:创建专业代理账户弹窗 Step 2 / 已创建代理 → 查看&配置 → 分润模式 tab(编辑+只读)/ 代理后台 → 我的帐户 → 分润模式 tab — 同一组件,3 处同步' },
+    ],
+  },
+  {
+    ver: 'v3.1.67',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '抽取 window.PaymentInfoView 共享组件(modules/agents.jsx)— editing/value/onChange props,统一布局:收款方式 整宽锁定 UPI / Account / IFSC(同一行 2 列)/ Email / Real Name(同一行 2 列)' },
+      { type: 'modify', text: '已创建代理 → 查看&配置 → 收款方式 tab 改用 PaymentInfoView:删除原 UPI pill + 黄色 hint 提示;_defaultPayment 扩展为 5 字段(method/ifsc/account/realName/email),兼容旧 upiId/holder 字段迁移到 account/realName' },
+      { type: 'modify', text: '自行申请代理 → 查看&审核 → 收款方式 tab 改用 PaymentInfoView:替换原编辑模式的 2x3 网格 + 只读模式的 5 行卡片,与已创建代理视觉完全一致' },
+      { type: 'modify', text: '收款方式视图列顺序按图调整:Account/IFSC → Email/Real Name(原 IFSC/Account → Real Name/Email);所有字段加 mono 字体一致化' },
+    ],
+  },
+  {
+    ver: 'v3.1.66',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '已创建代理 → 查看&配置 → 分润模式 只读视图(window.CommissionReadOnly)重做 — 布局完全镜像编辑态(CommissionModeForm),所有控件 disabled 形态:結算時間 只显示已选中那一行 radio(不显示另一选项也不显示「2选1」hint);結算幣種 / 最低結算佣金金額 / 最高結算佣金上限 改为 disabled input(灰底);分潤方案類型 改为 disabled input 显示已选方案 label + 右侧「分潤管理」链接(onJumpPlanMgr 存在时可点)' },
+      { type: 'remove', text: '删除原 CommissionReadOnly 的 PlanCard 卡片 + Row 字段-值列表(最低首存/最低流水/最低 NGR/有效天數/活躍留存/排除提款過玩家/負盈利結轉/分潤計算公式流程/備註 等 10+ 行)— 改为与编辑态完全一致的简洁表单视觉' },
+      { type: 'modify', text: '代理后台 → 我的帐户 → 分润模式 tab 同步受益(同一组件)' },
+    ],
+  },
+  {
+    ver: 'v3.1.65',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '自行申请代理 → 查看&审核 抽屉 申请审核行(申请进度 + 要求补件/拒绝/通过 按钮)从仅在「申请资料」tab 显示扩展到所有 tab(申请资料/流量来源/收款方式/操作记录),让审核人在任意 tab 都能直接处理申请;编辑模式下仍隐藏审核行,避免操作冲突' },
+    ],
+  },
+  {
+    ver: 'v3.1.64',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '自行申请代理 → 查看&审核 抽屉 收款方式 tab 重做 — 只读模式:卡片单列 5 行(收款方式 UPI / IFSC / Account / Real Name / Email),130px label + 值列,删除原 UPI pill 设计 + 黄色 hint 提示;编辑模式:2 列网格输入框(收款方式 UPI 灰底锁定 / IFSC / Account / Real Name / Email),与创建专业代理弹窗 Step 4 视觉一致' },
+      { type: 'modify', text: 'SelfApplicationsList draft state 增加 ifsc / account / realName / email 4 字段,init 从 _formSnapshot 读;saveDraft 时把 4 字段写回 _formSnapshot(payEmail key)' },
+    ],
+  },
+  {
+    ver: 'v3.1.63',
+    date: '2026-05-21',
+    changes: [
+      { type: 'fix', text: '创建专业代理账户弹窗 Step 4 流量/收款 — 把 IFSC(123123)/ Account(123123)/ Real Name(Nick An)/ Email(123@gmail.com)/ 流量链接(https://agentp0.netlify.app/)从 placeholder 改为申请审核场景的预填值,代表代理在申请时填写的真实资料,不再是空输入提示' },
+    ],
+  },
+  {
+    ver: 'v3.1.62',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '创建专业代理账户弹窗 Step 4「流量/收款」按图1 重做 — 删除上版灰底只读区,改为 2×3 网格全输入框:收款方式(锁定 UPI 灰底)/ IFSC / Account / Real Name / Email,前 4 字段可编辑,标签样式与 Step 1 基本资料统一' },
+      { type: 'modify', text: 'form.payment 数据结构从 { upiId, holder } 改为 { method, ifsc, account, realName, email };prefill 时从 _formSnapshot 读取 ifsc / account(兼容旧 upiId)/ realName(兼容旧 holder)/ payEmail(兼容 contacts.Email)' },
+      { type: 'modify', text: '流量來源鏈接 label 颜色从 text-1 → text-0(更深),提交时把新的 5 字段 _payment 写入新代理对象' },
+    ],
+  },
+  {
+    ver: 'v3.1.61',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '创建专业代理账户弹窗 步骤指示器 3 → 4 步:新增第 4 步「流量/收款」,步骤圆点 + 连接线同步扩展;step 1/2/3 下一步按钮文案分别为「下一步:分润模式 / 权限配置 / 流量/收款」,只有 step 4 才显示「创建代理账户」按钮' },
+      { type: 'add', text: 'Step 4 内容(按图):流量來源鏈接 — 输入框列表(placeholder https://agentp0.netlify.app/)+ 蓝色虚线「+新增流量來源鏈接」按钮;收款方式 — 灰底只读 5 行(收款方式 UPI / IFSC / Account / Real Name / Email)从 prefill._formSnapshot 读取,底部 hint「* 收款方式由代理在申请时填写,不可在此修改」' },
+      { type: 'modify', text: 'CreateAgentModal form state 增加 trafficUrls + payment;prefill 时从 _formSnapshot 预填 trafficUrls / upiId / holder' },
+      { type: 'modify', text: '提交时把 trafficUrls(过滤空值)+ payment 写入新代理对象的 _traffic / _payment,使「查看&配置 → 流量来源 / 收款方式」tab 能正确显示' },
+    ],
+  },
+  {
+    ver: 'v3.1.60',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '创建专业代理账户弹窗 步骤 3「权限配置」按图1 重做(window.AgentPermsForm):删除原 2×5 开关矩阵,改为两个 section 卡片 —「運營」(我的帳戶 查看 / Code與鏈接管理 查看·編輯 + 展开后可配置「可創建邀請Code上限數量」必填数字框) +「報表」(邀請Code與鏈接管理 查看 / 玩家損益 查看 / 分潤報表 查看)' },
+      { type: 'modify', text: 'form.perms 数据结构改为 { myAccount, codeManage, codeLimit, reportCode, reportPlayer, reportRevshare };AgentDetail 查看&配置 perms tab 复用同组件,默认值 + 持久化同步' },
+    ],
+  },
+  {
+    ver: 'v3.1.59',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '创建专业代理账户弹窗 步骤2 分润模式表单(window.CommissionModeForm)按图1 重做:「結算/分潤時間」→「結算時間」;每周/每月两个 radio 各自只剩一行,移除内部星期/日期下拉(每周固定周一,每月固定 1 号)' },
+      { type: 'add', text: '新增 3 个字段:結算幣種(只读 INR (₹))/ 最低結算佣金金額(默认 ₹200,带「低于该金额顺延至下期」hint)/ 最高結算佣金上限(空,placeholder「請輸入」);value 对象新增 minCommission / maxCommission 字段' },
+      { type: 'modify', text: '分潤方案類型:hint「(最少配置 1 種方案類型)」→「(僅能配置 1 種方案類型)」;只渲染 1 个下拉,移除 − 删除按钮 + 移除「+ 新增分潤方案」整段;plans 数组仍保留(长度 1)以兼容已有数据' },
+    ],
+  },
+  {
+    ver: 'v3.1.58',
+    date: '2026-05-21',
+    changes: [
+      { type: 'fix', text: '分润报表 负数金额显示修正 — 商户后台 agent_revshare.jsx + 专业代理后台 my_revshare.jsx 中 money / moneyDec helper 改为 (n<0?\'-₹\':\'₹\') + F.money(Math.abs(n)),负号显示在币种符号前面(原来是 ₹-485 → 改为 -₹485);影响列:期末余额 / 上期期末余额 / 佣金基数 / 上期佣金基数 / GGR / 投注 / 派彩 等' },
+    ],
+  },
+  {
+    ver: 'v3.1.57',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '商户后台 分润报表 + 专业代理后台 分润报表 已结算分润 表格 用户状态 右侧新增「结算记录」列,该列单元格显示「查询」蓝色链接按钮' },
+      { type: 'add', text: '点击「查询」弹出「已结算记录查询」弹窗:顶部 玩家UID 搜索框 + 查询按钮;下方 代理ID / 代理名称 / 邀请Code 三个只读字段;每周结算 / 每月结算 segmented 切换;10 列表格(期数 / 充值 / 提款 / 期末余额 / 上期期末余额 / 佣金基数 / 上期佣金基数 / 分润比例 / 结算佣金 / 用户状态)' },
+      { type: 'add', text: '弹窗示例数据 5 期(每周 W26051~W26061 + 每月 M2602~M2606)按公式严格手算自洽:本期佣金基数 = (上期期末余额 + 上期佣金基数) + (本期充值 - 本期提现 - 本期期末余额);链式连接 — N+1 期的上期期末余额 = N 期的期末余额,N+1 期的上期佣金基数 = min(0, N 期佣金基数)' },
+      { type: 'add', text: 'SettlementHistoryModal 定义于 agent_revshare.jsx 末尾并通过 window.SettlementHistoryModal 暴露,my_revshare.jsx 直接复用同一组件;colSpan(空状态)更新:已结算 16 → 17' },
+    ],
+  },
+  {
+    ver: 'v3.1.56',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 分润报表 玩家示例 4 笔 → 5 笔(my_revshare.jsx buildPeriodPlayers):重写为手算 5 笔,严格按公式 (上期期末余额 + 上期佣金基数) + (本期充值 - 本期提现 - 本期期末余额) = 本期佣金基数 自洽,覆盖 5 种结算场景 — #1 大盈利(base 6700, 佣金 335)/ #2 小盈利(base 1700, 佣金 85)/ #3 大亏损(base -5500 不计佣金)/ #4 小亏损(base -400 不计佣金)/ #5 持平(base 0 不计佣金)' },
+      { type: 'modify', text: '商户后台 → 分润报表 每个代理玩家示例 2 笔 → 5 笔(agent_revshare.jsx _ARV_buildPeriodRows 循环 i<5);_ARV_makeRow 期末余额 seed 范围下调到 [-2400, +600] 让 baseRaw 偏正,5 行样本中能稳定出现明显盈利与亏损两种情况;上期佣金基数 seed 范围 [-1200, +300] 经 Math.min(0,...) 后保持 ≤ 0' },
+    ],
+  },
+  {
+    ver: 'v3.1.55',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '已结算分润 表格列名统一术语:「上期结算余额」→「上期期末余额」,「上期负佣金基数」→「上期佣金基数」(商户后台 agent_revshare.jsx + 专业代理后台 my_revshare.jsx 两处)' },
+    ],
+  },
+  {
+    ver: 'v3.1.54',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '分润管理 → 收益分润 新增/编辑弹窗 计算口径流程文案改版(FORMULA_PERIOD_ASSET):STEP-1 公式术语改为「上期期末余额 / 本期期末余额」,删除原「上期结算余额 ≥ 0」与「上期佣金基数为 0 < 0」两条注;STEP-2 改为「校验本期平台是盈利或亏损/持平」,2-1 / 2-2 末尾改成接 STEP-4 / STEP-3 + 4;新增独立 STEP-3「计算本期佣金 = 本期佣金基数 × 佣金分润比例」;新增 STEP-4「本期带入下期值:期末余额 + 佣金基数(负值带入,正值带 0)」' },
+    ],
+  },
+  {
+    ver: 'v3.1.53',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '分润管理 → 收益分润 删除「用户损失基数分润」方案类型(REV_TYPES);SEED_REVENUE 中 RV-001 type 改为 period(原 loss),与 RV-002 一致都是「周期资产变动分润」' },
+    ],
+  },
+  {
+    ver: 'v3.1.52',
+    date: '2026-05-21',
+    changes: [
+      { type: 'fix', text: '商户后台 + 专业代理后台 已结算分润 数据规范: (1) 上期结算余额 不会有负数 — 商户后台 prevUnsettled = Math.max(0, seed) 范围调整为 [0, 1000];代理后台 4 笔示例的 prevUnsettled 全部改为正数或 0 + 字段 setter 加 Math.max(0, ...) 兜底 (2) 上期负佣金基数 只会有负数或 0 — 商户后台 prevBase = Math.min(0, seed) 范围 [-800, 0];代理后台 4 笔示例 prevBase 改为负数或 0 + Math.min(0, ...) 兜底' },
+    ],
+  },
+  {
+    ver: 'v3.1.51',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 + 专业代理后台 已结算分润分页 表格列调整 — 「结算余额」→「期末余额」;「分润基数」→「佣金基数」' },
+      { type: 'add', text: '已结算分润 表格新增 2 列:期末余额 右侧 +「上期结算余额」(灰色 text-2);佣金基数 左侧 +「上期负佣金基数」(负数红色,正数/0 灰色)' },
+      { type: 'add', text: '商户后台 agent_revshare.jsx _ARV_makeRow 行数据补 prevUnsettled / prevBase 字段(原已计算用于 base 公式,这次暴露到列);专业代理后台 my_revshare.jsx prevUnsettled / prevBase 字段已存在,直接消费' },
+      { type: 'modify', text: 'colSpan(空状态)更新:已结算 14 → 16' },
+    ],
+  },
+  {
+    ver: 'v3.1.50',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 分润报表 期号信息条样式与商户后台代理分润报表统一 — estimate tab 改为灰色外层 + 白底内层卡片(border + radius 8 + 阴影);settled tab 加同样灰色外层包裹,内层保留 v3.1.49 的浅蓝边框 + 切换期号蓝色按钮' },
+    ],
+  },
+  {
+    ver: 'v3.1.49',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 + 专业代理后台 已结算分润 期号选择框样式升级 — 边框由灰 → 浅蓝(#93c5fd 1.5px),hover/open 时 brand 蓝 + 3px brand 半透明光环;右侧 chevron 升级为「切换期号」蓝底白字按钮,下拉指引更明显' },
+    ],
+  },
+  {
     ver: 'v3.1.48',
     date: '2026-05-21',
-    current: true,
     changes: [
       { type: 'remove', text: '商户后台 4 个报表页(代理收益 / 代理推广链接 / 代理玩家损益 / 代理分润报表)工具栏右上角「共 N 条」/「共 N 个代理」counter 删除 — 左下角分页已显示总条数,避免重复' },
     ],

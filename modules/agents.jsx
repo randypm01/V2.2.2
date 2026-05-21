@@ -563,6 +563,24 @@ function AgentsModule({ initialDetail = null }) {
           // v2.4.47 烘入分润模式 + 权限,使「查看&配置 → 分润模式 / 权限配置」能正确显示
           _comm: form.commission || { kind:'weekly', weekday:1, monthday:1, plans:[''] },
           _perms: form.perms,
+          // v3.1.62 流量来源 / 收款方式 — 按图1 5 字段持久化
+          // v3.1.84 优先用 form 里(管理员补填的),空时回落到 app._formSnapshot(用户注册时填的)
+          _traffic: (() => {
+            const fromForm = (form.trafficUrls || []).filter(Boolean);
+            if (fromForm.length) return fromForm;
+            return (app._formSnapshot?.trafficUrls || []).filter(Boolean);
+          })(),
+          _payment: (() => {
+            const f = form.payment || {};
+            const snap = app._formSnapshot || {};
+            return {
+              method:   'UPI',
+              ifsc:     f.ifsc     || snap.ifsc     || '',
+              account:  f.account  || snap.account  || snap.upiId  || '',
+              realName: f.realName || snap.realName || snap.holder || '',
+              email:    f.email    || snap.payEmail || '',
+            };
+          })(),
           _appData: {
             userId: app.userId || 'P34157319',
             reason: app.reason || '',
@@ -570,10 +588,20 @@ function AgentsModule({ initialDetail = null }) {
             note: form.note || '',
             loginName: form.loginName,
             contacts: form.contacts,
+            // v3.1.84 trafficUrls 也存进 _formSnapshot,后续 AgentDetail 的 fallback 能读到
             appliedAt: app.createdAt || '2026-05-11 23:59:59',
             history: app.history || [],
             // v3.0.59 把申请时的 _formSnapshot 也带过来,供 AgentDetail 的 联系方式 / 流量来源 / 收款方式 读取
-            _formSnapshot: app._formSnapshot || null,
+            _formSnapshot: {
+              ...(app._formSnapshot || {}),
+              trafficUrls: (form.trafficUrls || []).filter(Boolean).length
+                ? form.trafficUrls.filter(Boolean)
+                : (app._formSnapshot?.trafficUrls || []),
+              ifsc:     form.payment?.ifsc     || app._formSnapshot?.ifsc     || '',
+              account:  form.payment?.account  || app._formSnapshot?.account  || '',
+              realName: form.payment?.realName || app._formSnapshot?.realName || '',
+              payEmail: form.payment?.email    || app._formSnapshot?.payEmail || '',
+            },
           },
         };
         setAgents([newAgent, ...agents]);
@@ -706,11 +734,20 @@ function CreateAgentModal({ open, onClose, onSubmit, prefill }) {
     name: '', loginName: '', password: '', type: 'Direct',
     parent: '', remark: '',
     // v2.4.43 分潤模式 重做:結算/分潤時間 + 分潤方案類型(多选)
-    commission: { kind:'weekly', weekday:1, monthday:1, plans:[''] },
+    // v3.1.79 init 时带入 minCommission/maxCommission 默认值,与 CommissionModeForm 显示一致,避免误报「必填」
+    commission: { kind:'weekly', weekday:1, monthday:1, plans:[''], minCommission: 200, maxCommission: 1000000 },
     contacts: [{type:'Email',value:''},{type:'手机',value:'',dial:'+91'}],
+    // v3.1.62 第 4 步 流量/收款 — 按图1 字段重做
+    trafficUrls: [''],
+    payment: { method: 'UPI', ifsc: '', account: '', realName: '', email: '' },
+    // v3.1.60 权限重做(图1):运营 + 报表 两组开关 + 可创建邀请Code上限数量
     perms: {
-      shareCode:true, viewPlayers:true, viewCommission:true, useApi:true, downloadMaterial:true,
-      viewRisk:true, applyWithdraw:true, createSubAgent:false, viewSubAgent:false, viewCrossLayer:false,
+      myAccount: true,
+      codeManage: true,
+      codeLimit: '',
+      reportCode: true,
+      reportPlayer: true,
+      reportRevshare: true,
     },
   });
   // 自行申请代理:打开时用申请资料预填
@@ -745,6 +782,20 @@ function CreateAgentModal({ open, onClose, onSubmit, prefill }) {
             {type:'手机', value:'', dial:'+91'},
           ];
         })(),
+        // v3.1.78 流量/收款 — 用户在专业代理后台注册时未填,审核时显示空(让管理员填)
+        // v3.1.80 收款方式的 Email 是用户银行账户的 email,与 联系方式的 Email 不同,不再 fallback 到 contacts.Email
+        trafficUrls: (() => {
+          const t = prefill._formSnapshot?.trafficUrls;
+          if (t && t.length) return [...t];
+          return [''];
+        })(),
+        payment: {
+          method: 'UPI',
+          ifsc:     prefill._formSnapshot?.ifsc     || '',
+          account:  prefill._formSnapshot?.account  || prefill._formSnapshot?.upiId  || '',
+          realName: prefill._formSnapshot?.realName || prefill._formSnapshot?.holder || '',
+          email:    prefill._formSnapshot?.payEmail || '',
+        },
       }));
       setStep(1);
     }
@@ -773,23 +824,84 @@ function CreateAgentModal({ open, onClose, onSubmit, prefill }) {
     {code:'+52',  name:'墨西哥'},
   ];
 
-  const validate = () => {
+  // v3.1.78 每步必填校验  v3.1.79 报错 inline 渲染,不再用顶部 banner
+  // v3.1.82 Step 2 分润方案 / Step 3 codeLimit / Step 4 流量收款 全部改为非必填
+  const validateStep = (s) => {
     const e = {};
-    if (!form.name) e.name = '代理名称必填';
-    if (!form.loginName) e.loginName = '登录账号必填';
-    if (form.loginName && form.loginName.length < 4) e.loginName = '至少 4 个字符';
-    if (!form.password) e.password = '密码必填';
-    if (form.password && form.password.length < 8) e.password = '至少 8 位';
-    if (!form.contacts[0]?.value || !form.contacts[1]?.value) e.contacts = '至少填写前两项联系方式';
+    if (s === 1) {
+      if (!form.name) e.name = '代理名称必填';
+      if (!form.loginName) e.loginName = '登录账号必填';
+      if (form.loginName && form.loginName.length < 4) e.loginName = '至少 4 个字符';
+      if (!form.password) e.password = '密码必填';
+      if (form.password && form.password.length < 8) e.password = '至少 8 位';
+      if (!form.contacts[0]?.value || !form.contacts[1]?.value) e.contacts = '至少填写前两项联系方式';
+    } else if (s === 2) {
+      const minComm = form.commission?.minCommission;
+      if (minComm === '' || minComm == null) e.minCommission = '最低結算佣金金額必填';
+      const maxComm = form.commission?.maxCommission;
+      if (maxComm === '' || maxComm == null) e.maxCommission = '最高結算佣金上限必填';
+      const plan = form.commission?.plans?.[0];
+      if (!plan) e.plan = '請選擇分潤方案';
+    } else if (s === 3) {
+      if (form.perms?.codeManage) {
+        const limit = form.perms?.codeLimit;
+        if (limit === '' || limit == null || Number(limit) < 1) e.codeLimit = '可創建邀請Code上限數量必填';
+      }
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
+  // 兼容旧调用名(本文件其他地方仍可能调用 validate())
+  const validate = () => validateStep(1);
+
+  // v3.1.82 表单数据变化时,自动重新校验当前 step,清除已修正字段的错误
+  React.useEffect(() => {
+    if (Object.keys(errors).length === 0) return;
+    // 静默校验:只更新当前 step 的错误,不显示新错误(只清除)
+    const next = { ...errors };
+    let changed = false;
+    const check = (key, isInvalid) => {
+      if (key in next && !isInvalid) { delete next[key]; changed = true; }
+    };
+    if (step === 1) {
+      check('name', !form.name);
+      check('loginName', !form.loginName || (form.loginName && form.loginName.length < 4));
+      check('password', !form.password || (form.password && form.password.length < 8));
+      check('contacts', !form.contacts[0]?.value || !form.contacts[1]?.value);
+    } else if (step === 2) {
+      const plan = form.commission?.plans?.[0];
+      check('plan', !plan);
+      const mn = form.commission?.minCommission;
+      check('minCommission', mn === '' || mn == null);
+      const mx = form.commission?.maxCommission;
+      check('maxCommission', mx === '' || mx == null);
+    } else if (step === 3) {
+      if (form.perms?.codeManage) {
+        const limit = form.perms?.codeLimit;
+        check('codeLimit', limit === '' || limit == null || Number(limit) < 1);
+      } else {
+        check('codeLimit', false);
+      }
+    } else if (step === 4) {
+      const traf = (form.trafficUrls || []).filter(Boolean);
+      check('trafficUrls', traf.length === 0);
+      check('pay_account', !form.payment?.account);
+      check('pay_ifsc', !form.payment?.ifsc);
+      check('pay_email', !form.payment?.email);
+      check('pay_realName', !form.payment?.realName);
+    }
+    if (changed) setErrors(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, step]);
 
   const next = () => {
-    if (step === 1 && !validate()) return;
+    if (!validateStep(step)) return;
     setStep(step + 1);
   };
-  const submit = () => onSubmit(form);
+  const submit = () => {
+    if (!validateStep(4)) return;
+    onSubmit(form);
+  };
 
   const updateContact = (idx, key, val) => {
     const next = [...form.contacts];
@@ -813,14 +925,14 @@ function CreateAgentModal({ open, onClose, onSubmit, prefill }) {
       footer={<>
         <button className="btn ghost" onClick={onClose}>取消</button>
         {step > 1 && <button className="btn" onClick={()=>setStep(step-1)}><Icon name="chevronLeft" size={12}/> 上一步</button>}
-        {step < 3 && <button className="btn primary" onClick={next}>下一步：{step===1?'分润模式':'权限配置'} <Icon name="chevronRight" size={12}/></button>}
-        {step === 3 && <button className="btn primary" onClick={submit}><Icon name="check" size={13}/> 创建代理账户</button>}
+        {step < 4 && <button className="btn primary" onClick={next}>下一步：{step===1?'分润模式':step===2?'权限配置':'流量/收款'} <Icon name="chevronRight" size={12}/></button>}
+        {step === 4 && <button className="btn primary" onClick={submit}><Icon name="check" size={13}/> 创建代理账户</button>}
       </>}>
 
-      {/* 步骤指示器 3 步 */}
+      {/* 步骤指示器 4 步 */}
       <div style={{display:'flex',alignItems:'center',marginBottom:22,padding:'0 10px'}}>
         {[
-          {n:1,l:'基本资料'},{n:2,l:'分润模式'},{n:3,l:'权限配置'},
+          {n:1,l:'基本资料'},{n:2,l:'分润模式'},{n:3,l:'权限配置'},{n:4,l:'流量/收款'},
         ].map((s,i,a) => (
           <React.Fragment key={s.n}>
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,minWidth:80}}>
@@ -854,13 +966,21 @@ function CreateAgentModal({ open, onClose, onSubmit, prefill }) {
           </div>
           <div>
             <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>登录账号 <span style={{color:'var(--danger)'}}>*</span></label>
-            <input className={'input ' + (errors.loginName?'error':'')} placeholder="如: AGlatam" value={form.loginName} onChange={e=>setForm({...form,loginName:e.target.value})}/>
-            {errors.loginName && <div className="field-error">{errors.loginName}</div>}
+            {isApplied ? (
+              <div style={{padding:'8px 12px',background:'#f8fafc',border:'1px solid var(--line)',borderRadius:6,fontSize:13,color:'var(--text-1)',height:36,display:'flex',alignItems:'center',fontFamily:'JetBrains Mono'}}>{form.loginName || '—'}</div>
+            ) : <>
+              <input className={'input ' + (errors.loginName?'error':'')} placeholder="如: AGlatam" value={form.loginName} onChange={e=>setForm({...form,loginName:e.target.value})}/>
+              {errors.loginName && <div className="field-error">{errors.loginName}</div>}
+            </>}
           </div>
           <div>
             <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>初始密码 <span style={{color:'var(--danger)'}}>*</span></label>
-            <input className={'input ' + (errors.password?'error':'')} type="password" placeholder="至少 8 位" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/>
-            {errors.password && <div className="field-error">{errors.password}</div>}
+            {isApplied ? (
+              <div style={{padding:'8px 12px',background:'#f8fafc',border:'1px solid var(--line)',borderRadius:6,fontSize:13,color:'var(--text-1)',height:36,display:'flex',alignItems:'center',fontFamily:'JetBrains Mono',letterSpacing:'0.1em'}}>{form.password ? '••••••••' : '—'}</div>
+            ) : <>
+              <input className={'input ' + (errors.password?'error':'')} type="password" placeholder="至少 8 位" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/>
+              {errors.password && <div className="field-error">{errors.password}</div>}
+            </>}
           </div>
           {!isApplied && <div>
             <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>代理类型 <span style={{color:'var(--danger)'}}>*</span></label>
@@ -943,28 +1063,121 @@ function CreateAgentModal({ open, onClose, onSubmit, prefill }) {
           <window.CommissionModeForm
             value={form.commission}
             onChange={c=>setForm({...form, commission:c})}
-            onJumpPlanMgr={()=>{ /* 在弹窗內,不跳轉 — 如需跳轉可在这里 onClose+路由 */ 
+            errors={errors}
+            onJumpPlanMgr={() => {
               if (typeof window.goRoute === 'function') { onClose(); window.goRoute('mod:revshare'); }
-            }}
-          />
+            }}/>
         </div>
       )}
 
       {step === 3 && (
-        <div style={{padding:'6px 4px'}}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px 32px'}}>
-            {[
-              ['shareCode','可创建分享Code'],['viewRisk','可查看风控名单'],
-              ['viewPlayers','可查看玩家列表'],['applyWithdraw','可申请提款'],
-              ['viewCommission','可查看佣金'],['createSubAgent','可创建下级代理'],
-              ['useApi','可使用 API'],['viewSubAgent','可查看下级代理'],
-              ['downloadMaterial','可下载素材'],['viewCrossLayer','可查看下级跨层数据'],
-            ].map(([k,label]) => (
-              <div key={k} style={{display:'flex',alignItems:'center',padding:'4px 0'}}>
-                <span style={{flex:1,fontSize:13.5,color:'var(--text-0)'}}>{label}</span>
-                <Switch on={form.perms[k]} onChange={()=>togglePerm(k)}/>
+        <div style={{padding:'4px 4px 10px'}}>
+          <window.AgentPermsForm
+            value={form.perms}
+            onChange={p => {
+              setForm({...form, perms: p});
+              // v3.1.82 清除已满足的错误
+              setErrors(prev => {
+                if (!prev) return prev;
+                const next = {...prev};
+                if (!p.codeManage || (p.codeLimit !== '' && p.codeLimit != null && Number(p.codeLimit) >= 1)) {
+                  delete next.codeLimit;
+                }
+                return next;
+              });
+            }}
+            errors={errors}/>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div style={{padding:'4px 4px 10px'}}>
+          {/* —— 流量来源链接 —— */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:13, color:'var(--text-0)', fontWeight:500, marginBottom:8}}>流量來源鏈接<span style={{color:'var(--text-3)',fontWeight:400,marginLeft:6,fontSize:12}}>(選填)</span></div>
+            {(form.trafficUrls || ['']).map((u, i) => (
+              <div key={i} style={{display:'flex', gap:8, alignItems:'center', marginBottom:8}}>
+                <input
+                  className="input"
+                  style={{flex:1, fontFamily:'JetBrains Mono'}}
+                  placeholder="https://agentp0.netlify.app/"
+                  value={u}
+                  onChange={e => {
+                    const next = [...form.trafficUrls];
+                    next[i] = e.target.value;
+                    setForm({...form, trafficUrls: next});
+                  }}
+                />
+                {form.trafficUrls.length > 1 && (
+                  <button type="button" className="contact-remove" onClick={() => {
+                    setForm({...form, trafficUrls: form.trafficUrls.filter((_,j) => j !== i)});
+                  }}>−</button>
+                )}
               </div>
             ))}
+            <button
+              type="button"
+              onClick={() => setForm({...form, trafficUrls: [...(form.trafficUrls || []), '']})}
+              style={{
+                width:'100%', padding:'10px', marginTop:4,
+                background:'#f0f7ff', border:'1px dashed #93c5fd',
+                borderRadius:6, color:'#2563eb', fontSize:12.5, fontWeight:500,
+                cursor:'pointer',
+              }}
+            >+新增流量來源鏈接</button>
+          </div>
+
+          {/* —— 收款方式 2x3 grid —— */}
+          <div className="form-grid">
+            <div>
+              <label className="text-soft" style={{fontSize:12, display:'block', marginBottom:6}}>收款方式</label>
+              <div style={{
+                padding:'8px 12px', background:'#f8fafc',
+                border:'1px solid var(--line)', borderRadius:6,
+                fontSize:13, color:'var(--text-1)',
+                height:36, display:'flex', alignItems:'center',
+              }}>UPI</div>
+            </div>
+            <div></div>
+            <div>
+              <label className="text-soft" style={{fontSize:12, display:'block', marginBottom:6}}>Account</label>
+              <input
+                className="input"
+                placeholder="請輸入"
+                value={form.payment.account || ''}
+                onChange={e => setForm({...form, payment: {...form.payment, account: e.target.value}})}
+                style={{fontFamily:'JetBrains Mono'}}
+              />
+            </div>
+            <div>
+              <label className="text-soft" style={{fontSize:12, display:'block', marginBottom:6}}>IFSC</label>
+              <input
+                className="input"
+                placeholder="請輸入"
+                value={form.payment.ifsc || ''}
+                onChange={e => setForm({...form, payment: {...form.payment, ifsc: e.target.value}})}
+                style={{fontFamily:'JetBrains Mono'}}
+              />
+            </div>
+            <div>
+              <label className="text-soft" style={{fontSize:12, display:'block', marginBottom:6}}>Email</label>
+              <input
+                className="input"
+                placeholder="請輸入"
+                value={form.payment.email || ''}
+                onChange={e => setForm({...form, payment: {...form.payment, email: e.target.value}})}
+                style={{fontFamily:'JetBrains Mono'}}
+              />
+            </div>
+            <div>
+              <label className="text-soft" style={{fontSize:12, display:'block', marginBottom:6}}>Real Name</label>
+              <input
+                className="input"
+                placeholder="請輸入"
+                value={form.payment.realName || ''}
+                onChange={e => setForm({...form, payment: {...form.payment, realName: e.target.value}})}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -981,35 +1194,34 @@ function AgentDetail({ agent, onClose }) {
   const _normComm = (c) => (c && typeof c === 'object') ? { ..._defaultComm, ...c, plans: c.plans && c.plans.length ? c.plans : [''] } : _defaultComm;
   const [comm, setComm] = React.useState(_normComm(agent._comm));
   const [perms, setPerms] = React.useState(agent._perms || {
-    shareCode:true, viewPlayers:true, viewCommission:true, useApi:true, downloadMaterial:true,
-    viewRisk:true, applyWithdraw:true, createSubAgent:false, viewSubAgent:false, viewCrossLayer:false,
+    myAccount: true, codeManage: true, codeLimit: '',
+    reportCode: true, reportPlayer: true, reportRevshare: true,
   });
   const [name, setName] = React.useState(agent.name);
   const [loginName, setLoginName] = React.useState(agent._appData?.loginName || (agent.name||'').replace(/[^A-Za-z]/g,'').toLowerCase() || 'agent');
   const [note, setNote] = React.useState(agent.note || '');
   // v3.0.15 流量来源 + 收款方式
+  // v3.1.84 移除默认 youtube/t.me 假数据 — 没数据时返回 [''] 一行空 input
   const _defaultTraffic = () => {
     if (agent._traffic && agent._traffic.length) return [...agent._traffic];
-    // v3.0.59 优先用申请时填的 trafficUrls(从 _appData._formSnapshot 来)
     const snapTraffic = agent._appData?._formSnapshot?.trafficUrls;
     if (snapTraffic && snapTraffic.length) {
       const cleaned = snapTraffic.filter(Boolean);
       if (cleaned.length) return cleaned;
     }
-    // 默认 2 个示例频道
-    return [
-      'https://youtube.com/@' + (agent.name || 'agent').toLowerCase().replace(/\s/g,''),
-      'https://t.me/' + (agent.name || 'agent').toLowerCase().replace(/\s/g,'') + '_channel',
-    ];
+    return [''];
   };
-  // v3.0.59 收款方式优先用申请时填的(快照里没有就为空)
+  // v3.1.67 收款方式 5 字段(method/ifsc/account/realName/email);兼容旧 _payment.upiId/holder
+  // v3.1.80 email 仅用支付邮箱(payEmail),不再 fallback 到联系方式的 Email
   const _defaultPayment = () => {
-    if (agent._payment) return agent._payment;
-    const snap = agent._appData?._formSnapshot;
+    const old = agent._payment || {};
+    const snap = agent._appData?._formSnapshot || {};
     return {
-      method: 'UPI',
-      upiId: snap?.upiId || '',
-      holder: snap?.holder || '',
+      method:   old.method   || 'UPI',
+      ifsc:     old.ifsc     || snap.ifsc     || '',
+      account:  old.account  || snap.account  || old.upiId  || snap.upiId  || '',
+      realName: old.realName || snap.realName || old.holder || snap.holder || '',
+      email:    old.email    || snap.payEmail || '',
     };
   };
   const [traffic, setTraffic] = React.useState(_defaultTraffic());
@@ -1020,8 +1232,8 @@ function AgentDetail({ agent, onClose }) {
     setNote(agent.note || '');
     setComm(_normComm(agent._comm));
     setPerms(agent._perms || {
-      shareCode:true, viewPlayers:true, viewCommission:true, useApi:true, downloadMaterial:true,
-      viewRisk:true, applyWithdraw:true, createSubAgent:false, viewSubAgent:false, viewCrossLayer:false,
+      myAccount: true, codeManage: true, codeLimit: '',
+      reportCode: true, reportPlayer: true, reportRevshare: true,
     });
     setEditing(false);
   }, [agent.id]);
@@ -1088,8 +1300,8 @@ function AgentDetail({ agent, onClose }) {
     setNote(agent.note || '');
     setComm(_normComm(agent._comm));
     setPerms(agent._perms || {
-      shareCode:true, viewPlayers:true, viewCommission:true, useApi:true, downloadMaterial:true,
-      viewRisk:true, applyWithdraw:true, createSubAgent:false, viewSubAgent:false, viewCrossLayer:false,
+      myAccount: true, codeManage: true, codeLimit: '',
+      reportCode: true, reportPlayer: true, reportRevshare: true,
     });
     setTraffic(_defaultTraffic());
     setPayment(_defaultPayment());
@@ -1225,20 +1437,7 @@ function AgentDetail({ agent, onClose }) {
 
         {tab === 'perms' && (
           <div style={{padding:'4px 0',opacity: editing ? 1 : 0.85, pointerEvents: editing ? 'auto' : 'none'}}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px 28px'}}>
-              {[
-                ['shareCode','可创建分享Code'],['viewRisk','可查看风控名单'],
-                ['viewPlayers','可查看玩家列表'],['applyWithdraw','可申请提款'],
-                ['viewCommission','可查看佣金'],['createSubAgent','可创建下级代理'],
-                ['useApi','可使用 API'],['viewSubAgent','可查看下级代理'],
-                ['downloadMaterial','可下载素材'],['viewCrossLayer','可查看下级跨层数据'],
-              ].map(([k,label]) => (
-                <div key={k} style={{display:'flex',alignItems:'center',padding:'4px 0'}}>
-                  <span style={{flex:1,fontSize:13,color:'var(--text-0)'}}>{label}</span>
-                  <Switch on={perms[k]} onChange={()=>setPerms({...perms,[k]:!perms[k]})}/>
-                </div>
-              ))}
-            </div>
+            <window.AgentPermsForm value={perms} onChange={setPerms}/>
           </div>
         )}
 
@@ -1275,35 +1474,11 @@ function AgentDetail({ agent, onClose }) {
 
         {tab === 'payment' && (
           <div style={{padding:'4px 0'}}>
-            <div className="ad-section-title">收款方式</div>
-            <div className="ad-info-card">
-              <div className="ad-info-grid">
-                <div>
-                  <span className="ad-k">付款方式:</span>
-                  <span className="ad-v">
-                    <span style={{padding:'2px 10px',background:'#dbeafe',color:'#1e40af',borderRadius:99,fontSize:12,fontWeight:600}}>UPI</span>
-                  </span>
-                </div>
-                <div></div>
-                <div>
-                  <span className="ad-k">UPI ID:</span>
-                  {editing
-                    ? <input className="input sm" value={payment.upiId || ''} onChange={e=>setPayment({...payment,upiId:e.target.value})} placeholder="example@paytm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',fontFamily:'JetBrains Mono'}}/>
-                    : <span className="ad-v text-mono">{payment.upiId || '-'}</span>}
-                </div>
-                <div></div>
-                <div>
-                  <span className="ad-k">收款人姓名:</span>
-                  {editing
-                    ? <input className="input sm" value={payment.holder || ''} onChange={e=>setPayment({...payment,holder:e.target.value})} placeholder="持卡人姓名" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%'}}/>
-                    : <span className="ad-v">{payment.holder || '-'}</span>}
-                </div>
-                <div></div>
-              </div>
-            </div>
-            <div style={{marginTop:12,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
-              <Icon name="info" size={12}/> 当前阶段仅支持 UPI 付款,后续如开放其他渠道(银行 / USDT / Skrill 等)会在此处增加选项
-            </div>
+            <window.PaymentInfoView
+              editing={editing}
+              value={payment}
+              onChange={setPayment}
+            />
           </div>
         )}
 
@@ -1385,6 +1560,12 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
         trafficUrls: (snap.trafficUrls && snap.trafficUrls.length) ? [...snap.trafficUrls] : [''],
         upiId: snap.upiId || '',
         holder: snap.holder || '',
+        // v3.1.64 收款方式 5 字段
+        ifsc:     snap.ifsc     || '',
+        account:  snap.account  || snap.upiId  || '',
+        realName: snap.realName || snap.holder || '',
+        // v3.1.80 仅用 payEmail，不再 fallback 到联系方式 Email
+        email:    snap.payEmail || '',
         remark: snap.remark || '',
       });
       setEditing(false);
@@ -1407,7 +1588,7 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
             // v3.0.83 登入帐号 / 登入密码 不可编辑,保持原值
             contact: primaryContact || a.contact,
             channels: trafficList || contactList || a.channels,
-            _formSnapshot: { ...(a._formSnapshot || {}), contacts: draft.contacts, trafficUrls: draft.trafficUrls, upiId: draft.upiId, holder: draft.holder, remark: draft.remark },
+            _formSnapshot: { ...(a._formSnapshot || {}), contacts: draft.contacts, trafficUrls: draft.trafficUrls, upiId: draft.upiId, holder: draft.holder, ifsc: draft.ifsc, account: draft.account, realName: draft.realName, payEmail: draft.email, remark: draft.remark },
             updatedAt: nowStr,
             _logs: [...(a._logs || []), { at: nowStr, by: '商户:管理员-randy', type:'edit', note:'编辑申请资料 / 流量来源 / 收款方式' }],
           }
@@ -1431,6 +1612,12 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
       trafficUrls: (snap.trafficUrls && snap.trafficUrls.length) ? [...snap.trafficUrls] : [''],
       upiId: snap.upiId || '',
       holder: snap.holder || '',
+      // v3.1.64 收款方式 5 字段
+      ifsc:     snap.ifsc     || '',
+      account:  snap.account  || snap.upiId  || '',
+      realName: snap.realName || snap.holder || '',
+      // v3.1.80 仅用 payEmail，不再 fallback 到联系方式 Email
+      email:    snap.payEmail || '',
       remark: snap.remark || '',
     });
     setEditing(false);
@@ -1636,30 +1823,17 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
                 </div>
               ) : detailTab==='payment' ? (
                 <div style={{padding:'4px 0'}}>
-                  <div className="ad-section-title">收款方式</div>
-                  <div className="ad-info-card">
-                    <div className="ad-info-grid">
-                      <div><span className="ad-k">付款方式:</span><span className="ad-v"><span style={{padding:'2px 10px',background:'#dbeafe',color:'#1e40af',borderRadius:99,fontSize:12,fontWeight:600}}>UPI</span></span></div>
-                      <div></div>
-                      <div>
-                        <span className="ad-k">UPI ID:</span>
-                        {editing
-                          ? <input className="input sm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',fontFamily:'JetBrains Mono',marginLeft:4}} placeholder="example@paytm" value={draft?.upiId||''} onChange={e=>setDraft({...draft,upiId:e.target.value})}/>
-                          : <span className="ad-v text-mono">{detail._formSnapshot?.upiId || '—'}</span>}
-                      </div>
-                      <div></div>
-                      <div>
-                        <span className="ad-k">收款人姓名:</span>
-                        {editing
-                          ? <input className="input sm" style={{height:24,fontSize:13,padding:'2px 8px',width:'70%',marginLeft:4}} placeholder="持卡人姓名" value={draft?.holder||''} onChange={e=>setDraft({...draft,holder:e.target.value})}/>
-                          : <span className="ad-v">{detail._formSnapshot?.holder || '—'}</span>}
-                      </div>
-                      <div></div>
-                    </div>
-                  </div>
-                  <div style={{marginTop:12,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
-                    <Icon name="info" size={12}/> 当前阶段仅支持 UPI 付款,后续如开放其他渠道(银行 / USDT / Skrill 等)会在此处增加选项
-                  </div>
+                  <window.PaymentInfoView
+                    editing={editing}
+                    value={{
+                      method:   'UPI',
+                      ifsc:     draft?.ifsc     || '',
+                      account:  draft?.account  || '',
+                      realName: draft?.realName || '',
+                      email:    draft?.email    || '',
+                    }}
+                    onChange={(next) => setDraft({...draft, ...next})}
+                  />
                 </div>
               ) : <>
               <div className="ad-section-title">基本资料</div>
@@ -1771,7 +1945,8 @@ function SelfApplicationsList({ toast, onCreateAgent, tpls }) {
                 </>)}
               </div>
             )}
-            {detailTab==='basic' && !editing && (
+            {/* v3.1.65 申请审核行 — 所有 tab 都显示(原仅 basic) */}
+            {!editing && (
               <div className="agent-detail-foot" style={{justifyContent:'space-between',alignItems:'center'}}>
                 <div style={{fontSize:13,color:'var(--text-1)'}}>申请进度: <span style={{color:APP_STATE_META[detail.state].fg,fontWeight:600}}>{APP_STATE_META[detail.state].label}</span></div>
                 {(detail.state==='reviewing'||detail.state==='supplement'||detail.state==='supplemented') && (
@@ -2114,3 +2289,169 @@ function TplConfigModal({ open, tpls, onClose, onSave, onReset }) {
     </AM>
   );
 }
+
+// =============================================================
+// v3.1.67 收款方式 视图(自行申请代理 + 已创建代理 共用)
+// 布局:收款方式(整宽,锁定 UPI) → Account/IFSC → Email/Real Name
+// props: { editing, value:{method,ifsc,account,realName,email}, onChange }
+// =============================================================
+window.PaymentInfoView = function PaymentInfoView({ editing, value, onChange }) {
+  const v = value || { method:'UPI', ifsc:'', account:'', realName:'', email:'' };
+  const set = (patch) => onChange && onChange({ ...v, ...patch });
+  const monoFont = 'JetBrains Mono';
+
+  const lockedBox = (
+    <div style={{
+      padding:'8px 12px', background:'#f8fafc',
+      border:'1px solid var(--line)', borderRadius:6,
+      fontSize:13, color:'var(--text-1)',
+      height:36, display:'flex', alignItems:'center',
+    }}>UPI</div>
+  );
+
+  const roStyle = {
+    width:'100%', padding:'8px 12px', fontSize:13, height:36,
+    border:'1px solid var(--line)', borderRadius:6,
+    background:'var(--bg-2)', color:'var(--text-1)',
+    outline:'none', cursor:'not-allowed', boxSizing:'border-box',
+  };
+
+  const Field = ({ label, children }) => (
+    <div>
+      <label style={{fontSize:12, color:'var(--text-2)', display:'block', marginBottom:6}}>{label}</label>
+      {children}
+    </div>
+  );
+
+  // v3.1.78 placeholder 改为「請輸入」;只读态没值时显示空白(不再带 fallback 示例值)
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <Field label="收款方式">{lockedBox}</Field>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="Account">
+          {editing
+            ? <input className="input" value={v.account || ''} placeholder="請輸入"
+                onChange={e=>set({account:e.target.value})} style={{fontFamily:monoFont}}/>
+            : <input readOnly value={v.account || ''} placeholder="請輸入" style={{...roStyle, fontFamily:monoFont}}/>}
+        </Field>
+        <Field label="IFSC">
+          {editing
+            ? <input className="input" value={v.ifsc || ''} placeholder="請輸入"
+                onChange={e=>set({ifsc:e.target.value})} style={{fontFamily:monoFont}}/>
+            : <input readOnly value={v.ifsc || ''} placeholder="請輸入" style={{...roStyle, fontFamily:monoFont}}/>}
+        </Field>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="Email">
+          {editing
+            ? <input className="input" value={v.email || ''} placeholder="請輸入"
+                onChange={e=>set({email:e.target.value})} style={{fontFamily:monoFont}}/>
+            : <input readOnly value={v.email || ''} placeholder="請輸入" style={{...roStyle, fontFamily:monoFont}}/>}
+        </Field>
+        <Field label="Real Name">
+          {editing
+            ? <input className="input" value={v.realName || ''} placeholder="請輸入"
+                onChange={e=>set({realName:e.target.value})}/>
+            : <input readOnly value={v.realName || ''} placeholder="請輸入" style={roStyle}/>}
+        </Field>
+      </div>
+    </div>
+  );
+};
+
+// v3.1.82 PermRow / PermSectionCard 提取到组件外,避免每次 render 重建组件类型导致 input 失焦
+function _AgentPermRow({ label, on, onToggle }) {
+  return (
+    <div style={{
+      display:'flex', alignItems:'center', padding:'10px 0',
+    }}>
+      <span style={{flex:1, fontSize:13.5, color:'var(--text-0)'}}>{label}</span>
+      <Switch on={!!on} onChange={onToggle}/>
+    </div>
+  );
+}
+function _AgentPermSectionCard({ title, children }) {
+  return (
+    <div style={{marginBottom:18}}>
+      <div style={{fontSize:13, color:'var(--text-1)', fontWeight:500, marginBottom:8}}>{title}</div>
+      <div style={{
+        border:'1px solid var(--line)', borderRadius:8,
+        padding:'4px 14px', background:'#fff',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+window.AgentPermsForm = function AgentPermsForm({ value, onChange, errors }) {
+  const E = errors || {};
+  const v = value || {
+    myAccount: true, codeManage: true, codeLimit: '',
+    reportCode: true, reportPlayer: true, reportRevshare: true,
+  };
+  const set = (patch) => onChange({ ...v, ...patch });
+
+  return (
+    <div>
+      {/* —— 运营 —— */}
+      <_AgentPermSectionCard title="運營">
+        <_AgentPermRow
+          label="我的帳戶 (查看)"
+          on={v.myAccount}
+          onToggle={() => set({ myAccount: !v.myAccount })}
+        />
+        <div style={{borderTop:'1px solid var(--line-soft)'}}/>
+        <_AgentPermRow
+          label="Code與鏈接管理 (查看/編輯)"
+          on={v.codeManage}
+          onToggle={() => set({ codeManage: !v.codeManage })}
+        />
+        {v.codeManage && (
+          <div style={{padding:'4px 0 14px'}}>
+            <div style={{fontSize:12.5, color:'var(--text-1)', marginBottom:6}}>
+              可創建邀請Code上限數量<span style={{color:'var(--danger)'}}>*</span>
+            </div>
+            <input
+              type="number"
+              min="1"
+              value={v.codeLimit ?? ''}
+              onChange={e => set({ codeLimit: e.target.value === '' ? '' : Number(e.target.value) })}
+              placeholder="最少輸入 1"
+              style={{
+                width:'100%', padding:'8px 12px', fontSize:13, height:36,
+                border:'1px solid ' + (E.codeLimit ? 'var(--danger)' : 'var(--line)'), borderRadius:6,
+                background:'#fff', color:'var(--text-0)',
+                outline:'none', boxSizing:'border-box',
+              }}
+            />
+            {E.codeLimit && <div className="field-error" style={{marginTop:4}}>{E.codeLimit}</div>}
+          </div>
+        )}
+      </_AgentPermSectionCard>
+
+      {/* —— 报表 —— */}
+      <_AgentPermSectionCard title="報表">
+        <_AgentPermRow
+          label="邀請Code與鏈接管理 (查看)"
+          on={v.reportCode}
+          onToggle={() => set({ reportCode: !v.reportCode })}
+        />
+        <div style={{borderTop:'1px solid var(--line-soft)'}}/>
+        <_AgentPermRow
+          label="玩家損益 (查看)"
+          on={v.reportPlayer}
+          onToggle={() => set({ reportPlayer: !v.reportPlayer })}
+        />
+        <div style={{borderTop:'1px solid var(--line-soft)'}}/>
+        <_AgentPermRow
+          label="分潤報表 (查看)"
+          on={v.reportRevshare}
+          onToggle={() => set({ reportRevshare: !v.reportRevshare })}
+        />
+      </_AgentPermSectionCard>
+    </div>
+  );
+};
