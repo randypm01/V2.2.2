@@ -46,8 +46,8 @@ const PRD_FEATURES = {
     { id:'P0-4', name:'玩家管理', week:'W2-W3', dev:8, status:'done',
       side:'商户后台',
       mapping:[
-        { backend:'merchant', mod:'players', path:'运营 → 玩家管理' },
-        { backend:'agent', mod:'my_players', path:'推广 → 我的玩家' }
+        { backend:'merchant', mod:'players', path:'报表 → 代理玩家损益' },
+        { backend:'agent', mod:'my_players', path:'报表 → 玩家损益' }
       ],
       why:'CPA 与分润必须有干净的玩家数据 — 归属、流水、状态都要可查',
       scope:['玩家列表 + 多维过滤(代理 / Code / VIP / 状态)','充提 / 投注 / NGR 时间线','归属代理与归属链路','玩家详情抽屉(注册信息 / 设备 / 支付方式)','是否计入 CPA / RevShare 标记'],
@@ -72,8 +72,9 @@ const PRD_FEATURES = {
     { id:'P0-7', name:'分润合作模式', week:'W4', dev:6, status:'done',
       side:'共用',
       mapping:[
-        { backend:'merchant', mod:'revshare', path:'收益 → 分润管理' },
-        { backend:'agent', mod:'my_revshare', path:'收益 → 分润报表' }
+        { backend:'merchant', mod:'revshare', path:'运营 → 分润管理' },
+        { backend:'merchant', mod:'agent_revshare', path:'报表 → 代理分润报表' },
+        { backend:'agent', mod:'my_revshare', path:'报表 → 分润报表' }
       ],
       why:'CPA 之外的 RevShare / Hybrid 必须可配,代理在签约时就要确定',
       scope:['CPA / RevShare / Hybrid / 固定奖励 / 阶梯 / 下级抽成','分润周期 / 结算币种 / 最低结算金额','负盈利是否结转','代理分润方案(适用代理 / 层级 / 比例 / 封顶)'],

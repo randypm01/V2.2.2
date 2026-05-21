@@ -2,9 +2,282 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.1.48',
+    date: '2026-05-21',
+    current: true,
+    changes: [
+      { type: 'remove', text: '商户后台 4 个报表页(代理收益 / 代理推广链接 / 代理玩家损益 / 代理分润报表)工具栏右上角「共 N 条」/「共 N 个代理」counter 删除 — 左下角分页已显示总条数,避免重复' },
+    ],
+  },
+  {
+    ver: 'v3.1.47',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理分润报表 信息条改为独立卡片样式:外层灰色背景条 + 内层白底卡片(border + radius 8 + 阴影),与「图2」参考效果一致;estimate / settled tab 共用同一样式' },
+    ],
+  },
+  {
+    ver: 'v3.1.46',
+    date: '2026-05-21',
+    changes: [
+      { type: 'fix', text: '🐛 专业代理后台 → 分润报表「每周/每月结算」切换器没真正切换数据 — 原因:settledList 只构造一次 + estimate info 写死 W26061;改为 settledList useMemo 依赖 cycleType + estimateInfo 由 MR_ESTIMATE_INFO[cycleType] 动态取' },
+      { type: 'add', text: '每周结算:本期预估 W26061 / 已结算 W26054、W26053;每月结算:本期预估 M2606 / 已结算 M2605、M2604;切换后 KPI + 表格用不同 seed 派生(每月数据 ≈ 每周 × 约 6 倍)' },
+      { type: 'modify', text: '切换 cycle 时若选中已结算期不在新列表中,自动重置为新列表首期' },
+    ],
+  },
+  {
+    ver: 'v3.1.45',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 分润报表 副标题:「查看分润结算数据」→「查看本期预估分润与历史结算」(中英 i18n 字典 page.my_revshare.sub 同步)' },
+      { type: 'add', text: '专业代理后台 → 分润报表 副标题下方新增「每周结算 / 每月结算」segmented 切换器(样式同商户后台代理分润报表);默认每周结算' },
+      { type: 'fix', text: 'agent_common.jsx i18n 字典清理:page.my_revshare 两条 add() 之前被合并在同一行尾部还残留「tails」错字,拆成 2 行并修正英文翻译' },
+    ],
+  },
+  {
+    ver: 'v3.1.44',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '商户后台 → 代理分润报表 「每周/每月结算」segmented 右侧新增「说明」按钮(右上 ghost btn);点击弹出说明弹窗' },
+      { type: 'add', text: '说明弹窗 3 个章节：(1)结算周期/结算时间(表格 — 每周一 00:00:00 / 每月 1 号 00:00:00) (2)期编号规则(W26051 / M2605 拆解) (3)结算周期切换规则(到下个月 1 号才生效 + 周→月 / 月→周 双栏说明 + AC100007 例子)' },
+    ],
+  },
+  {
+    ver: 'v3.1.43',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '商户后台 → 代理分润报表 表格「邀请Code」右侧新增「注册时间」列 — 基于 (代理+Code+期+UID) seed 派生近 1~90 天随机时间(稳定不抖动),格式 YYYY/MM/DD HH:mm:ss,可排序;空状态 colSpan 同步 +1' },
+    ],
+  },
+  {
+    ver: 'v3.1.42',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '商户后台 → 代理分润报表 删除「全部代理」选项 — 默认选中代理列表首项(AC100005);头部胶囊不再支持「✕」清除回全部' },
+      { type: 'remove', text: 'KPI 删除「代理总数」(因为已经选中具体代理) + 「盈利户数」(冗余于表格用户状态列);KPI 由 10 张 → 8 张,网格由 5 列 → 4 列布局' },
+      { type: 'add', text: '选中代理头部胶囊 ID·名称 后面新增「当前结算周期」pill — 每周结算(蓝)/ 每月结算(绿),与下拉项的 cycle pill 同步样式' },
+      { type: 'modify', text: '代理选择器下拉每行 状态 pill 范围:从只显示非 active 状态扩展为全部 4 状态都显示(已启用绿/已冻结黄/已停用红/未启用灰)' },
+    ],
+  },
+  {
+    ver: 'v3.1.41',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理分润报表 结算周期切换生效规则 — 周→月或月→周切换都要等「下个月 1 号」才生效。每个代理某一历史期只属于一种结算方式，不会重叠（例如：5 月已是月结算的代理不会同时出现在 W26053/W26054 周结算里）' },
+      { type: 'add', text: '示例数据体现切换：AC100005 一直每周;AC100006 一直每月;AC100007 5/1 起切到每月(之前周;故 weekly W26053/W26054 不出现,只在 monthly M2605/M2606 出现);AC100008 6/1 起切到每周(之前月;故 monthly M2604/M2605 仍出现,M2606 不出现,weekly W26061 出现)' },
+      { type: 'modify', text: '行过滤逻辑:对每期(预估/已结算)按该期 end 时间 + 代理 switchAt 判断该代理是否在该期、该 cycle 下出现;代理选择器下拉始终显示全部 4 个代理(不论 cycle),pill 显示「当前结算周期方案」' },
+    ],
+  },
+  {
+    ver: 'v3.1.40',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理分润报表 「每周结算 / 每月结算」segmented 切换器 位置:从 PageHead 下方 → 移到代理选择器下方(整体顺序:PageHead → 代理选择器 → 每周/每月切换 → Tabs)' },
+      { type: 'modify', text: '规则调整:每个代理同时拥有「每周结算报表 + 每月结算报表」(因为代理可能中途从每周改为每月,两套报表都要保留);两个 cycle 下拉都显示全部 4 个代理' },
+      { type: 'add', text: '代理选择器下拉每项「代理名称」右侧新增 cycle pill — 标注该代理「当前结算周期方案」:每周结算(蓝色 chip)/ 每月结算(绿色 chip);依据 index 派生(偶数 = 每周,奇数 = 每月)' },
+    ],
+  },
+  {
+    ver: 'v3.1.39',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '期号规则统一 — 每周:W + YY + MM + 周序(如 W26051 = 2026 年 5 月第 1 周);每月:M + YY + MM(如 M2605 = 2026 年 5 月)' },
+      { type: 'modify', text: '商户后台 → 代理分润报表 期号:每周 W3/W2/W1 → W26061/W26054/W26053;每月 M6/M5/M4 → M2606/M2605/M2604' },
+      { type: 'modify', text: '代理后台 → 分润报表 期号:本期预估 W3 → W26061;已结算 W2/W1 → W26054/W26053(代理后台暂无每月结算 tab,仅做每周对齐)' },
+    ],
+  },
+  {
+    ver: 'v3.1.38',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理分润报表 表格列顺序调整:「玩家UID」与「邀请Code」位置调换(玩家UID 在前、邀请Code 在后)— 与代理后台 my_revshare 对齐' },
+      { type: 'fix', text: '🐛 代理选择器显示 80 人 — 原因:用户未进入「代理账户管理」时 APS_MERCHANT_AGENTS_STORE 未初始化,fallback 落到 D.agents(假数据 80 条);改为:(1) agents.jsx 把 ensureMerchantAgentsStore 挂到 window.APS_ensureMerchantAgentsStore (2) agent_revshare.jsx mount 时主动调用,确保只读 store 的 4 个真实已创建代理' },
+      { type: 'add', text: '商户后台 → 代理分润报表 「每周结算 / 每月结算」分流代理:偶数 index 代理(AC100005 / AC100007)归每周结算;奇数 index 代理(AC100006 / AC100008)归每月结算 — 反映「每个代理只能选一种结算方式」;切换 cycle 时若原选中代理不在新 cycle 下,自动重置为「全部代理」' },
+      { type: 'modify', text: '每月结算 期号格式:「2026/05 / 2026/04」改为「M5 / M4」;预估期号 「2026/06」改为「M6」 — 与每周结算 Wn 格式对齐' },
+      { type: 'modify', text: '每月结算 周期保持:每月 1 号 00:00:00 ~ 月底 23:59:59(已结算 M5 = 2026/5/1~5/31;M4 = 2026/4/1~4/30;预估 M6 = 2026/6/1~6/30)' },
+    ],
+  },
+  {
+    ver: 'v3.1.37',
+    date: '2026-05-21',
+    changes: [
+      { type: 'fix', text: '🐛 商户后台 → 代理分润报表 页面底部出现重复的「代理分润报表 P0-7 MVP 上线」占位卡片 — 原因:app.jsx 第 637 行 fallback whitelist 漏掉 agent_revshare,导致主路由分发渲染了正常模块的同时，fallback 又渲染了一个占位卡片。把 agent_revshare 加入 whitelist 解决' },
+      { type: 'add', text: '商户后台 → 代理分润报表 PageHead 下方新增「每周结算 / 每月结算」segmented 切换器 — 切换后预估期信息条 + 已结算期下拉同步更新:每周=W3/W2/W1;每月=2026/06/2026/05/2026/04' },
+      { type: 'remove', text: '商户后台 → 代理分润报表 表格 删除「代理ID」+「代理名称」列(15 列 → 13 列;14 列 → 12 列)— 顶部已有代理选择器，列再展示就重复了;搜索框 placeholder 同步精简为「邀请Code / 玩家UID」' },
+    ],
+  },
+  {
+    ver: 'v3.1.36',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '回退 v3.1.35 对「AG000000-本商户」标签的删改 — AG000000 是平台根节点标记(不是 AG 代理范例),保留:agents.jsx 列表 parentLabel + AgentDetail parentLabel + CreateAgentModal 下拉「默认AG000000-本商户」+ agent_profile.jsx parentLabel 4 处全部还原' },
+    ],
+  },
+  {
+    ver: 'v3.1.35',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: 'P0 简化版彻底清理:整個系統只剩 AC(代理後台自行申請),把所有 AG / AP 範例資料 + 引用清掉' },
+      { type: 'modify', text: 'data.js genAgents 80 个范例代理 ID 由 AG100001+ → AC100001+;前 5 笔示例名称由 AG範例1~4 + AP範例6 → AC範例1~5;players/codes/cpa/settlements/risk/logs/alerts 中所有 AG100xxx 引用同步改为 AC100xxx' },
+      { type: 'modify', text: 'modules/agent_common.jsx 当前登录代理 CURRENT_AGENT_ID:AG100007 → AC100006' },
+      { type: 'modify', text: 'modules/my_wallet.jsx 6 条结算交易记录:STL-...-AG100007 → STL-...-AC100006' },
+      { type: 'modify', text: 'modules/agent_notify.jsx 通知中心 2 条结算通知:STL-...-AG100007 → STL-...-AC100006' },
+      { type: 'modify', text: 'modules/frontend.jsx referrer placeholder「如 AG10042」→「如 AC10042」(中英两版)' },
+      { type: 'modify', text: 'app.jsx 顶栏代理胶囊 avatar:删除 isAp 分支(AG=蓝/AP=绿),统一显示 AC + 黄色 (#f59e0b)' },
+      { type: 'modify', text: 'modules/agents.jsx 列表 + 详情 parent label fallback「AG000000-本商户」→「本商户」' },
+      { type: 'modify', text: 'modules/agent_profile.jsx parent label fallback「AG000000-本商户」→「本商户」' },
+      { type: 'modify', text: 'modules/agents.jsx AgentDetail 头像逻辑简化:删除 AG/AP/AC 三态分支,统一为 AC + 黄色' },
+    ],
+  },
+  {
+    ver: 'v3.1.34',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '商户后台 → 代理分润报表 顶部新增「代理选择器」(自定义下拉,在 PageHead 与 Tabs 之间) — placeholder「选择查询的代理ID·代理名称」,选项实时从 APS_MERCHANT_AGENTS_STORE 拉取(代理账户管理已创建代理同步出现)' },
+      { type: 'add', text: '下拉首项「全部代理」+ 显示总人数；每项展示代理ID(蓝色 mono)+ 名称 + 状态 pill(冻结/停用/未启用着色)；空 store 时提示「请先在代理账户管理创建」' },
+      { type: 'add', text: '选中后头部胶囊展示「ID · 名称」+ 「✕」一键清除回「全部代理」；选择后立即筛选 estimate/settled 两期表格 + KPI 同步重算 + 翻页归 1' },
+    ],
+  },
+  {
+    ver: 'v3.1.33',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '专业代理后台 → 分润报表 表格「邀请 Code」右侧新增「注册时间」列 — 4 笔示例玩家固定注册时间(5/12 10:24:31 / 5/05 16:08:54 / 4/18 22:41:09 / 5/14 09:15:42)；本期预估与已结算两期共用；colSpan(空状态)对应 +1' },
+    ],
+  },
+  {
+    ver: 'v3.1.32',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '商户后台 → 报表 → 代理玩家损益 下方新增「代理分润报表」(modules/agent_revshare.jsx) — 商户视角分润报表,与代理后台 my_revshare 对应' },
+      { type: 'add', text: '页面结构 3 tab：本期预估分润 / 已结算分润 / 分润规则；预估期信息条「期號 W3 · 結算狀態 · 週期」；已结算期下拉切换 W2/W1' },
+      { type: 'add', text: 'KPI 10 张：代理总数 / 玩家总数 / 总充值 / 总提款 / 充提差 / 总投注 / 总派彩 / GGR / 预估或结算佣金合计 / 盈利户数比' },
+      { type: 'add', text: '表格 14~15 列(代理 × 玩家 维度)：代理ID / 代理名称 / 邀请Code / 玩家UID / 充值 / 提款 / 充提差 / [当前余额 or 结算余额] / 投注 / 派彩 / GGR / [分润基数(仅已结算)] / 分润比例 / [预估佣金 or 结算佣金] / 用户状态；所有数字列可点击表头排序' },
+      { type: 'add', text: '搜索框 placeholder「代理ID / 代理名称 / 邀请Code / 玩家UID」+ 用户状态筛选(全部/盈利/亏损)+ 共 N 条 counter' },
+      { type: 'add', text: '与既有计算口径对齐：预估佣金 = max(0, 充值 - 提款 - 余额)；结算佣金 = max(0, 上期未结算余额 + 上期佣金基数 + (本期充值 - 提款 - 结算余额)) × 5%' },
+      { type: 'modify', text: 'app.jsx NAV 商户后台「报表」section 新增子项；app.jsx 主路由分发新增 agent_revshare → window.AgentRevshareModule；index.html script 引用 agent_revshare.jsx；prd.jsx P0-7 mapping 新增 merchant/agent_revshare 路径' },
+    ],
+  },
+  {
+    ver: 'v3.1.31',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 玩家损益 / 分润报表 表格列「来源 Code」改为「邀请 Code」— my_players.jsx + my_revshare.jsx fallback 文案 + agent_common.jsx i18n 字典 mp.col.source_code 三处同步(中:邀请 Code;英:Invite Code)' },
+    ],
+  },
+  {
+    ver: 'v3.1.30',
+    date: '2026-05-21',
+    changes: [
+      { type: 'add', text: '专业代理后台 → 玩家损益 表格「来源 Code」右侧新增「注册时间」列 — 5 笔示例玩家分别派生不同 days-ago(3/12/45/1/28 天前),格式 YYYY/MM/DD HH:mm:ss;表格 9 列 → 10 列' },
+    ],
+  },
+  {
+    ver: 'v3.1.29',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '商户后台 → 代理玩家损益 删除「总玩家余额」KPI、表格「玩家余额」列、「总佣金」KPI（KPI 11 张 → 9 张；表格 13 列 → 12 列）— 该报表聚焦损益/GGR，余额与佣金归并到「代理钱包 / 分润管理」专门页查' },
+      { type: 'add', text: '表格「玩家UID」右侧新增「注册时间」列 — 基于行 seed 派生近 1~60 天内随机时间（稳定不抖动），格式 YYYY/MM/DD HH:mm:ss，可点击表头排序' },
+    ],
+  },
+  {
+    ver: 'v3.1.28',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 → 报表 → 玩家损益 重命名「代理玩家损益」 — 侧栏 NAV label + players.jsx PageHead 标题 + prd.jsx P0-4 mapping 路径同步;路由 key 仍为 players' },
+      { type: 'feat', text: '代理玩家损益 整页重做按截图：副标题「查看代理邀请的玩家收益」' },
+      { type: 'feat', text: 'KPI 由 6 张换成 11 张（5+5+1）：玩家总数 / 总首存人数 / 总首存金额 / 总充值金额 / 累计提款金额 / 充提差(±着色) / 总玩家余额 / 总投注 / 总派彩 / GGR(±着色) / 总佣金' },
+      { type: 'feat', text: '表格列由 13 列(全部玩家视角)改为 13 列「代理 × Code × 玩家」维度：代理ID / 代理名称 / 邀请Code / Code 创建时间 / 玩家UID / 首次存款金额 / 充值金额 / 提款金额 / 充提差 / 玩家余额 / 投注 / 派彩 / GGR' },
+      { type: 'add', text: '数据维度扁平化：取代理 store 前 2 个代理 × 每代理 2 个 Code × 每个 Code 1 个示例玩家 = 4 行，与截图一致；货币统一 ₹；所有数字列可点击表头排序(默认充提差 ↓)' },
+      { type: 'add', text: '工具栏：搜索框 placeholder「代理ID / 代理名称 / 邀请Code / 玩家UID」+ 复用 window.TimeRange(近 7/14/30 日 + 双月历自定义)+ 右侧「共 N 条」counter' },
+      { type: 'remove', text: '移除 Tabs(全部/已首存/有效CPA/风控中/已冻结) — 该报表只关注损益，状态/风控/CPA 在「玩家管理 / CPA 管理 / 风控管理」专门页查' },
+      { type: 'remove', text: '移除 VIP/国家/CPA状态/导出筛选下拉 + 详情 Drawer — 同上' },
+    ],
+  },
+  {
+    ver: 'v3.1.27',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '商户后台 → 代理推广链接 删除表格「代理创建时间」列 — 该报表关注 Code 本身的资料，代理创建时间可在「代理账户管理」查' },
+      { type: 'add', text: '表格「邀请Code」右侧新增「Code 创建时间」列 — 基于 (代理+Code) seed 派生近 1～90 天内随机时间（稳定不拖动），格式 YYYY/MM/DD HH:mm，可点击表头排序' },
+      { type: 'fix', text: '范例资料消失 bug — 上版 v3.1.25 把 _pickMixedAgents() 限制为「只挑 AC 开头」误用了不存在的前缀（实际代理 ID 是 AG于商户创建 / AP于自行申请，无 AC）导致表格「共 0 条」；改回取 list 前 3 个代理（不过滤 ID 前缀），范例资料恢复' },
+    ],
+  },
+  {
+    ver: 'v3.1.26',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '代理后台 → 玩家损益 移除「VIP 等级」筛选下拉(全部 VIP)与表格「VIP 等级」列 — 代理视角下 VIP 等级非关键决策字段,精简后工具栏剩搜索 + 时间维度,表格 10 列 → 9 列' },
+    ],
+  },
+  {
+    ver: 'v3.1.25',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理推广链接 表格代理 ID/名称 由「AG + AC 混合」改为「只显示 AC」— _pickMixedAgents() 简化为 .filter(startsWith AC).slice(0, n);AG (商户创建代理)的范例数据不再出现在该报表(报表仅展示「代理后台自行申请」的 AC 代理)' },
+    ],
+  },
+  {
+    ver: 'v3.1.24',
+    date: '2026-05-21',
+    changes: [
+      { type: 'fix', text: '商户后台 → 代理推广链接 邀请 Code 重复问题:原 _codesFor 用代理名前缀生成(AC範例1→AC01,AC範例2→AC01 — 撞码),改为全局 Code 池(CD_GLOBAL_POOL: RANDY01/RANDY02/JACK01/JACK02/LISA01/KEVIN01/TINA01/TINA02/MIKE01/EVA01)按代理顺序依序分配,保证全局唯一' },
+      { type: 'fix', text: '商户后台 → 代理推广链接 代理ID 只有 AC 没有 AG 问题:原 .slice(0,3) 取连续 3 个(都是 AC 自申请的)→ 新增 _pickMixedAgents() 把 list 拆成 AC + AG 两组交替挑选,确保表格能同时看到 AC 与 AG 两种代理 ID' },
+    ],
+  },
+  {
+    ver: 'v3.1.23',
+    date: '2026-05-21',
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理推广链接 范例资料精简 — 代理由 12 个 → 3 个,每个代理 Code 数从 1~3 → 1~2 个,总行数约 3~6 行(与截图 4 行接近)' },
+    ],
+  },
+  {
+    ver: 'v3.1.22',
+    date: '2026-05-21',
+    changes: [
+      { type: 'feat', text: '商户后台 → 报表 → 代理推广链接 整页重做,匹配新截图:标题副标题改「代理推广链接 · 查看所有代理生成 code 链接的收益数据」' },
+      { type: 'feat', text: 'KPI 由 4 张换成 8 张(2 行 × 4):Code 总数量 / 总注册人数 / 总充值人数 / 总充值金额 / 总提款人数 / 总提款金额 / 充值转化率 / 充提差 — 充提差 hero 着色(+绿/-红 + 卡片底色边框)' },
+      { type: 'feat', text: '表格列由 13 列改为 11 列「代理 × Code」维度:代理ID / 代理名称 / 代理创建时间 / 邀请Code / 注册人数 / 充值人数 / 充值金额 / 提款人数 / 提款金额 / 充值转化率 / 充提差 — 移除原 渠道/Campaign/Clicks/FTD/CPA/转化率/佣金/状态/有效期/操作 列' },
+      { type: 'add', text: '数据维度从「单个 Code」改为「代理 × Code」扁平化:每个代理 1~3 个 Code(基于 _displayId 哈希稳定生成),共约 12~24 行;货币统一 ₹' },
+      { type: 'add', text: '工具栏 升级:搜索 placeholder「代理ID / 代理名称 / 邀请Code」+ 复用 window.TimeRange(近 7/14/30 日 + 双月历自定义)+ 右侧「共 N 条」counter — 移除 全部渠道/全部状态/Tabs(Code 列表/数据报表/Tracking Link)/创建 Code 按钮' },
+      { type: 'add', text: '所有 9 个数字列可点击表头排序(↕▲▼),默认按 充提差 ↓;充值转化率阈值色 ≥40% 绿 / ≥28% 默认 / <28% 灰;充提差 ± 前缀 +绿/-红' },
+      { type: 'remove', text: '删除原 QR Code 弹窗 / 创建 Code 弹窗 / CodeReport (TOP 15 ROI) / TrackingLinks 模板 4 块代码 — 报表页不需要创建/编辑/QR 这些功能(归 代理后台 → Code 与链接管理)' },
+    ],
+  },
+  {
+    ver: 'v3.1.21',
+    date: '2026-05-21',
+    current: true,
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理收益 范例资料从全部 80 条精简到前 12 条(.slice(0,12))— 报表演示用,避免列表过长;KPI / 合计仍按筛选后的 12 条聚合' },
+    ],
+  },
+  {
+    ver: 'v3.1.20',
+    date: '2026-05-21',
+    changes: [
+      { type: 'remove', text: '商户后台 → 代理收益 表格 删除「代理名称」旁边的 tier pill(总代理/个人代理/团队代理徽章)' },
+      { type: 'remove', text: '商户后台 → 代理收益 表格 删除「充值金额 / 提款金额」单元格下的 mini bar 进度条' },
+      { type: 'remove', text: '商户后台 → 代理收益 表格 删除「合计(当前筛选)」tfoot 合计行' },
+    ],
+  },
+  {
+    ver: 'v3.1.19',
+    date: '2026-05-21',
+    changes: [
+      { type: 'feat', text: '商户后台 → 报表 → 代理收益 整页重做:KPI 由 4 张换成 9 张(代理总数 / 总注册人数 / 总充值人数 / 总充值金额 / 总提款人数 / 总提款金额 / 充值转化率 / 充提差 / ARPPU),5 + 4 排版 — 与「代理推广链接 / 玩家损益」KPI 词表对齐,货币统一 ₹' },
+      { type: 'feat', text: '表格列由 10 列改为 12 列:代理ID / 代理名称 / 代理创建时间 / Code数量 / 注册人数 / 充值人数 / 充值金额 / 提款人数 / 提款金额 / 充值转化率 / 充提差 / ARPPU — 移除「CPA / 分润 / 本期未结算 / 总收益 / NGR / 玩家数」等旧指标' },
+      { type: 'add', text: '充提差 KPI hero 着色 — 正值绿、负值红 + 卡片细边框+底色 4% 透明度' },
+      { type: 'add', text: '表格视觉强化:充值金额 / 提款金额 各加 2px mini bar(brand 蓝 / warning 黄,相对本页最大值);充值转化率 ≥40% 绿 / ≥28% 默认 / <28% 灰;充提差 +绿/-红 带 ± 前缀;代理名称行内 inline tier pill(个人 / 团队 / 总代理 三色)' },
+      { type: 'add', text: '所有 9 个数字列可点击表头排序(↕ ▲ ▼ 指示器)默认按 充提差 降序;新增 tfoot 合计(当前筛选)行 — 12 列均显示加总' },
+      { type: 'add', text: '工具栏 升级:搜索 placeholder「代理ID / 名称」+ 全部代理类型 下拉(个人/团队/总代理)+ 复用 window.TimeRange(近 7 / 14 / 30 日 + 双月历自定义)+ 右侧「共 N 个代理」counter' },
+      { type: 'add', text: '种子化稳定假数据:基于 agent._displayId 哈希派生 codes / reg / dep / wd / depAmt / wdAmt / arppu,确保每个代理数据稳定不抖动且各代理之间有差异(允许少数代理出现负充提差)' },
+    ],
+  },
+  {
     ver: 'v3.1.18',
     date: '2026-05-20',
-    current: true,
     changes: [
       { type: 'fix', text: '代理后台 → 我的帐户 → 流量来源 tab 显示「未填写流量来源」与商户后台「查看&配置」对不上:复用商户弹窗同款 fallback 逻辑 — 当代理对象无 _formSnapshot.trafficUrls 时,基于 me.name 生成 2 个默认链接(https://youtube.com/@xxx + https://t.me/xxx_channel)' },
     ],

@@ -87,7 +87,8 @@ function App() {
     { section: '报表', icon:'pie', items: [
       { k:'agent_revenue', l:'代理收益', icon:'wallet' },
       { k:'codes', l:'代理推广链接', icon:'link', prd:'P0-3' },
-      { k:'players', l:'玩家损益', icon:'user', prd:'P0-4' },
+      { k:'players', l:'代理玩家损益', icon:'user', prd:'P0-4' },
+      { k:'agent_revshare', l:'代理分润报表', icon:'pie', prd:'P0-7' },
     ]},
   ];
 
@@ -306,9 +307,8 @@ function App() {
           <div className="agent-user-wrap" style={{position:'relative'}}>
             <div className="top-user agent-user-pill" onClick={()=>setAgentUserMenuOpen(v=>!v)} style={{cursor:'pointer'}}>
               {(() => {
-                // v2.4.19 头像前缀根据 agentId 区分:AG=商户创建、AP=自行申请
-                const isAp = String(loggedInAgent.agentId || '').startsWith('AP');
-                return <div className="av" style={{background: isAp ? '#22c55e' : '#3b82f6',color:'#fff'}}>{isAp ? 'AP' : 'AG'}</div>;
+                // v3.1.35 P0 简化版:整個系統只剩 AC(代理後台自行申請),头像统一显示 AC + 黄色
+                return <div className="av" style={{background:'#f59e0b',color:'#fff'}}>AC</div>;
               })()}
               <div className="who"><b>{loggedInAgent.loginName}</b><small className="mono">{loggedInAgent.agentId}</small></div>
               <Icon name="chevronDown" size={12} className="text-mute"/>
@@ -608,6 +608,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'players' && <PlayersModule/>}
             {r.kind === 'mod' && r.k === 'cpa' && <CpaModule/>}
             {r.kind === 'mod' && r.k === 'revshare' && <RevShareModule/>}
+            {r.kind === 'mod' && r.k === 'agent_revshare' && <window.AgentRevshareModule/>}
             {r.kind === 'mod' && r.k === 'agent_levels' && <window.AgentLevelsModule/>}
             {r.kind === 'mod' && r.k === 'agent_revenue' && <window.AgentRevenueModule/>}
             {r.kind === 'mod' && r.k === 'subs' && <window.SubsModule/>}
@@ -630,7 +631,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'multi_currency' && <window.MultiCurrencyModule/>}
             {r.kind === 'mod' && r.k === 'ad_network' && <window.AdNetworkModule/>}
             {r.kind === 'mod' && r.k === 'bi' && <window.BiModule/>}
-            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','agent_revenue','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
+            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','agent_revenue','agent_revshare','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
               const sec = NAV.find(s => s.items.some(i => i.k === r.k));
               const it = sec?.items.find(i => i.k === r.k);
               if (!it) return null;

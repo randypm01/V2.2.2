@@ -1,6 +1,7 @@
 // 专业代理后台 - 共用工具与组件
 // 当前登录代理身份(模拟)
-window.CURRENT_AGENT_ID = 'AG100007';
+// v3.1.35 P0 简化版:整個系統只剩 AC,當前登入身分改為 AC100006
+window.CURRENT_AGENT_ID = 'AC100006';
 
 // ============ v3.0.8 全局语言状态(招募营销页 + 登入后页面共享) ============
 (function() {
@@ -143,7 +144,7 @@ window.CURRENT_AGENT_ID = 'AG100007';
   add('mp.kpi.ggr',            'GGR',          'GGR');
   add('mp.kpi.commission',     '总佣金',       'Total Commission');
   add('mp.col.uid',            '玩家 UID',     'Player UID');
-  add('mp.col.source_code',    '来源 Code',    'Source Code');
+  add('mp.col.source_code',    '邀请 Code',    'Invite Code');
   add('mp.col.vip',            'VIP 等级',     'VIP Level');
   add('mp.col.ftd_amt',        '首次存款金额', 'First Deposit');
   add('mp.col.deposit',        '充值金额',     'Deposit');
@@ -226,7 +227,7 @@ window.CURRENT_AGENT_ID = 'AG100007';
   add('page.my_players.title', '玩家损益', 'Player P&L');
   add('page.my_players.sub',   '查看邀请玩家的清单', 'View list of invited players');
   add('page.my_revshare.title', '分润报表', 'RevShare Report');
-  add('page.my_revshare.sub', '按周期查看您的 RevShare 收益与计算明细', 'View your RevShare earnings and calculation details');
+  add('page.my_revshare.sub', '查看本期预估分润与历史结算', 'View current estimate & historical settlements');
 
   // 登入弹窗
   add('login.title', '专业代理后台', 'Pro Affiliate Portal');

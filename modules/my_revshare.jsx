@@ -20,7 +20,8 @@ const MR_T = (k, fb) => window.t(k, fb);
 function buildPeriodPlayers(agentId, seed) {
   // 用 seed 让不同期数据稍有不同(乘以 0.7 ~ 1.3 之间的系数)
   const factor = 0.7 + (((seed * 31) % 7) / 10);
-  const make = (id, code, vip, dep, wd, wager, balance, isLoss, prevUnsettled, prevBase) => {
+  const fixedReg = ['2026/5/12 10:24:31','2026/5/05 16:08:54','2026/4/18 22:41:09','2026/5/14 09:15:42'];
+  const make = (id, code, vip, dep, wd, wager, balance, isLoss, prevUnsettled, prevBase, regAt) => {
     const deposit  = Math.round(dep * factor);
     const withdraw = Math.round(wd * factor);
     const wagerV   = Math.round(wager * factor);
@@ -39,6 +40,7 @@ function buildPeriodPlayers(agentId, seed) {
     const settledCom = Math.round(base * rate / 100);
     return {
       id, agentId, code, vip,
+      registered: regAt,
       deposit, withdraw, wager: wagerV, payout, ggr,
       balance: balanceV,
       rate,
@@ -54,24 +56,37 @@ function buildPeriodPlayers(agentId, seed) {
   };
   // 参数增加 prevUnsettled / prevBase — 模拟上期结转数据
   return [
-    make('P12354531','RANDY01', 1, 10000, 10000, 10000, 10000, false,  200,  500),
-    make('P12354532','RANDY02', 1, 10000, 10000, 10000, 10000, false,  -100, 300),
-    make('P12354533','RANDY03', 1, 10000, 10000, 10000, 10000, true,   0,    0),
-    make('P12354534','RANDY04', 1, 10000, 10000, 10000, 10000, true,   -800, 0),
+    make('P12354531','RANDY01', 1, 10000, 10000, 10000, 10000, false,  200,  500, fixedReg[0]),
+    make('P12354532','RANDY02', 1, 10000, 10000, 10000, 10000, false,  -100, 300, fixedReg[1]),
+    make('P12354533','RANDY03', 1, 10000, 10000, 10000, 10000, true,   0,    0,   fixedReg[2]),
+    make('P12354534','RANDY04', 1, 10000, 10000, 10000, 10000, true,   -800, 0,   fixedReg[3]),
   ];
 }
 
-// —— 期次列表(已结算)——
-function buildSettledPeriodList() {
+// —— 期次列表(已结算) v3.1.46 按结算周期拆分为 周 / 月 两套
+function buildSettledPeriodList(cycleType) {
+  if (cycleType === 'monthly') {
+    return [
+      { week:'M2605', start:'2026/5/1 00:00:00', end:'2026/5/31 23:59:59', seed: 25 },
+      { week:'M2604', start:'2026/4/1 00:00:00', end:'2026/4/30 23:59:59', seed: 24 },
+    ];
+  }
   return [
-    { week:'W2', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2 },
-    { week:'W1', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1 },
+    { week:'W26054', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2 },
+    { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1 },
   ];
 }
+const MR_ESTIMATE_INFO = {
+  weekly:  { week: 'W26061', period: '2026/6/1 00:00:00 - 2026/6/7 23:59:59',  seed: 3  },
+  monthly: { week: 'M2606',  period: '2026/6/1 00:00:00 - 2026/6/30 23:59:59', seed: 26 },
+};
 
 function MyRevshareModule() {
   const F = window.APS_FMT;
   const me = window.useCurrentAgent();
+
+  // v3.1.45 结算周期 segmented (每周 / 每月)
+  const [cycleType, setCycleType] = React.useState('weekly');
 
   // 3 个 tab
   const [tab, setTab] = React.useState('estimate'); // estimate | settled | rule
@@ -81,12 +96,20 @@ function MyRevshareModule() {
   const [statusF, setStatusF] = React.useState('all'); // all | profit | loss
   const [page, setPage] = React.useState(1);
 
-  // 已结算期 选中哪一期
-  const settledList = React.useMemo(() => buildSettledPeriodList(), []);
+  // 已结算期 选中哪一期 — 随 cycleType 重算
+  const settledList = React.useMemo(() => buildSettledPeriodList(cycleType), [cycleType]);
   const [selectedWeek, setSelectedWeek] = React.useState(settledList[0].week);
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  // 切换 周/月 后,如果选中期不在新列表中,重置为新列表首期
+  React.useEffect(() => {
+    if (!settledList.find(p => p.week === selectedWeek)) {
+      setSelectedWeek(settledList[0].week);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cycleType]);
 
   const selectedPeriod = settledList.find(p => p.week === selectedWeek) || settledList[0];
+  const estimateInfo = MR_ESTIMATE_INFO[cycleType];
 
   // 关闭下拉:外部点击
   const pickerRef = React.useRef(null);
@@ -97,8 +120,8 @@ function MyRevshareModule() {
     return () => document.removeEventListener('mousedown', h);
   }, [pickerOpen]);
 
-  // 当前期数据
-  const estimatePlayers = React.useMemo(() => buildPeriodPlayers(me.id, 3), [me.id]);
+  // 当前期数据 — 随 cycleType 重算(不同 seed 产生不同范例)
+  const estimatePlayers = React.useMemo(() => buildPeriodPlayers(me.id, estimateInfo.seed), [me.id, estimateInfo.seed]);
   const settledPlayers  = React.useMemo(() => buildPeriodPlayers(me.id, selectedPeriod.seed), [me.id, selectedPeriod.seed]);
   const players = tab === 'estimate' ? estimatePlayers : settledPlayers;
 
@@ -131,8 +154,30 @@ function MyRevshareModule() {
     <div className="page">
       <MRUI.PageHead
         title={MR_T('page.my_revshare.title','分润报表')}
-        subtitle={MR_T('page.my_revshare.sub','查看分润结算数据')}
+        subtitle={MR_T('page.my_revshare.sub','查看本期预估分润与历史结算')}
       />
+
+      {/* v3.1.45 结算周期 segmented (每周 / 每月) */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 14, border: '1px solid var(--line)', borderRadius: 8, padding: 4, background: 'var(--bg-2)', width: 'fit-content' }}>
+        {[
+          { k: 'weekly',  l: MR_T('mr.cycle.weekly','每周结算') },
+          { k: 'monthly', l: MR_T('mr.cycle.monthly','每月结算') },
+        ].map(c => (
+          <div key={c.k}
+            onClick={() => { setCycleType(c.k); setPage(1); }}
+            style={{
+              padding: '8px 22px', fontSize: 13.5, cursor: 'pointer', userSelect: 'none',
+              borderRadius: 6, fontWeight: cycleType === c.k ? 600 : 500,
+              background: cycleType === c.k ? '#fff' : 'transparent',
+              color: cycleType === c.k ? 'var(--brand)' : 'var(--text-2)',
+              boxShadow: cycleType === c.k ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+              border: cycleType === c.k ? '1px solid var(--brand)' : '1px solid transparent',
+              transition: 'all .15s',
+            }}>
+            {c.l}
+          </div>
+        ))}
+      </div>
 
       {/* 3 个 tab */}
       <div className="card" style={{padding:0,overflow:'visible'}}>
@@ -149,9 +194,9 @@ function MyRevshareModule() {
             border:'1px solid var(--line)', borderRadius:6,
             display:'flex',alignItems:'center',gap:32,fontSize:12.5
           }}>
-            <InfoCell l={MR_T('mr.info.week','期號')} v="W3"/>
+            <InfoCell l={MR_T('mr.info.week','期號')} v={estimateInfo.week}/>
             <InfoCell l={MR_T('mr.info.status','結算狀態')} v={<span style={{color:'#f59e0b',fontWeight:600}}>{MR_T('mr.info.unsettled','未結算預估分潤')}</span>}/>
-            <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">2026/6/1 00:00:00 - 2026/6/7 23:59:59</span>}/>
+            <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{estimateInfo.period}</span>}/>
           </div>
         )}
 
@@ -222,6 +267,8 @@ function MyRevshareModule() {
               ))}
             </div>
 
+            {/* v3.1.47 工具栏 + 表格 + 分页 用一层 card 包起来 */}
+            <div style={{ border:'1px solid var(--line)', borderRadius:8, background:'#fff', padding:'14px 16px' }}>
             {/* 工具栏 */}
             <div className="toolbar" style={{padding:'0 0 12px'}}>
               <MRUI.SearchInput value={q} onChange={(v)=>{setQ(v);setPage(1);}} placeholder={MR_T('mr.filter.search_ph','玩家UID / 邀请Code')} width={220}/>
@@ -238,7 +285,8 @@ function MyRevshareModule() {
               <table className="tbl">
                 <thead><tr>
                   <th>{MR_T('mr.col.uid','玩家 UID')}</th>
-                  <th>{MR_T('mr.col.source_code','来源 Code')}</th>
+                  <th>{MR_T('mr.col.source_code','邀请 Code')}</th>
+                  <th>{MR_T('mr.col.registered','注册时间')}</th>
                   <th className="right">{MR_T('mr.col.deposit','充值金额')}</th>
                   <th className="right">{MR_T('mr.col.withdraw','提款金额')}</th>
                   <th className="right">{MR_T('mr.col.gap','充提差')}</th>
@@ -268,6 +316,7 @@ function MyRevshareModule() {
                       <tr key={p.id}>
                         <td className="text-mono" style={{color:'var(--text-0)',fontSize:12,fontWeight:600}}>{p.id}</td>
                         <td className="text-mono" style={{color:'var(--brand)',fontSize:11.5}}>{p.code}</td>
+                        <td className="text-mono" style={{color:'var(--text-2)',fontSize:11.5}}>{p.registered}</td>
                         <td className="right text-mono">{money(p.deposit)}</td>
                         <td className="right text-mono">{money(p.withdraw)}</td>
                         <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
@@ -289,7 +338,7 @@ function MyRevshareModule() {
                     );
                   })}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={tab === 'settled' ? 13 : 12} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
+                    <tr><td colSpan={tab === 'settled' ? 14 : 13} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -297,6 +346,7 @@ function MyRevshareModule() {
 
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12,fontSize:12,color:'var(--text-3)'}}>
               <span>{MR_T('mr.pagination.total','共')} {filtered.length} {MR_T('mr.pagination.items','条')} · {MR_T('mr.pagination.page','第')} 1/1 {MR_T('mr.pagination.page_unit','页')}</span>
+            </div>
             </div>
           </div>
         )}

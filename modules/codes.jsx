@@ -1,215 +1,264 @@
-// 分享Code与推广链接
-const UI = window.UI;
+// 商户后台 → 报表 → 代理推广链接  v3.1.22
+// 整页重做,匹配截图:
+//   - 标题 / 副标题:代理推广链接 · 查看所有代理生成 code 链接的收益数据
+//   - KPI 8 张(2 行 × 4):Code 总数量 / 总注册人数 / 总充值人数 / 总充值金额 /
+//                         总提款人数 / 总提款金额 / 充值转化率 / 充提差
+//   - 工具栏:搜索(代理ID/代理名称/邀请Code) + TimeRange(双月历)+ 近7/14/30日
+//   - 表格 11 列(代理 × Code 维度):
+//     代理ID / 代理名称 / 代理创建时间 / 邀请Code /
+//     注册人数 / 充值人数 / 充值金额 / 提款人数 / 提款金额 /
+//     充值转化率 / 充提差
+//   - 货币 ₹,充提差 +绿 / -红,转化率阈值着色
+const CDUI = window.UI;
+
+// —— 稳定哈希(同 agent_revenue 一致风格)
+function _hashSeed(str) {
+  return String(str || 'x').split('').reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 7);
+}
+function _seedFn(seed, offset) {
+  const x = Math.sin(seed * 9301 + offset * 49297) * 10000;
+  return x - Math.floor(x);
+}
+function _seedInt(seed, offset, lo, hi) {
+  return Math.floor(lo + _seedFn(seed, offset) * (hi - lo + 1));
+}
+
+// —— 全局 Code 池 — 保证各代理 Code 不重复(邀请 Code 是全局唯一的)
+const CD_GLOBAL_POOL = [
+  'RANDY01', 'RANDY02',
+  'JACK01', 'JACK02',
+  'LISA01',
+  'KEVIN01',
+  'TINA01', 'TINA02',
+  'MIKE01',
+  'EVA01',
+];
+
+// —— 从 STORE.list 按顺序取前 N 个代理(不过滤 ID 前缀,保证范例资料可见)
+function _pickMixedAgents(list, n) {
+  return (list || []).slice(0, n);
+}
+
+// —— 从稳定 seed 派生 Code 创建日期(近 1～90 天内)
+function _codeCreatedAt(seed) {
+  const daysAgo = _seedInt(seed, 7, 1, 90);
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  d.setHours(_seedInt(seed, 8, 0, 23), _seedInt(seed, 9, 0, 59), 0, 0);
+  return d;
+}
+
+// —— 给定 (代理, code) 派生 stats
+function _statsForRow(agent, code) {
+  const seed = _hashSeed((agent._displayId || agent.id) + ':' + code);
+  const reg = _seedInt(seed, 1, 20, 1800);
+  const cvr = 0.20 + _seedFn(seed, 2) * 0.40;
+  const dep = Math.max(0, Math.round(reg * cvr));
+  const wd = Math.round(dep * (0.28 + _seedFn(seed, 3) * 0.48));
+  const arppu = _seedInt(seed, 4, 40, 480);
+  const depAmt = dep * arppu;
+  const wdAmt = Math.round(depAmt * (0.40 + _seedFn(seed, 5) * 0.95));
+  return { reg, dep, wd, depAmt, wdAmt, cvr };
+}
 
 function CodesModule() {
   const D = window.APS_DATA;
   const F = window.APS_FMT;
-  const toast = UI.useToast();
-  const [codes, setCodes] = React.useState(D.codes);
-  const [tab, setTab] = React.useState('list');
   const [q, setQ] = React.useState('');
-  const [showCreate, setShowCreate] = React.useState(false);
+  const [timeRange, setTimeRange] = React.useState(() => {
+    const end = new Date(); end.setHours(23, 59, 59, 0);
+    const start = new Date(end); start.setDate(end.getDate() - 6); start.setHours(0, 0, 0, 0);
+    return { preset: '7d', start, end };
+  });
+  const [sort, setSort] = React.useState({ k: 'gap', dir: 'desc' });
   const [page, setPage] = React.useState(1);
-  const [showQR, setShowQR] = React.useState(null);
-
-  const filtered = codes.filter(c => !q || (c.code+c.name+c.id).toLowerCase().includes(q.toLowerCase()));
   const pageSize = 12;
-  const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
-  const totalClicks = codes.reduce((a,c)=>a+c.clicks,0);
-  const totalRegs = codes.reduce((a,c)=>a+c.regs,0);
-  const totalFtds = codes.reduce((a,c)=>a+c.ftds,0);
-  const totalCommission = codes.reduce((a,c)=>a+c.commission,0);
+  // —— 取 mixed AC + AG 前 3 个代理 × 1~2 个 Code,以全局 CD_GLOBAL_POOL 依序分配唯一 Code
+  const rawList = _pickMixedAgents(
+    (window.APS_MERCHANT_AGENTS_STORE
+      ? window.APS_MERCHANT_AGENTS_STORE.list
+      : D.agents) || [],
+    3
+  );
+
+  const rows = React.useMemo(() => {
+    const out = [];
+    let poolIdx = 0;
+    rawList.forEach(a => {
+      const seed = _hashSeed(a._displayId || a.id);
+      const n = _seedInt(seed, 0, 1, 2); // 1~2 个 Code
+      for (let i = 0; i < n; i++) {
+        if (poolIdx >= CD_GLOBAL_POOL.length) break;
+        const code = CD_GLOBAL_POOL[poolIdx++];
+        const s = _statsForRow(a, code);
+        const gap = s.depAmt - s.wdAmt;
+        const codeSeed = _hashSeed((a._displayId || a.id) + ':' + code);
+        out.push({
+          key: (a._displayId || a.id) + '_' + code,
+          agentId: a._displayId || a.id,
+          agentName: a.name,
+          codeCreated: _codeCreatedAt(codeSeed),
+          code,
+          reg: s.reg, dep: s.dep, wd: s.wd,
+          depAmt: s.depAmt, wdAmt: s.wdAmt,
+          cvr: s.cvr, gap,
+        });
+      }
+    });
+    return out;
+  }, [rawList]);
+
+  // —— 搜索 + 排序
+  const filtered = rows.filter(r => {
+    if (!q) return true;
+    const t = q.toLowerCase();
+    return r.agentId.toLowerCase().includes(t)
+      || (r.agentName || '').toLowerCase().includes(t)
+      || r.code.toLowerCase().includes(t);
+  });
+  const sorted = [...filtered].sort((a, b) => {
+    const av = a[sort.k] ?? 0, bv = b[sort.k] ?? 0;
+    if (typeof av === 'string') return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sort.dir === 'asc' ? av - bv : bv - av;
+  });
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  // —— KPI 8 张
+  const sum = (k) => sorted.reduce((s, r) => s + (r[k] || 0), 0);
+  const totalReg = sum('reg');
+  const totalDep = sum('dep');
+  const totalWd = sum('wd');
+  const totalDepAmt = sum('depAmt');
+  const totalWdAmt = sum('wdAmt');
+  const totalGap = totalDepAmt - totalWdAmt;
+  const totalCvr = totalReg ? totalDep / totalReg : 0;
+  const codeCount = new Set(sorted.map(r => r.code)).size;
+
+  // —— 排序工具
+  const setSortKey = (k) => {
+    setSort(s => s.k === k ? { k, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { k, dir: 'desc' });
+    setPage(1);
+  };
+  const Th = ({ k, children, right }) => (
+    <th className={right ? 'right' : ''}
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => setSortKey(k)}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {children}
+        <span style={{ fontSize: 9, color: sort.k === k ? 'var(--brand)' : 'var(--text-3)', lineHeight: 1 }}>
+          {sort.k === k ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
+        </span>
+      </span>
+    </th>
+  );
+
+  const fmtDate = (raw) => {
+    if (!raw) return '—';
+    const d = raw instanceof Date ? raw : new Date(raw);
+    if (isNaN(d.getTime())) return String(raw).slice(0, 10).replace(/-/g, '/');
+    const pad = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  };
+  const moneyCell = (n) => '₹' + F.fmtNum(n || 0);
 
   return (
     <div className="page">
-      <UI.PageHead title="代理推广链接" subtitle="为代理生成专属推广 Code、Tracking Link 与 QR Code">
-        <button className="btn"><Icon name="download" size={13}/>导出报表</button>
-        <button className="btn primary" onClick={()=>setShowCreate(true)}><Icon name="plus" size={13}/>创建 Code</button>
-      </UI.PageHead>
+      <CDUI.PageHead title="代理推广链接" subtitle="查看所有代理生成 code 链接的收益数据">
+        <button className="btn"><Icon name="download" size={13} />导出</button>
+      </CDUI.PageHead>
 
-      <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
+      {/* —— KPI 8 张 · 2 行 × 4 —— */}
+      <div className="kpi-grid mb-4" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
         {[
-          ['累计 Clicks', F.fmtNum(totalClicks), '+18.4%', 'up'],
-          ['累计注册', F.fmtNum(totalRegs), '+12.1%', 'up'],
-          ['累计 FTD', F.fmtNum(totalFtds), '+9.8%', 'up'],
-          ['累计佣金', '$'+F.money(totalCommission), '+14.6%', 'up'],
-        ].map(([l,v,d,dir]) => (
-          <div key={l} className="kpi">
-            <div className="label">{l}</div>
-            <div className="val">{v}</div>
-            <div className={'delta '+dir}><Icon name="arrowUp" size={11}/>{d}</div>
+          { l: 'Code 总数量', v: F.fmtNum(codeCount) },
+          { l: '总注册人数', v: F.fmtNum(totalReg) },
+          { l: '总充值人数', v: F.fmtNum(totalDep) },
+          { l: '总充值金额', v: '₹' + F.fmtNum(totalDepAmt) },
+          { l: '总提款人数', v: F.fmtNum(totalWd) },
+          { l: '总提款金额', v: '₹' + F.fmtNum(totalWdAmt) },
+          { l: '充值转化率', v: (totalCvr * 100).toFixed(1) + '%' },
+          {
+            l: '充提差',
+            v: (totalGap >= 0 ? '+' : '-') + '₹' + F.fmtNum(Math.abs(totalGap)),
+            valColor: totalGap >= 0 ? 'var(--success)' : 'var(--danger)',
+            highlight: true,
+          },
+        ].map(k => (
+          <div key={k.l} className="kpi" style={k.highlight ? {
+            borderColor: totalGap >= 0 ? 'rgba(34,197,94,.35)' : 'rgba(239,68,68,.35)',
+            background: totalGap >= 0 ? 'rgba(34,197,94,.04)' : 'rgba(239,68,68,.04)',
+          } : undefined}>
+            <div className="label">{k.l}</div>
+            <div className="val" style={k.valColor ? { color: k.valColor } : undefined}>{k.v}</div>
           </div>
         ))}
       </div>
 
       <div className="card">
-        <UI.Tabs value={tab} onChange={setTab} tabs={[
-          {key:'list',label:'Code 列表',count:codes.length},
-          {key:'report',label:'数据报表'},
-          {key:'tracking',label:'Tracking Link'},
-        ]}/>
         <div className="toolbar">
-          <UI.SearchInput value={q} onChange={setQ} placeholder="Code / 名称 / 代理"/>
-          <select className="filter-select"><option>全部渠道</option>{D.CHANNELS.map(c=><option key={c}>{c}</option>)}</select>
-          <select className="filter-select"><option>全部状态</option><option>已启用</option><option>已暂停</option><option>已过期</option></select>
-          <UI.DateRange value="30d" onChange={()=>{}}/>
-          <span style={{flex:1}}/>
-          <button className="btn sm ghost icon-only"><Icon name="settings" size={14}/></button>
+          <CDUI.SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="代理ID / 代理名称 / 邀请Code" width={260} />
+          {window.TimeRange ? (
+            <window.TimeRange value={timeRange} onChange={(v) => { setTimeRange(v); setPage(1); }} />
+          ) : (
+            <CDUI.DateRange value="7d" onChange={() => {}} />
+          )}
+          <span style={{ flex: 1 }} />
         </div>
+
         <div className="tbl-wrap">
-          {tab === 'list' && (
-            <table className="tbl">
-              <thead><tr>
-                <th>Code / 名称</th><th>代理</th><th>渠道</th><th>Campaign</th>
-                <th className="right">Clicks</th><th className="right">注册</th>
-                <th className="right">FTD</th><th className="right">CPA</th>
-                <th className="right">转化率</th><th className="right">佣金</th>
-                <th>状态</th><th>有效期</th><th style={{width:90}}>操作</th>
-              </tr></thead>
-              <tbody>
-                {paged.map(c => (
-                  <tr key={c.id}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <Th k="agentId">代理ID</Th>
+                <Th k="agentName">代理名称</Th>
+                <Th k="code">邀请Code</Th>
+                <Th k="codeCreated">Code 创建时间</Th>
+                <Th k="reg" right>注册人数</Th>
+                <Th k="dep" right>充值人数</Th>
+                <Th k="depAmt" right>充值金额</Th>
+                <Th k="wd" right>提款人数</Th>
+                <Th k="wdAmt" right>提款金额</Th>
+                <Th k="cvr" right>充值转化率</Th>
+                <Th k="gap" right>充提差</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map(r => {
+                const cvr100 = r.cvr * 100;
+                const cvrColor = cvr100 >= 40 ? 'var(--success)' : cvr100 >= 28 ? 'var(--text-0)' : 'var(--text-2)';
+                return (
+                  <tr key={r.key}>
+                    <td className="id" style={{ color: 'var(--text-0)' }}>{r.agentId}</td>
+                    <td style={{ color: 'var(--text-0)', fontWeight: 500 }}>{r.agentName}</td>
                     <td>
-                      <div className="stack">
-                        <span style={{display:'flex',gap:6,alignItems:'center'}}>
-                          <span className="text-mono" style={{color:'var(--text-0)',fontWeight:600,background:'var(--bg-3)',padding:'1px 6px',borderRadius:3,fontSize:11.5}}>{c.code}</span>
-                          <span style={{color:'var(--text-1)'}}>{c.name}</span>
-                        </span>
-                        <span className="id" style={{fontSize:11}}>{c.id}</span>
-                      </div>
+                      <span className="text-mono" style={{ color: 'var(--text-0)', fontWeight: 600, fontSize: 12 }}>{r.code}</span>
                     </td>
-                    <td className="id">{c.agent}</td>
-                    <td><span className="badge b-neutral">{c.channel}</span></td>
-                    <td className="text-mono text-mute" style={{fontSize:11}}>{c.campaign}</td>
-                    <td className="right">{F.fmtNum(c.clicks)}</td>
-                    <td className="right">{F.fmtNum(c.regs)}</td>
-                    <td className="right">{F.fmtNum(c.ftds)}</td>
-                    <td className="right">{F.fmtNum(c.cpas)}</td>
-                    <td className="right" style={{color: c.regs/c.clicks > 0.15 ? '#6ee7a8' : 'var(--text-2)'}}>
-                      {((c.regs/c.clicks)*100).toFixed(1)}%
-                    </td>
-                    <td className="right" style={{color:'var(--text-0)',fontWeight:500}}>${F.money(c.commission)}</td>
-                    <td><UI.StatusBadge status={c.status}/></td>
-                    <td className="text-mute" style={{fontSize:11}}>{new Date(c.expires).toLocaleDateString('zh-CN')}</td>
-                    <td>
-                      <div style={{display:'flex',gap:4}}>
-                        <button className="btn sm ghost icon-only" title="QR Code" onClick={()=>setShowQR(c)}><Icon name="qr" size={13}/></button>
-                        <button className="btn sm ghost icon-only" title="复制链接" onClick={()=>toast('链接已复制')}><Icon name="copy" size={13}/></button>
-                        <button className="btn sm ghost icon-only"><Icon name="more" size={13}/></button>
-                      </div>
+                    <td className="text-mono" style={{ color: 'var(--text-2)', fontSize: 11.5 }}>{fmtDate(r.codeCreated)}</td>
+                    <td className="right">{F.fmtNum(r.reg)}</td>
+                    <td className="right">{F.fmtNum(r.dep)}</td>
+                    <td className="right">{moneyCell(r.depAmt)}</td>
+                    <td className="right">{F.fmtNum(r.wd)}</td>
+                    <td className="right">{moneyCell(r.wdAmt)}</td>
+                    <td className="right text-mono" style={{ color: cvrColor }}>{cvr100.toFixed(1)}%</td>
+                    <td className="right">
+                      <span className="text-mono" style={{ color: r.gap >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
+                        {(r.gap >= 0 ? '+' : '-')}₹{F.fmtNum(Math.abs(r.gap))}
+                      </span>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {tab === 'report' && <CodeReport codes={codes}/>}
-          {tab === 'tracking' && <TrackingLinks/>}
+                );
+              })}
+              {paged.length === 0 && (
+                <tr><td colSpan={11} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        {tab === 'list' && <UI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>}
+        <CDUI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage} />
       </div>
-
-      <UI.Modal open={!!showQR} onClose={()=>setShowQR(null)} title="分享 Code · QR" subtitle={showQR?.code}>
-        {showQR && (
-          <div style={{textAlign:'center',padding:'10px 20px'}}>
-            <div style={{width:200,height:200,margin:'0 auto',padding:14,background:'#fff',borderRadius:8}}>
-              <svg viewBox="0 0 21 21" style={{width:'100%',height:'100%'}}>
-                {/* fake QR pattern */}
-                {Array.from({length:21}).map((_,r)=>Array.from({length:21}).map((_,c)=>{
-                  const seed = (r*17 + c*7 + showQR.code.charCodeAt(0)) % 7;
-                  const corner = (r<7 && c<7) || (r<7 && c>13) || (r>13 && c<7);
-                  if (corner) {
-                    const isFrame = (r===0||r===6||c===0||c===6) || (r>13 && (r===14||r===20||c===0||c===6)) || (r<7 && c>13 && (r===0||r===6||c===14||c===20));
-                    return seed > 2 ? <rect key={r+'-'+c} x={c} y={r} width="1" height="1" fill="#000"/> : null;
-                  }
-                  return seed > 3 ? <rect key={r+'-'+c} x={c} y={r} width="1" height="1" fill="#000"/> : null;
-                }))}
-              </svg>
-            </div>
-            <div style={{marginTop:16,padding:10,background:'var(--bg-2)',borderRadius:6,fontFamily:'var(--font-mono)',fontSize:11.5,color:'var(--text-1)'}}>
-              https://aff.brand.com/?code={showQR.code}&utm_source={showQR.channel}
-            </div>
-            <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:14}}>
-              <button className="btn sm" onClick={()=>toast('链接已复制')}><Icon name="copy" size={13}/>复制链接</button>
-              <button className="btn sm">下载 QR</button>
-              <button className="btn sm">生成短链</button>
-            </div>
-          </div>
-        )}
-      </UI.Modal>
-
-      <UI.Modal open={showCreate} onClose={()=>setShowCreate(false)} title="创建分享 Code" subtitle="为代理生成专属推广 Code 与 Tracking Link"
-        footer={<><button className="btn ghost" onClick={()=>setShowCreate(false)}>取消</button><button className="btn primary" onClick={()=>{toast('Code 创建成功');setShowCreate(false);}}>创建</button></>}>
-        <div className="form-grid">
-          <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>Code 名称</label><input className="input" placeholder="如: TG-VIP-Q3"/></div>
-          <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>所属代理</label><select className="select"><option>请选择代理</option>{D.agents.slice(0,6).map(a=><option key={a.id}>{a.id} · {a.name}</option>)}</select></div>
-          <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>用途</label><select className="select"><option>注册推广</option><option>VIP 渠道</option><option>活动推广</option></select></div>
-          <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>渠道</label><select className="select">{D.CHANNELS.map(c=><option key={c}>{c}</option>)}</select></div>
-          <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>对应活动</label><select className="select"><option>无</option><option>BR World Cup</option><option>VIP CashBack</option></select></div>
-          <div><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>有效期</label><input className="input" type="date" defaultValue="2026-12-31"/></div>
-          <div className="full"><label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>UTM 参数</label>
-            <div className="grid-3">
-              <input className="input" placeholder="utm_source"/>
-              <input className="input" placeholder="utm_medium"/>
-              <input className="input" placeholder="utm_campaign"/>
-            </div>
-          </div>
-          <div className="full" style={{display:'flex',gap:24,paddingTop:6}}>
-            <label style={{display:'flex',alignItems:'center',gap:8,fontSize:12,color:'var(--text-1)'}}><CheckBox on={true}/> 生成 QR Code</label>
-            <label style={{display:'flex',alignItems:'center',gap:8,fontSize:12,color:'var(--text-1)'}}><CheckBox on={true}/> 生成短链</label>
-            <label style={{display:'flex',alignItems:'center',gap:8,fontSize:12,color:'var(--text-1)'}}><CheckBox on={false}/> 启用 Sub ID</label>
-          </div>
-        </div>
-      </UI.Modal>
-    </div>
-  );
-}
-
-function CodeReport({ codes }) {
-  const F = window.APS_FMT;
-  const top = [...codes].sort((a,b)=>b.commission-a.commission).slice(0,15);
-  const max = top[0]?.commission || 1;
-  return (
-    <div style={{padding:'14px 16px'}}>
-      <div style={{fontSize:12,color:'var(--text-3)',marginBottom:10}}>Code ROI 排行 · TOP 15</div>
-      {top.map(c => (
-        <div key={c.id} style={{display:'grid',gridTemplateColumns:'200px 1fr 100px 100px 100px',gap:12,alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--line-soft)'}}>
-          <div className="stack">
-            <span style={{display:'flex',gap:6,alignItems:'center'}}>
-              <span className="text-mono" style={{color:'var(--text-0)',fontSize:11.5}}>{c.code}</span>
-              <span className="badge b-neutral" style={{fontSize:10}}>{c.channel}</span>
-            </span>
-            <span className="id" style={{fontSize:10.5}}>{c.id}</span>
-          </div>
-          <div className="funnel-bar"><div style={{width:(c.commission/max*100)+'%',background:'#3b82f6'}}>${F.money(c.commission)}</div></div>
-          <div className="text-mono right" style={{textAlign:'right',fontSize:11.5,color:'var(--text-2)'}}>{F.fmtNum(c.clicks)} clicks</div>
-          <div className="text-mono right" style={{textAlign:'right',fontSize:11.5,color:'var(--text-2)'}}>{F.fmtNum(c.cpas)} CPA</div>
-          <div style={{textAlign:'right'}}><span className="badge b-success">×{(c.commission/(c.clicks*0.5)).toFixed(2)}</span></div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TrackingLinks() {
-  return (
-    <div style={{padding:'18px 18px'}}>
-      <div style={{fontSize:12,color:'var(--text-2)',marginBottom:12}}>Tracking Link 模板 · 自动注入 click_id / device_id / campaign_id</div>
-      {[
-        { l:'基础推广链接', t: 'https://aff.brand.com/?code={CODE}' },
-        { l:'Campaign Link', t: 'https://aff.brand.com/?code={CODE}&campaign={CAMPAIGN_ID}&ad={AD_ID}' },
-        { l:'Sub ID Link', t: 'https://aff.brand.com/?code={CODE}&sub1={SUB1}&sub2={SUB2}&click_id={CLICK_ID}' },
-        { l:'渠道链接', t: 'https://aff.brand.com/{CHANNEL}/?code={CODE}&utm_source={SRC}&utm_medium={MED}' },
-      ].map(r => (
-        <div key={r.l} style={{padding:14,background:'var(--bg-2)',border:'1px solid var(--line)',borderRadius:6,marginBottom:10}}>
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-            <span style={{fontSize:12,color:'var(--text-1)',fontWeight:500}}>{r.l}</span>
-            <button className="btn sm ghost"><Icon name="copy" size={12}/>复制</button>
-          </div>
-          <code style={{fontFamily:'var(--font-mono)',fontSize:11.5,color:'var(--brand)',wordBreak:'break-all'}}>{r.t}</code>
-        </div>
-      ))}
     </div>
   );
 }

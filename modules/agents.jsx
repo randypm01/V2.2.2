@@ -386,6 +386,8 @@ function ensureMerchantAgentsStore() {
   } catch (e) { /* noop */ }
   return window.APS_MERCHANT_AGENTS_STORE;
 }
+// v3.1.38 expose 给其他模块（如 agent_revshare）首次访问时主动初始化 store
+window.APS_ensureMerchantAgentsStore = ensureMerchantAgentsStore;
 function useMerchantAgents() {
   const store = ensureMerchantAgentsStore();
   const [, force] = React.useReducer(x => x + 1, 0);
@@ -1098,12 +1100,11 @@ function AgentDetail({ agent, onClose }) {
   const statusCls = { active:'st-active', pending:'st-pending', frozen:'st-frozen', suspended:'st-suspended' };
   const parentLabel = agent.parent ? agent.parent + '-' + (D.agents.find(x=>x.id===agent.parent)?.name || 'Agent') : 'AG000000-本商户';
   const displayId = agent._displayId || agent.id;
-  const createWay = agent._createWay || '商户创建代理';
-  const isApplied = createWay !== '商户创建代理';
-  const avatarText = isApplied ? (agent._channel === 'agentportal' ? 'AC' : 'AP') : 'AG';
-  const avatarBg = isApplied
-    ? (agent._channel === 'agentportal' ? '#f59e0b' : '#10b981')
-    : 'var(--brand)';
+  // v3.1.35 P0 简化版:整個系統只剩 AC,头像统一显示 AC + 黄色
+  const createWay = agent._createWay || '代理后台自行申请';
+  const isApplied = true;
+  const avatarText = 'AC';
+  const avatarBg = '#f59e0b';
   const fmtDT = (d) => {
     const x = new Date(d);
     return x.toISOString().slice(0,10) + ' ' + x.toTimeString().slice(0,8);

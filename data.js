@@ -33,22 +33,20 @@ function genAgents(n=80) {
   for (let i = 0; i < n; i++) {
     const created = Date.now() - srand(1, 720) * 86400000;
     const lastLogin = Date.now() - srand(0, 90) * 86400000;
-    // 前 5 笔示例 status 固定(见下方);未启用(pending)的玩家数固定为 0
-    // v2.4.12 顺序调整:AG×4 在前、AP 在最后(原本 AP 在首行)
+    // v3.1.35 P0 簡化版:整個系統只剩 AC(代理後台自行申請),不再有 AG / AP 範例
+    // 前 5 筆示例 status 固定(供仪表盘/报表展示);未启用(pending)的玩家数固定为 0
     const fixedStatus = i < 5 ? ['pending','active','frozen','suspended','pending'][i] : null;
     const players = fixedStatus === 'pending' ? 0 : srand(0, 4500);
     const commission = srand(0, 250000);
     list.push({
-      // v2.4.13 AG ID 起点改为 AG100001(原 AG100000),让首行(AG範例1)显示为 AG100001
-      id: id('AG', 100001 + i),
-      // 前 5 笔示例代理名称:AG範例1~4 在前、AP範例6 在最后
+      id: id('AC', 100001 + i),
       name: i < 5
-        ? (i === 4 ? 'AP範例6' : `AG範例${i + 1}`)
+        ? `AC範例${i + 1}`
         : spick(FIRST_NAMES) + '_' + spick(['VIP','Pro','Elite','Network','Media','Group','Team','Studio']),
       type: spick(AGENT_TYPES),
       level: srand(1, 5),
       tier: spick(AGENT_LEVELS),
-      parent: i > 5 ? id('AG', 100001 + srand(0, Math.min(i-1, 8))) : null,
+      parent: i > 5 ? id('AC', 100001 + srand(0, Math.min(i-1, 8))) : null,
       // 前 5 笔示例数据固定:依序 未启用/未启用/已启用/已冻结/已停用
       status: fixedStatus || spick(['active','active','active','active','frozen','suspended','pending']),
       country: spick(COUNTRIES),
@@ -82,7 +80,7 @@ function genPlayers(n=200) {
     const ngr = wager * (0.03 + seedRand() * 0.07);
     list.push({
       id: id('P', 800000 + i),
-      agentId: id('AG', 100000 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, 79)),
       codeId: id('C', 7000 + srand(0, 49)),
       country: spick(COUNTRIES),
       currency: spick(CURRENCIES),
@@ -116,7 +114,7 @@ function genCodes(n=50) {
       id: id('C', 7000 + i),
       code: 'PROMO' + String(srand(1000,9999)),
       name: spick(['Summer Push','LATAM Q3','Telegram VIP','TikTok Influence','BR World Cup','PIX Boost','VN Newbie','TH Masters','PH Streamer','Retargeting Burst']),
-      agent: id('AG', 100000 + srand(0, 79)),
+      agent: id('AC', 100001 + srand(0, 79)),
       channel: spick(CHANNELS),
       campaign: 'CMP-' + srand(1000, 9999),
       market: spick(MARKETS),
@@ -142,7 +140,7 @@ function genCpaRecords(n=120) {
     const status = spick(['approved','approved','approved','pending','pending','rejected','risk_hold']);
     list.push({
       id: id('CPA', 50000 + i),
-      agentId: id('AG', 100000 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, 79)),
       playerId: id('P', 800000 + srand(0, 199)),
       ftdAmount: srand(20, 800),
       ftdAt: Date.now() - srand(1, 60) * 86400000,
@@ -171,7 +169,7 @@ function genSettlements(n=40) {
     const total = cpa + rev + sub + adj - risk;
     list.push({
       id: 'STM-2026-' + String(srand(10000, 99999)),
-      agentId: id('AG', 100000 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, 79)),
       period: spick(['2026-W17','2026-W18','2026-W19','2026-04','2026-03']),
       cpa, rev, sub, adj, risk,
       tax: Math.floor(total * 0.05),
@@ -202,7 +200,7 @@ function genRiskPlayers(n=40) {
   for (let i = 0; i < n; i++) {
     list.push({
       id: id('P', 800000 + srand(0, 199)),
-      agentId: id('AG', 100000 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, 79)),
       codeId: id('C', 7000 + srand(0, 49)),
       reason: spick(reasons),
       level: spick(['low','medium','high','critical']),
@@ -219,14 +217,14 @@ function genRiskPlayers(n=40) {
 // ---------- Logs ----------
 function genLogs(n=50) {
   const actions = [
-    { t: 'create_agent', label: '创建代理', target: id('AG', 100000 + srand(0,79)) },
-    { t: 'modify_commission', label: '修改分润方案', target: id('AG', 100000 + srand(0,79)) },
+    { t: 'create_agent', label: '创建代理', target: id('AC', 100001 + srand(0,79)) },
+    { t: 'modify_commission', label: '修改分润方案', target: id('AC', 100001 + srand(0,79)) },
     { t: 'approve_cpa', label: '审核CPA', target: id('CPA', 50000 + srand(0,99)) },
     { t: 'approve_settlement', label: '审核结算单', target: 'STM-2026-' + srand(10000,99999) },
-    { t: 'freeze_commission', label: '冻结佣金', target: id('AG', 100000 + srand(0,79)) },
+    { t: 'freeze_commission', label: '冻结佣金', target: id('AC', 100001 + srand(0,79)) },
     { t: 'approve_withdrawal', label: '审核提款', target: 'WD-' + srand(100000,999999) },
     { t: 'risk_action', label: '风控处理', target: id('P', 800000 + srand(0,199)) },
-    { t: 'modify_agent', label: '修改代理资料', target: id('AG', 100000 + srand(0,79)) },
+    { t: 'modify_agent', label: '修改代理资料', target: id('AC', 100001 + srand(0,79)) },
   ];
   const operators = ['admin','finance.amy','risk.tom','ops.lily','superadmin','audit.chris'];
   const list = [];
@@ -250,9 +248,9 @@ function genLogs(n=50) {
 // ---------- Risk alerts (dashboard) ----------
 function genAlerts() {
   return [
-    { type: 'danger', title: '代理 AG100023 异常CPA率 92%', meta: '近24小时CPA拒绝率超过阈值 · 23 条待复核', icon: 'warn' },
-    { type: 'warning', title: '同IP风险：12 名玩家共享同一IP段', meta: '关联代理 AG100007 · 涉及佣金 $4,820', icon: 'warn' },
-    { type: 'warning', title: '代理 AG100015 提款行为异常', meta: '7 名玩家FTD后24h内提款占比 86%', icon: 'warn' },
+    { type: 'danger', title: '代理 AC100023 异常CPA率 92%', meta: '近24小时CPA拒绝率超过阈值 · 23 条待复核', icon: 'warn' },
+    { type: 'warning', title: '同IP风险：12 名玩家共享同一IP段', meta: '关联代理 AC100007 · 涉及佣金 $4,820', icon: 'warn' },
+    { type: 'warning', title: '代理 AC100015 提款行为异常', meta: '7 名玩家FTD后24h内提款占比 86%', icon: 'warn' },
     { type: 'info', title: '佣金待审核累计 $128,400', meta: '17 张结算单待财务审核', icon: 'info' },
     { type: 'danger', title: '套利团队疑似命中', meta: '5 名玩家投注模式高度相似 · 已暂扣佣金 $2,150', icon: 'warn' },
     { type: 'info', title: '风控规则触发：低质量流量比例 18.3%', meta: '建议复查 Telegram 渠道近7日数据', icon: 'info' },

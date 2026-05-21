@@ -20,7 +20,7 @@ function AgentNotifyModule() {
   // 我收到的通知
   const items = React.useMemo(() => {
     const samples = [
-      { t:'settle', title:'本周结算单已生成', body:'结算编号 STL-2026W19-AG100007 · 应付金额 $2,847.50 · 请在 7 天内确认' },
+      { t:'settle', title:'本周结算单已生成', body:'结算编号 STL-2026W19-AC100006 · 应付金额 $2,847.50 · 请在 7 天内确认' },
       { t:'cpa',    title:'CPA 已通过审核', body:'玩家 PL2024xxx 的 CPA $50 已通过,计入本月收益' },
       { t:'risk',   title:'玩家行为异常告警', body:'玩家 PL2024582 触发风控:首存后 12 小时内提款,该 CPA 暂扣' },
       { t:'campaign', title:'BR 世界杯活动上线', body:'5/20-6/15,玩家 NGR ≥ $200 额外奖励 $20,详见活动详情' },
@@ -33,7 +33,7 @@ function AgentNotifyModule() {
       { t:'campaign', title:'VIP CashBack 活动延期', body:'原定本周结束的 VIP 活动延长至月底,无需重新报名' },
       { t:'system', title:'素材中心 5 月新素材', body:'新增世界杯主题 Banner 28 张 / 视频 6 支,请前往素材中心下载' },
       { t:'cpa',    title:'CPA 已通过审核', body:'玩家 PL2024xxx 的 CPA $50 已通过' },
-      { t:'settle', title:'上周结算单已审核通过', body:'STL-2026W18-AG100007 · 金额 $2,415.80 · 等待付款排期' },
+      { t:'settle', title:'上周结算单已审核通过', body:'STL-2026W18-AC100006 · 金额 $2,415.80 · 等待付款排期' },
       { t:'risk',   title:'多账户共用 IP 提醒', body:'玩家 PL2024301、PL2024319 共用 IP,可能为同人,已介入复核' },
     ];
     return samples.map((s, i) => ({

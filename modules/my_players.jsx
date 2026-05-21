@@ -11,18 +11,23 @@ const MP_T = (k, fb) => window.t(k, fb);
 // v3.0.102 5 条固定示例玩家 — 字段配合新表格列(增加 ftdAmt / playerBalance / payout / commission)
 function buildSamplePlayers(agentId) {
   const days = (n) => Date.now() - n * 86400000;
-  const make = (id, code, vip, ftdAmt, dep, wd, wager, balance) => {
+  const fmtTs = (n) => {
+    const d = new Date(days(n));
+    const pad = (x) => String(x).padStart(2,'0');
+    return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  };
+  const make = (id, code, vip, ftdAmt, dep, wd, wager, balance, regDays) => {
     const payout = Math.round(wager * 0.92);  // 玩家累计赢回(派彩)≈ 投注 × 92%
     const ggr = wager - payout;                 // 平台毛利 = 投注 − 派彩
     const commission = Math.round(ggr * 0.30);  // 代理佣金 ≈ GGR × 30%
-    return { id, agentId, code, vip, ftdAmt, deposit:dep, withdraw:wd, wager, payout, ggr, balance, commission };
+    return { id, agentId, code, vip, ftdAmt, deposit:dep, withdraw:wd, wager, payout, ggr, balance, commission, registered: fmtTs(regDays) };
   };
   return [
-    make('P12354531','RANDY01',1, 100,   1200,  350,   8400,  730),
-    make('P12354532','RANDY02',3, 500,   5800,  2100, 48000, 2150),
-    make('P12354533','RANDY03',5, 2000, 18500,  7200,124000, 4100),
-    make('P12354534','RANDY01',0, 50,    240,   0,    980,   240),
-    make('P12354535','RANDY04',2, 300,   3200,  1500, 21000, 980),
+    make('P12354531','RANDY01',1, 100,   1200,  350,   8400,  730,  3),
+    make('P12354532','RANDY02',3, 500,   5800,  2100, 48000, 2150, 12),
+    make('P12354533','RANDY03',5, 2000, 18500,  7200,124000, 4100, 45),
+    make('P12354534','RANDY01',0, 50,    240,   0,    980,   240,  1),
+    make('P12354535','RANDY04',2, 300,   3200,  1500, 21000, 980,  28),
   ];
 }
 
@@ -30,7 +35,6 @@ function MyPlayersModule() {
   const me = window.useCurrentAgent();
   const F = window.APS_FMT;
   const [q, setQ] = React.useState('');
-  const [vipF, setVipF] = React.useState('all');
   const [timeRange, setTimeRange] = React.useState(() => {
     const end = new Date(); end.setHours(23,59,59,0);
     const start = new Date(end); start.setDate(end.getDate() - 6); start.setHours(0,0,0,0);
@@ -42,7 +46,6 @@ function MyPlayersModule() {
 
   const filtered = players.filter(p => {
     if (q && !(p.id + p.code).toLowerCase().includes(q.toLowerCase())) return false;
-    if (vipF !== 'all' && String(p.vip) !== vipF) return false;
     return true;
   });
   const pageSize = 14;
@@ -94,10 +97,6 @@ function MyPlayersModule() {
       <div className="card">
         <div className="toolbar">
           <APUI.SearchInput value={q} onChange={setQ} placeholder={MP_T('mp.filter.search_ph','玩家 UID / 邀请 Code')} width={220}/>
-          <select className="filter-select" value={vipF} onChange={e=>{setVipF(e.target.value);setPage(1);}}>
-            <option value="all">{MP_T('mp.filter.all_vip','全部 VIP')}</option>
-            {[0,1,2,3,4,5,6,7].map(v=><option key={v} value={v}>VIP {v}</option>)}
-          </select>
           {window.TimeRange && <window.TimeRange value={timeRange} onChange={(v)=>{setTimeRange(v);setPage(1);}}/>}
           <span style={{flex:1}}/>
         </div>
@@ -106,8 +105,8 @@ function MyPlayersModule() {
           <table className="tbl">
             <thead><tr>
               <th>{MP_T('mp.col.uid','玩家 UID')}</th>
-              <th>{MP_T('mp.col.source_code','来源 Code')}</th>
-              <th>{MP_T('mp.col.vip','VIP 等级')}</th>
+              <th>{MP_T('mp.col.source_code','邀请 Code')}</th>
+              <th>{MP_T('mp.col.registered','注册时间')}</th>
               <th className="right">{MP_T('mp.col.ftd_amt','首次存款金额')}</th>
               <th className="right">{MP_T('mp.col.deposit','充值金额')}</th>
               <th className="right">{MP_T('mp.col.withdraw','提款金额')}</th>
@@ -123,7 +122,7 @@ function MyPlayersModule() {
                   <tr key={p.id}>
                     <td className="text-mono" style={{color:'var(--text-0)',fontSize:12,fontWeight:600}}>{p.id}</td>
                     <td className="text-mono" style={{color:'var(--brand)',fontSize:11.5}}>{p.code}</td>
-                    <td><span style={{fontSize:12,color:'var(--text-1)'}}>VIP {p.vip}</span></td>
+                    <td className="text-mono" style={{color:'var(--text-2)',fontSize:11.5}}>{p.registered}</td>
                     <td className="right text-mono">{money(p.ftdAmt)}</td>
                     <td className="right text-mono">{money(p.deposit)}</td>
                     <td className="right text-mono">{money(p.withdraw)}</td>
