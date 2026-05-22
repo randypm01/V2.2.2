@@ -60,11 +60,12 @@ function TimeRange({ value, onChange }) {
   const popRef = React.useRef(null);
 
   // 算 popover 位置(用 fixed 避开 .card overflow:hidden 截断)
+  // v3.1.99 POP_W 按视口宽度裁剪以避免手机溢出
   const recomputePos = React.useCallback(() => {
     const t = triggerRef.current;
     if (!t) return;
     const r = t.getBoundingClientRect();
-    const POP_W = 560;
+    const POP_W = Math.min(560, window.innerWidth - 16);
     const left = Math.max(8, Math.min(window.innerWidth - POP_W - 8, r.left));
     const top = r.bottom + 6;
     setPopPos({ left, top });
@@ -91,6 +92,8 @@ function TimeRange({ value, onChange }) {
 
   const pad = (n) => String(n).padStart(2,'0');
   const fmt = (d) => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  // v3.1.99 手机端只显示日期(不含时间)
+  const fmtDateOnly = (d) => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
 
   const setPreset = (preset) => {
     const end = new Date();
@@ -109,9 +112,10 @@ function TimeRange({ value, onChange }) {
   ];
 
   return (
-    <div style={{display:'flex', gap:8, alignItems:'center'}} ref={ref}>
+    <div className="time-range-wrap" style={{display:'flex', gap:8, alignItems:'center'}} ref={ref}>
       <div
         ref={triggerRef}
+        className="time-range-trigger"
         onClick={()=>setOpen(o=>!o)}
         style={{
           display:'inline-flex', alignItems:'center', gap:8,
@@ -120,7 +124,11 @@ function TimeRange({ value, onChange }) {
           fontSize:12, color:'var(--text-1)', cursor:'pointer', minWidth:300,
           fontFamily:'var(--font-mono)',
         }}>
-        <span style={{flex:1}}>{fmt(value.start)} - {fmt(value.end)}</span>
+        <span style={{flex:1,minWidth:0}}>
+          {/* v3.1.99 桌面显示完整日期+时间；手机(<768px)只显示日期，两个 span CSS 互斥 */}
+          <span className="tr-full">{fmt(value.start)} - {fmt(value.end)}</span>
+          <span className="tr-short">{fmtDateOnly(value.start)} - {fmtDateOnly(value.end)}</span>
+        </span>
         <Icon name="chevronDown" size={11} style={{color:'var(--text-3)'}}/>
       </div>
       {open && ReactDOM.createPortal(
@@ -141,6 +149,7 @@ function TimeRange({ value, onChange }) {
       )}
       {presets.map(p => (
         <button key={p.k}
+          className="time-range-preset"
           onClick={()=>setPreset(p.k)}
           style={{
             padding:'0 14px', height:32,
@@ -270,8 +279,8 @@ function RangeCalendar({ lang, value, onChange, onClose }) {
   };
 
   return (
-    <div style={{padding:14, width: 560}}>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6, gap:8}}>
+    <div className="time-range-cal" style={{padding:14, width: 560}}>
+      <div className="trc-head" style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6, gap:8}}>
         <div style={{display:'flex', gap:4}}>
           <button onClick={()=>setView(new Date(view.getFullYear()-1, view.getMonth(), 1))} style={arrowBtn} title={lang==='en'?'Previous year':'上一年'}>«</button>
           <button onClick={()=>setView(new Date(view.getFullYear(), view.getMonth()-1, 1))} style={arrowBtn} title={lang==='en'?'Previous month':'上个月'}>‹</button>
@@ -284,9 +293,9 @@ function RangeCalendar({ lang, value, onChange, onClose }) {
           <button onClick={()=>setView(new Date(view.getFullYear()+1, view.getMonth(), 1))} style={arrowBtn} title={lang==='en'?'Next year':'下一年'}>»</button>
         </div>
       </div>
-      <div style={{display:'flex', gap:14}}>
+      <div className="trc-months" style={{display:'flex', gap:14}}>
         {renderMonth(view)}
-        <div style={{width:1, background:'var(--line)'}}/>
+        <div className="trc-divider" style={{width:1, background:'var(--line)'}}/>
         {renderMonth(nextMonth)}
       </div>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:10, paddingTop:10, borderTop:'1px solid var(--line)'}}>

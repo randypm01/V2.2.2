@@ -95,7 +95,7 @@ function AgentProfileModule() {
           const filledContacts = contacts.filter(c => c.value);
 
           return (
-            <div style={{padding:'18px 22px'}}>
+            <div className="mp-tab-body" style={{padding:'18px 22px'}}>
               {/* 基本资料 — 与商户后台「查看&审核」弹窗布局一致(每行一列字段,左标签 右值) */}
               <div className="ad-section-title">{T('mp_prof.basic.title','基本资料')}</div>
               <div className="ad-info-card">
@@ -171,14 +171,14 @@ function AgentProfileModule() {
           const fmtMoney = (n) => `${D.symbol}${Number(n).toLocaleString()}`;
 
           const Row = ({ k, children }) => (
-            <div style={{display:'flex',alignItems:'baseline',padding:'8px 0',fontSize:13.5,lineHeight:1.7}}>
-              <div style={{width:160,flexShrink:0,color:'var(--text-2)'}}>{k}</div>
-              <div style={{flex:1,color:'var(--text-0)'}}>{children}</div>
+            <div className="mp-comm-row" style={{display:'flex',alignItems:'baseline',padding:'8px 0',fontSize:13.5,lineHeight:1.7}}>
+              <div className="mp-comm-k" style={{width:160,flexShrink:0,color:'var(--text-2)'}}>{k}</div>
+              <div className="mp-comm-v" style={{flex:1,color:'var(--text-0)'}}>{children}</div>
             </div>
           );
 
           return (
-            <div style={{padding:'18px 22px'}}>
+            <div className="mp-tab-body" style={{padding:'18px 22px'}}>
               {/* —— 平台结算配置 —— */}
               <Row k={T('mp_prof.comm.cycle','結算周期')}>{cycleText}</Row>
               <Row k={T('mp_prof.comm.currency','結算幣種')}><b style={{fontWeight:500}}>{D.currency} ({D.symbol})</b></Row>
@@ -198,7 +198,7 @@ function AgentProfileModule() {
               {/* —— 计算口径流程 —— */}
               <div style={{padding:'10px 0 4px',fontSize:13.5,color:'var(--text-2)'}}>{T('mp_prof.comm.formula','計算口徑流程')}</div>
               {formula ? (
-                <pre style={{
+                <pre className="mp-comm-pre" style={{
                   margin:0, padding:0,
                   fontSize:12.5, lineHeight:1.85, color:'var(--text-1)',
                   fontFamily:'inherit', whiteSpace:'pre-wrap',
@@ -212,7 +212,7 @@ function AgentProfileModule() {
         })()}
 
         {tab === 'perms' && (
-          <div style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
             <div className="ad-section-title">{T('mp_prof.perms.title','權限範圍')}</div>
             <div style={{border:'1px solid var(--line)',borderRadius:8,padding:'18px 22px',background:'#fff'}}>
               {/* 运营 section */}
@@ -242,7 +242,7 @@ function AgentProfileModule() {
         )}
 
         {tab === 'traffic' && (
-          <div style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
             <div className="ad-section-title">{T('mp_prof.traffic.title','流量来源链接')}</div>
             <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:12}}>{T('mp_prof.traffic.sub','您推广所使用的频道、平台账号或落地页(Youtube / Tiktok / Telegram / Facebook ...)')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
@@ -261,7 +261,7 @@ function AgentProfileModule() {
         )}
 
         {tab === 'payment' && (
-          <div style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
             <window.PaymentInfoView editing={false} value={payment}/>
             <div style={{marginTop:14,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
               <Icon name="info" size={12}/> {T('mp_prof.payment.contact','如需修改收款方式,请联系商户运营')}
@@ -270,7 +270,7 @@ function AgentProfileModule() {
         )}
 
         {tab === 'security' && (
-          <div style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
             <div className="ad-section-title">{T('mp_prof.security.title','登入安全')}</div>
             <SecurityRow icon="shield" title={T('mp_prof.security.pwd','登入密码')}
               desc={T('mp_prof.security.last','上次修改时间:') + new Date(Date.now()-30*86400000).toISOString().slice(0,10) + ' ' + new Date().toTimeString().slice(0,8)}
@@ -294,7 +294,7 @@ function AgentProfileModule() {
 
 function SecurityRow({ icon, title, desc, badge, action }) {
   return (
-    <div style={{padding:14,border:'1px solid var(--line)',borderRadius:8,display:'flex',alignItems:'center',gap:14}}>
+    <div className="mp-security-row" style={{padding:14,border:'1px solid var(--line)',borderRadius:8,display:'flex',alignItems:'center',gap:14}}>
       <div style={{width:36,height:36,borderRadius:6,background:'var(--bg-2)',display:'grid',placeItems:'center'}}>
         <Icon name={icon} size={18} style={{color:'var(--text-2)'}}/>
       </div>

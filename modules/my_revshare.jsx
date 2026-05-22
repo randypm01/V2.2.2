@@ -181,7 +181,7 @@ function MyRevshareModule() {
       />
 
       {/* v3.1.45 结算周期 segmented (每周 / 每月) */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 14, border: '1px solid var(--line)', borderRadius: 8, padding: 4, background: 'var(--bg-2)', width: 'fit-content' }}>
+      <div className="mr-cycle-seg" style={{ display: 'flex', gap: 0, marginBottom: 14, border: '1px solid var(--line)', borderRadius: 8, padding: 4, background: 'var(--bg-2)', width: 'fit-content' }}>
         {[
           { k: 'weekly',  l: MR_T('mr.cycle.weekly','每周结算') },
           { k: 'monthly', l: MR_T('mr.cycle.monthly','每月结算') },
@@ -211,21 +211,22 @@ function MyRevshareModule() {
 
         {/* —— 信息条 v3.1.50 与商户后台样式统一(灰色外层 + 白底内层) —— */}
         {tab === 'estimate' && (
-          <div style={{
+          <div className="mr-info-outer" style={{
             padding:'14px 18px',
             background:'var(--bg-2)',
             borderTop:'1px solid var(--line)',
             borderBottom:'1px solid var(--line)',
           }}>
-            <div style={{
+            <div className="mr-info-inner" style={{
               padding:'14px 18px',
               background:'#fff',
               border:'1px solid var(--line)', borderRadius:8,
               boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
               display:'flex',flexDirection:'column',alignItems:'flex-start',gap:8,fontSize:12.5,
             }}>
-              {/* v3.1.92 期号 + 状态 一行；周期 另起一行；周期隐藏时间 */}
-              <div style={{display:'flex',alignItems:'center',gap:32}}>
+              {/* v3.1.92 期号 + 状态 一行；周期 另起一行；周期隐藏时间
+                  v3.1.97 加 flexWrap 让手机窄屏下「狀態」自动换行,不会被截断 */}
+              <div style={{display:'flex',alignItems:'center',gap:32,flexWrap:'wrap',rowGap:8}}>
                 <InfoCell l={MR_T('mr.info.week','期號')} v={estimateInfo.week}/>
                 <InfoCell l={MR_T('mr.info.status','結算狀態')} v={<span style={{color:'#f59e0b',fontWeight:600}}>{MR_T('mr.info.unsettled','未結算預估分潤')}</span>}/>
               </div>
@@ -235,7 +236,7 @@ function MyRevshareModule() {
         )}
 
         {tab === 'settled' && (
-          <div style={{
+          <div className="mr-info-outer" style={{
             padding:'14px 18px',
             background:'var(--bg-2)',
             borderTop:'1px solid var(--line)',
@@ -243,6 +244,7 @@ function MyRevshareModule() {
             position:'relative',
           }} ref={pickerRef}>
             <div
+              className="mr-settled-bar"
               onClick={()=>setPickerOpen(!pickerOpen)}
               style={{
                 padding:'14px 18px',
@@ -254,22 +256,22 @@ function MyRevshareModule() {
                 cursor:'pointer', userSelect:'none', transition:'all .15s',
               }}>
               {/* v3.1.92 期號 / 周期 拆为两行，周期隐藏时间 */}
-              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:8,flex:1}}>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:8,flex:1,minWidth:0}}>
                 <InfoCell l={MR_T('mr.info.week','期號')} v={selectedPeriod.week}/>
                 <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{_stripTime(selectedPeriod.start)} - {_stripTime(selectedPeriod.end)}</span>}/>
               </div>
-              <span style={{
+              <span className="mr-switch-btn" style={{
                 display:'inline-flex',alignItems:'center',gap:6,
                 padding:'6px 12px',borderRadius:6,
                 background:'var(--brand)',color:'#fff',
-                fontSize:12,fontWeight:600,
+                fontSize:12,fontWeight:600,flexShrink:0,
               }}>
                 {MR_T('mr.info.switch','切換期號')}
                 <Icon name="chevronDown" size={14} style={{transform:pickerOpen?'rotate(180deg)':'none',transition:'transform .15s'}}/>
               </span>
             </div>
             {pickerOpen && (
-              <div style={{
+              <div className="mr-picker-pop" style={{
                 position:'absolute', left:18, right:18, top:'calc(100% - 2px)',
                 background:'#fff', border:'1px solid var(--line)', borderRadius:8,
                 boxShadow:'0 8px 24px rgba(0,0,0,0.10)', zIndex:20,
@@ -278,6 +280,7 @@ function MyRevshareModule() {
                 {settledList.map(p => (
                   <div
                     key={p.week}
+                    className="mr-picker-item"
                     onClick={()=>{setSelectedWeek(p.week);setPickerOpen(false);setPage(1);}}
                     style={{
                       padding:'10px 16px', cursor:'pointer', fontSize:12.5,

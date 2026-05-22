@@ -335,7 +335,7 @@ function EditModalMgmt({ data, onClose, onSubmit, toast }) {
         <button className="btn ghost" onClick={onClose}>{MCM_T('mcm.btn.cancel','取消')}</button>
         <button className="btn primary" onClick={()=>onSubmit(f)}>{MCM_T('mcm.btn.save','保存')}</button>
       </>}>
-      <div style={{display:'grid',gridTemplateColumns:'1.3fr 0.9fr',gap:24,alignItems:'start'}}>
+      <div className="mcm-edit-grid" style={{display:'grid',gridTemplateColumns:'1.3fr 0.9fr',gap:24,alignItems:'start'}}>
         {/* 左栏:表单 */}
         <div style={{display:'grid',gap:14}}>
           <div>

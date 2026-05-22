@@ -2,9 +2,58 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.1.95',
+    ver: 'v3.2.0',
     date: '2026-05-22',
     current: true,
+    changes: [
+      { type: 'fix', text: '邀请Code与链接 / 玩家损益 → 时间选择器弹出的「双月历 RangeCalendar」桌面 width:560 在 390 屏外溢一半(图1)— 加 .time-range-cal CSS:width:calc(100vw - 16px) + max-width:380;.trc-months gap → 0;.trc-divider + 第二个月 display:none 收为单月;.trc-head 字号 11.5 → 11 紧凑' },
+      { type: 'modify', text: 'my_codes.jsx TimeRange recomputePos 之前已用 Math.min(560, innerWidth-16) 限制左移,这次配合 CSS 双月 → 单月,弹窗不再超出 iPhone 框' },
+    ],
+  },
+  {
+    ver: 'v3.1.99',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '🐛 v3.1.98 styles.css 漏写 .mp-security-row 选择器开头大括号(只剩 flex-wrap/align-items 两行规则悬空),导致整个 <768px 媒体查询块从安全设置往后全部失效。补回选择器,Change Password 按钮换行 + 后续 TimeRange / picker 规则正确解析' },
+      { type: 'fix', text: '邀请Code与链接 / 玩家损益:TimeRange 时间选择器手机端排版优化(.time-range-wrap / .time-range-trigger / .time-range-preset 三组 CSS)— 触发按钮 min-width:300 取消,独占整行 + 字号 12 → 11.5;3 个 preset 按钮平分整行 flex:1 1 33.333%,触控目标更大;trigger 内文字 .tr-full(完整 YYYY/M/D HH:MM:SS - …)在手机隐藏,.tr-short(只 YYYY/M/D - …)启用,横向不再溢出' },
+      { type: 'modify', text: 'my_codes.jsx 旧代码本就内置 .tr-full / .tr-short 双 span(v3.1.98 加好但漏写媒体查询),这次只在 styles.css 给两 class 加 display 切换规则' },
+    ],
+  },
+  {
+    ver: 'v3.1.98',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '我的帐户 → 安全设置 tab:「Change Password / 修改密码」按钮在手机端从右侧被挤压改为「换行到副标题下方」— SecurityRow 加 .mp-security-row 类,flex-wrap:wrap + align-items:flex-start;按钮 flex-basis:100% + margin-left:50px(icon 36 + gap 14)与上方文字左对齐;width 用 calc(100% - 50px) 防溢出;按钮整宽更易点,不再被压扁' },
+    ],
+  },
+  {
+    ver: 'v3.1.97',
+    date: '2026-05-22',
+    changes: [
+      { type: 'modify', text: '專業代理後台 4 个核心页面手机端响应式优化(<768px / <480px 两档断点) — 我的帐户 / Code 与链接管理 / 玩家损益 / 分润报表;桌面端样式完全不动' },
+      { type: 'fix', text: '我的帐户 → 分润模式 tab:Row 标签固定 width:160px 在 390 屏挤压内容,改为「标签上 + 值下」纵向堆叠(.mp-comm-row);公式 <pre> 字号 12.5 → 11.5 + word-break:break-word 防长公式溢出(.mp-comm-pre)' },
+      { type: 'fix', text: '我的帐户 → 收款方式 tab:PaymentInfoView Account/IFSC 与 Email/Real Name 两组 1fr 1fr 双列在手机改单列(.payment-grid-2 类同步应用到商户后台「查看&配置 / 自行申请审核」对应弹窗,共用组件一并受益)' },
+      { type: 'fix', text: '我的帐户 6 个 tab 内容统一加 .mp-tab-body:padding 18/22 → 14/14;<480px → 12/12,为窄屏腾出 16px+ 内容宽度' },
+      { type: 'fix', text: 'Code 与链接管理 → 编辑弹窗:gridTemplateColumns 1.3fr / 0.9fr(表单 + QR)在手机改单列纵堆,QR 卡片走到表单下方,字段不再被压扁(.mcm-edit-grid)' },
+      { type: 'fix', text: '分润报表 → 每周/每月 segmented 控件:桌面 width:fit-content 在窄屏看着很小,改为撑满整行 + 子项 flex:1 50%,触控目标更大(.mr-cycle-seg)' },
+      { type: 'fix', text: '分润报表 → 本期预估 信息条:外/内 padding 收紧 14/18 → 10/12 与 12/14;期号 + 状态行 gap 32 → 16,row-gap 8 → 6(.mr-info-outer / .mr-info-inner);加 flexWrap 让「狀態」在窄屏自动换行不被截断' },
+      { type: 'fix', text: '分润报表 → 已结算 tab 期号横条:padding 14/18 → 12/14;「切換期號」按钮 padding 6/12 → 6/8,flexShrink:0 防被压扁;<480px 时按钮隐藏文字只剩 chevron 图标(.mr-settled-bar / .mr-switch-btn)' },
+      { type: 'fix', text: '分润报表 → 期号下拉浮层:position:absolute left/right 从 18 → 12,贴齐窄屏内层边距(.mr-picker-pop)' },
+      { type: 'modify', text: '所有 4 页面表格依旧走 .tbl-wrap 横向滚动 + 既有渐变阴影提示;KPI 走既有 .kpi-grid 2 列堆叠;Tabs 走 .tabs 横向滚动 — 无需重复改' },
+    ],
+  },
+  {
+    ver: 'v3.1.96',
+    date: '2026-05-22',
+    changes: [
+      { type: 'add', text: '商户后台 → 运营 新增「社媒分享管理」(modules/social_share.jsx)— 按图1 完整实现:列表(Key / 类型 / 链接 / 描述 / 操作)+「新增 社媒」按钮 + 新增/编辑弹窗(Key / 类型下拉 / 链接 / 描述 4 字段;类型下拉 9 项 Telegram / WhatsApp / Facebook / Twitter / YouTube / Instagram / TikTok / Discord / Line)+ 删除确认弹窗' },
+      { type: 'add', text: '全局 store window.APS_SOCIAL_SHARE_STORE 预填 4 条示例数据(TG1 / WA1 / YT1 / IG1)— 切页保留,后续可供代理后台「分享物料」读取' },
+      { type: 'modify', text: 'index.html 引入 modules/social_share.jsx;app.jsx NAV 在「代理等级管理」之后新增菜单项 social_share,模块路由白名单同步加入' },
+    ],
+  },
+  {
+    ver: 'v3.1.95',
+    date: '2026-05-22',
     changes: [
       { type: 'fix', text: '專業代理後台 → 我的账户 → RevShare Mode:EN 模式下「分潤方案」(週期資產變動分潤)与「計算口徑流程」(整段中文 STEP-1~STEP-4 公式)未翻译。原因:plan label 与 formula 直接来自 revshare.jsx 的中文常量 FORMULA_PERIOD_ASSET / REV_TYPES,没经过 i18n' },
       { type: 'add', text: 'agent_common.jsx 新增 rv.plan.period + rv.formula.period 两个 i18n key,EN 文案:Periodic Asset Change RevShare + 完整翻译 STEP-1 ~ STEP-4 公式(含 Commission Base / Ending Balance / Deposits / Withdrawals 等术语)' },

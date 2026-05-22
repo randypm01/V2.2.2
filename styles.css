@@ -1497,9 +1497,12 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
  * ============================================================ */
 
 /* 平板(<1024px) — 网格列数下降一档 */
+/* v3.1.97 .kpi-grid grid-template-columns 改用 !important —
+   各模块 .kpi-grid 都有内联 style={{gridTemplateColumns:'repeat(N,1fr)'}},
+   不加 !important 媒体查询会被内联样式覆盖,响应式失效 */
 @media (max-width: 1023px) {
   .page { padding: 16px 16px 48px; }
-  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .home-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
@@ -1511,7 +1514,7 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
   .page { padding: 12px 12px 40px; }
 
   /* KPI 改 2 列 */
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
   .kpi { padding: 10px 12px !important; }
   .kpi .val { font-size: 18px !important; }
   .kpi .label { font-size: 11px !important; }
@@ -1556,7 +1559,7 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 
 /* 超窄屏(<480px) — KPI 直接单列堆,否则数字会挤 */
 @media (max-width: 479px) {
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
   .funnel-row { grid-template-columns: 1fr 50px; grid-template-areas: 'name name' 'bar pct'; }
   .funnel-row > :nth-child(4) { display: none; }
 }
@@ -1852,4 +1855,164 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
     justify-content: stretch;
   }
   .self-app-detail-panel .app-act-btn { flex: 1; }
+}
+
+/* ============================================================
+ * v3.1.98 代理后台 4 页面响应式优化 — 我的帐户 / Code 与链接管理 / 玩家损益 / 分润报表
+ * 仅 < 768px 收紧；桌面端样式不动
+ * ============================================================ */
+@media (max-width: 767px) {
+  /* —— 我的帐户：tab 内容左右 padding 收紧 18/22 → 14/14 —— */
+  .mp-tab-body { padding: 14px 14px !important; }
+
+  /* —— 我的帐户 · 分润模式 Row：标签上 + 值下（默认 width:160 在 390 太占地）—— */
+  .mp-comm-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 2px !important;
+    padding: 10px 0 !important;
+  }
+  .mp-comm-row .mp-comm-k {
+    width: auto !important;
+    font-size: 12px !important;
+  }
+  .mp-comm-row .mp-comm-v {
+    font-size: 13px !important;
+  }
+  /* 公式 pre 字号下调 + 允许换行 */
+  .mp-comm-pre {
+    font-size: 11.5px !important;
+    line-height: 1.75 !important;
+    word-break: break-word;
+  }
+
+  /* —— 我的帐户 · 收款方式：Account/IFSC 与 Email/RealName 双列改单列 —— */
+  .payment-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* —— Code 与链接管理 · 编辑弹窗：左右双栏 1.3fr/0.9fr 改单列 —— */
+  .mcm-edit-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* —— 分润报表 · 周/月 segmented：撑满整行更易点 —— */
+  .mr-cycle-seg {
+    width: 100% !important;
+  }
+  .mr-cycle-seg > div {
+    flex: 1 1 50% !important;
+    text-align: center !important;
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+  }
+
+  /* —— 分润报表 · 信息条：外层 padding 减半，内层不挤 —— */
+  .mr-info-outer { padding: 10px 12px !important; }
+  .mr-info-inner { padding: 12px 14px !important; gap: 8px !important; }
+  /* 第一行 期号 + 状态 gap 32 太宽，挤窄一点 */
+  .mr-info-inner > div[style*="flex-wrap"] {
+    gap: 16px !important;
+    row-gap: 6px !important;
+  }
+
+  /* —— 已结算分润 · 切换期号横条 —— */
+  .mr-settled-bar {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+  .mr-switch-btn {
+    padding: 6px 8px !important;
+    font-size: 11.5px !important;
+  }
+  .mr-picker-pop { left: 12px !important; right: 12px !important; }
+  .mr-picker-item { padding: 10px 14px !important; gap: 4px !important; }
+
+  /* —— 我的帐户 · 安全设置:Change Password 按钮换行到副标题下方 —— */
+  .mp-security-row {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+  }
+  /* action 直接作为 row 的最后一个子节点(button 元素本身)。
+     flex-wrap 后让它换到次行;icon(36) + gap(14) = 50px 缩进,与上方文字左对齐;
+     width 用 calc 防超出 flex container 内宽。 */
+  .mp-security-row > :last-child {
+    flex-basis: 100% !important;
+    width: calc(100% - 50px) !important;
+    margin-left: 50px !important;
+    margin-top: 6px !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* —— v3.1.99 TimeRange (邀请Code与链接 / 玩家损益):整组撑满 + 短日期 —— */
+  /* 整组容器:trigger + 3 preset 按钮换行铺满 */
+  .time-range-wrap {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  /* 触发按钮:min-width:300 在窄屏撑爆;独占整行,只显示短日期 */
+  .time-range-trigger {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex-basis: 100% !important;
+    font-size: 11.5px !important;
+  }
+  .time-range-trigger .tr-full { display: none !important; }
+  .time-range-trigger .tr-short { display: inline !important; }
+  /* 3 个 preset 按钮平分剩余整行,触控目标更大 */
+  .time-range-preset {
+    flex: 1 1 calc(33.333% - 4px) !important;
+    min-width: 0 !important;
+    padding: 0 8px !important;
+    font-size: 11.5px !important;
+  }
+
+  /* —— v3.2.0 TimeRange 弹窗(双月历):桌面 560 宽在手机溢出,改单月 —— */
+  .time-range-cal {
+    width: calc(100vw - 16px) !important;
+    max-width: 380px !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+  }
+  /* 月历容器:双月 → 单月垂直叠放,gap 收紧 */
+  .time-range-cal .trc-months {
+    gap: 0 !important;
+  }
+  /* 隐藏第二个月 + 分割线,只显示当月 */
+  .time-range-cal .trc-divider,
+  .time-range-cal .trc-months > div:last-child {
+    display: none !important;
+  }
+  .time-range-cal .trc-months > div:first-child {
+    flex: 1 1 100% !important;
+    padding: 0 !important;
+  }
+  /* head 文案在窄屏字号小一点 */
+  .time-range-cal .trc-head {
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+  }
+  .time-range-cal .trc-head > span {
+    font-size: 11px !important;
+  }
+}
+
+/* 桌面端:短日期隐藏,完整日期+时间显示(默认) */
+.time-range-trigger .tr-full { display: inline; }
+.time-range-trigger .tr-short { display: none; }
+
+/* 超窄屏(<480px) — 进一步收紧 */
+@media (max-width: 479px) {
+  .mp-tab-body { padding: 12px 12px !important; }
+  .mr-info-outer { padding: 8px 10px !important; }
+  .mr-info-inner { padding: 10px 12px !important; }
+  .mr-settled-bar { padding: 10px 12px !important; }
+  /* 切换期号按钮 在超窄屏只显示图标，把文字隐藏起来留给左侧期号 */
+  .mr-switch-btn { font-size: 0 !important; padding: 8px !important; gap: 0 !important; }
+  .mr-switch-btn svg { width: 14px !important; height: 14px !important; }
 }

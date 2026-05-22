@@ -83,6 +83,7 @@ function App() {
       { k:'agents', l:'代理账户管理', icon:'users', prd:'P0-1' },
       { k:'revshare', l:'分润管理', icon:'pie', prd:'P0-7' },
       { k:'agent_levels', l:'代理等级管理', icon:'flag' },
+      { k:'social_share', l:'社媒分享管理', icon:'globe' },
     ]},
     { section: '报表', icon:'pie', items: [
       { k:'agent_revenue', l:'代理收益', icon:'wallet' },
@@ -600,6 +601,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'revshare' && <RevShareModule/>}
             {r.kind === 'mod' && r.k === 'agent_revshare' && <window.AgentRevshareModule/>}
             {r.kind === 'mod' && r.k === 'agent_levels' && <window.AgentLevelsModule/>}
+            {r.kind === 'mod' && r.k === 'social_share' && <window.SocialShareModule/>}
             {r.kind === 'mod' && r.k === 'agent_revenue' && <window.AgentRevenueModule/>}
             {r.kind === 'mod' && r.k === 'subs' && <window.SubsModule/>}
             {r.kind === 'mod' && r.k === 'revshare_detail' && <window.RevShareDetailModule/>}
@@ -621,7 +623,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'multi_currency' && <window.MultiCurrencyModule/>}
             {r.kind === 'mod' && r.k === 'ad_network' && <window.AdNetworkModule/>}
             {r.kind === 'mod' && r.k === 'bi' && <window.BiModule/>}
-            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','agent_revenue','agent_revshare','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
+            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','social_share','agent_revenue','agent_revshare','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
               const sec = NAV.find(s => s.items.some(i => i.k === r.k));
               const it = sec?.items.find(i => i.k === r.k);
               if (!it) return null;

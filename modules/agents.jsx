@@ -2432,7 +2432,7 @@ window.PaymentInfoView = function PaymentInfoView({ editing, value, onChange }) 
     <div style={{display:'flex',flexDirection:'column',gap:14}}>
       <Field label="收款方式">{lockedBox}</Field>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+      <div className="payment-grid-2" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
         <Field label="Account">
           {editing
             ? <input className="input" value={v.account || ''} placeholder="請輸入"
@@ -2447,7 +2447,7 @@ window.PaymentInfoView = function PaymentInfoView({ editing, value, onChange }) 
         </Field>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+      <div className="payment-grid-2" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
         <Field label="Email">
           {editing
             ? <input className="input" value={v.email || ''} placeholder="請輸入"
