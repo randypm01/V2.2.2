@@ -94,6 +94,88 @@ window.CURRENT_AGENT_ID = 'AC100006';
   // PageHead 通用 — 各模块标题/副标题
   add('page.my_profile.title', '我的账户', 'My Account');
   add('page.my_profile.sub', '查看您的个人资料、合作方案、安全设置', 'View your profile, partnership and security settings');
+
+  // v3.1.93 ===== 我的账户 6 个 tab 标签 =====
+  add('mp_prof.tab.basic',      '基本资料',  'Basic Info');
+  add('mp_prof.tab.commission', '分润模式',  'RevShare Mode');
+  add('mp_prof.tab.perms',      '权限配置',  'Permissions');
+  add('mp_prof.tab.traffic',    '流量来源',  'Traffic Source');
+  add('mp_prof.tab.payment',    '收款方式',  'Payment');
+  add('mp_prof.tab.security',   '安全设置',  'Security');
+
+  // 基本资料 tab
+  add('mp_prof.basic.title',         '基本资料',     'Basic Info');
+  add('mp_prof.basic.createWay',     '代理创建方式', 'Created By');
+  add('mp_prof.basic.createWay.merchant', '商户创建代理',   'Created by Merchant');
+  add('mp_prof.basic.createWay.self',     '代理后台自行申请', 'Self-applied');
+  add('mp_prof.basic.id',            '代理ID',       'Agent ID');
+  add('mp_prof.basic.name',          '代理名称',     'Agent Name');
+  add('mp_prof.basic.loginName',     '登入帐号',     'Login Username');
+  add('mp_prof.basic.password',      '登入密码',     'Login Password');
+  add('mp_prof.basic.parent',        '上级代理',     'Parent Agent');
+  add('mp_prof.basic.parent.self',   '本商户',       'Self (Merchant)');
+  add('mp_prof.basic.created',       '创建时间',     'Created At');
+  add('mp_prof.basic.status',        '帐户状态',     'Account Status');
+  add('mp_prof.basic.status.active', '已启用',       'Active');
+  add('mp_prof.basic.contacts',      '联系方式',     'Contact Methods');
+  add('mp_prof.basic.contact.type',  '联系类型',     'Type');
+  add('mp_prof.basic.contact.value', '联系资料',     'Value');
+  add('mp_prof.contact.phone',       '手机',         'Mobile');
+
+  // 分润模式 tab
+  add('mp_prof.comm.cycle',     '結算周期',         'Settlement Cycle');
+  add('mp_prof.comm.cycle.weekly', '每周結算 · 每周一 00:00:00,結算上周一 00:00:00 ~ 周日 23:59:59',
+       'Weekly · Every Monday 00:00, settles previous Monday 00:00 ~ Sunday 23:59');
+  add('mp_prof.comm.cycle.monthly','每月結算 · 每月1號 00:00:00,結算上月1號 00:00:00 ~ 月底 23:59:59',
+       'Monthly · Every 1st at 00:00, settles previous 1st 00:00 ~ month-end 23:59');
+  add('mp_prof.comm.currency',   '結算幣種',         'Settlement Currency');
+  add('mp_prof.comm.minAmt',     '最低結算佣金金額', 'Min. Settlement Amount');
+  add('mp_prof.comm.minAmt.hint','(低于该金额顺延至下期)', '(below this amount carries to next period)');
+  add('mp_prof.comm.maxAmt',     '最高結算佣金上限', 'Max. Settlement Cap');
+  add('mp_prof.comm.plan',       '分潤方案',         'RevShare Plan');
+  add('mp_prof.comm.ratio',      '分潤比例',         'RevShare Ratio');
+  add('mp_prof.comm.formula',    '計算口徑流程',     'Calculation Method');
+
+  // 权限配置 tab
+  add('mp_prof.perms.title',     '权限范围',         'Permission Scope');
+  add('mp_prof.perms.sec.ops',   '运营',             'Operations');
+  add('mp_prof.perms.sec.reports','报表',            'Reports');
+  add('mp_prof.perms.myAccount',     '我的帐户',           'My Account');
+  add('mp_prof.perms.codeManage',    'Code 与链接管理',    'Code & Link Management');
+  add('mp_prof.perms.codeLimit',     '可创建邀请 Code 上限数量', 'Max Invite Codes');
+  add('mp_prof.perms.reportCode',    '邀请 Code 与链接管理', 'Codes & Links');
+  add('mp_prof.perms.reportPlayer',  '玩家损益',           'Player P&L');
+  add('mp_prof.perms.reportRevshare','分润报表',           'RevShare Report');
+  add('mp_prof.perms.sub.view',      '(查看)',           '(View)');
+  add('mp_prof.perms.sub.viewEdit',  '(查看/编辑)',      '(View/Edit)');
+
+  // 流量来源 tab
+  add('mp_prof.traffic.title', '流量来源链接', 'Traffic Source URLs');
+  add('mp_prof.traffic.sub',   '您推广所使用的频道、平台账号或落地页(Youtube / Tiktok / Telegram / Facebook ...)',
+       'Your promotion channels, platforms or landing pages (Youtube / Tiktok / Telegram / Facebook ...)');
+  add('mp_prof.traffic.empty', '(未填写流量来源)', '(No traffic source)');
+
+  // 收款方式 tab
+  add('mp_prof.payment.contact', '如需修改收款方式,请联系商户运营', 'Contact merchant ops to modify payment info');
+
+  // 安全设置 tab
+  add('mp_prof.security.title',      '登入安全',         'Login Security');
+  add('mp_prof.security.pwd',        '登入密码',         'Login Password');
+  add('mp_prof.security.last',       '上次修改时间:',  'Last changed: ');
+  add('mp_prof.security.change',     '修改密码',         'Change Password');
+  add('mp_prof.pwd.modal.title',     '修改登录密码',     'Change Login Password');
+  add('mp_prof.pwd.modal.current',   '当前密码',         'Current Password');
+  add('mp_prof.pwd.modal.new',       '新密码 (至少 12 位,包含大小写 + 数字 + 符号)', 'New Password (≥12 chars, upper+lower+digits+symbols)');
+  add('mp_prof.pwd.modal.confirm',   '确认新密码',       'Confirm New Password');
+  add('mp_prof.pwd.modal.cancel',    '取消',             'Cancel');
+  add('mp_prof.pwd.modal.ok',        '确认修改',         'Confirm');
+  add('mp_prof.pwd.toast',           '密码已修改',       'Password changed');
+
+  // v3.1.95 EN-only:RevShare 方案名 + 計算口徑流程(對應 revshare.jsx FORMULA_PERIOD_ASSET / REV_TYPES)
+  add('rv.plan.period',     '週期資產變動分潤',  'Periodic Asset Change RevShare');
+  add('rv.formula.period',
+    'STEP-1:計算用戶本期行為判斷平台是否虧損的基數\n    (上期期末餘額 + (上期佣金基數)) + (本期充值 - 本期提現 - 本期期末餘額) = 本期佣金基數\n\nSTEP-2:校驗本期平台是盈利或虧損 / 持平\n    2-1 本期佣金基數 ≤ 0,代表平台虧損或持平,不計算佣金,接 STEP-4\n    2-2 本期佣金基數 > 0,代表平台盈利,計算佣金,接 STEP-3、STEP-4\n\nSTEP-3:計算本期佣金\n    本期佣金基數 × 佣金分潤比例 = 本期佣金\n\nSTEP-4:本期帶入下期值\n    · 本期期末餘額\n    · 本期佣金基數\n      (如果本期佣金基數是負值則帶入下期該負值;如果為正值則將 0 帶入下期)',
+    'STEP-1: Determine whether the platform is at a loss for this period\n    (Prev Ending Balance + Prev Commission Base) + (Deposits - Withdrawals - Ending Balance) = Commission Base\n\nSTEP-2: Verify whether the platform profits or loses this period\n    2-1 Commission Base ≤ 0 — Platform at loss or break-even, no commission, go to STEP-4\n    2-2 Commission Base > 0 — Platform profits, calculate commission, then STEP-3 & STEP-4\n\nSTEP-3: Calculate this period\'s commission\n    Commission Base × RevShare Ratio = This Period Commission\n\nSTEP-4: Values carried to next period\n    · This Period Ending Balance\n    · This Period Commission Base\n      (Negative values carry over to next period as-is; positive values carry 0)');
   add('page.my_codes.title', '邀请Code与链接', 'Invite Codes & Links');
   add('page.my_codes.sub', '查看各 Code 推广链接累计数据', 'View accumulated stats per code');
   // my_codes 页 KPI / 表头 / 筛选 / 空态
@@ -155,6 +237,7 @@ window.CURRENT_AGENT_ID = 'AC100006';
   add('mp.col.payout',         '派彩',         'Payout');
   add('mp.col.ggr',            'GGR',          'GGR');
   add('mp.col.commission',     '佣金',         'Commission');
+  add('mp.col.registered',     '注册时间',     'Registered At');
   add('mp.filter.search_ph',   '玩家 UID / 邀请 Code', 'Player UID / Invite Code');
   add('mp.filter.all_vip',     '全部 VIP',     'All VIP');
   add('mp.empty',              '暂无玩家数据', 'No player data');
@@ -217,6 +300,134 @@ window.CURRENT_AGENT_ID = 'AC100006';
   add('mcm.tip.copy_code', '复制 Code', 'Copy Code');
   add('mcm.tip.copy_link', '复制短链', 'Copy link');
   add('mcm.tip.copy', '复制', 'Copy');
+
+  // v3.1.93 ===== 我的账户 (mpf.*) =====
+  add('mpf.tab.basic',     '基本资料',     'Basic Info');
+  add('mpf.tab.commission','分润模式',     'Commission Mode');
+  add('mpf.tab.perms',     '权限配置',     'Permissions');
+  add('mpf.tab.traffic',   '流量来源',     'Traffic Source');
+  add('mpf.tab.payment',   '收款方式',     'Payment Method');
+  add('mpf.tab.security',  '安全设置',     'Security');
+
+  // 基本资料
+  add('mpf.basic.title',       '基本资料',      'Basic Info');
+  add('mpf.basic.createWay',   '代理创建方式',  'Created By');
+  add('mpf.basic.createWay.merchant', '商户创建代理', 'Created by Merchant');
+  add('mpf.basic.createWay.applied',  '自行申请代理', 'Self-applied');
+  add('mpf.basic.agentId',     '代理ID',        'Agent ID');
+  add('mpf.basic.agentName',   '代理名称',      'Agent Name');
+  add('mpf.basic.loginName',   '登入帐号',      'Login Username');
+  add('mpf.basic.password',    '登入密码',      'Login Password');
+  add('mpf.basic.parent',      '上级代理',      'Parent Agent');
+  add('mpf.basic.parent.merchant', '本商户',    'This Merchant');
+  add('mpf.basic.createdAt',   '创建时间',      'Created At');
+  add('mpf.basic.status',      '帐户状态',      'Account Status');
+  add('mpf.basic.status.active','已启用',       'Active');
+  add('mpf.basic.contact_title','联系方式',     'Contact Methods');
+  add('mpf.basic.contact_type', '联系类型',     'Type');
+  add('mpf.basic.contact_value','联系资料',     'Value');
+
+  // 分润模式
+  add('mpf.comm.cycle',           '结算周期',         'Settlement Cycle');
+  add('mpf.comm.cycle.weekly',    '每周结算 · 每周一 00:00:00,结算上周一 00:00:00 ~ 周日 23:59:59',
+                                  'Weekly · Every Monday 00:00:00, settling previous Mon 00:00:00 ~ Sun 23:59:59');
+  add('mpf.comm.cycle.monthly',   '每月结算 · 每月1号 00:00:00,结算上月1号 00:00:00 ~ 月底 23:59:59',
+                                  'Monthly · 1st of each month 00:00:00, settling prev 1st 00:00:00 ~ month-end 23:59:59');
+  add('mpf.comm.currency',        '结算币种',         'Settlement Currency');
+  add('mpf.comm.minAmt',          '最低结算佣金金额', 'Min Settlement Amount');
+  add('mpf.comm.minAmt.hint',     '(低于该金额顺延至下期)', '(Carried to next period if below)');
+  add('mpf.comm.maxAmt',          '最高结算佣金上限', 'Max Settlement Cap');
+  add('mpf.comm.planType',        '分润方案',         'RevShare Plan');
+  add('mpf.comm.ratio',           '分润比例',         'RevShare Rate');
+  add('mpf.comm.formula',         '计算口径流程',     'Calculation Formula');
+
+  // 权限配置
+  add('mpf.perms.scope',          '权限范围',         'Permission Scope');
+  add('mpf.perms.sec.ops',        '运营',             'Operations');
+  add('mpf.perms.sec.report',     '报表',             'Reports');
+  add('mpf.perms.myAccount',      '我的帐户',         'My Account');
+  add('mpf.perms.codeManage',     'Code 与链接管理',  'Code & Link Management');
+  add('mpf.perms.codeLimit',      '可创建邀请 Code 上限数量', 'Invite Code Creation Limit');
+  add('mpf.perms.reportCode',     '邀请 Code 与链接管理', 'Invite Codes & Links');
+  add('mpf.perms.reportPlayer',   '玩家损益',         'Player P&L');
+  add('mpf.perms.reportRevshare', '分润报表',         'RevShare Report');
+  add('mpf.perms.view',           '查看',             'View');
+  add('mpf.perms.viewEdit',       '查看/编辑',        'View / Edit');
+
+  // 流量来源 / 收款方式
+  add('mpf.traffic.title',        '流量来源链接',     'Traffic Source Links');
+  add('mpf.traffic.sub',          '您推广所使用的频道、平台账号或落地页(Youtube / Tiktok / Telegram / Facebook ...)',
+                                  'Channels, platform accounts or landing pages you use (YouTube / TikTok / Telegram / Facebook ...)');
+  add('mpf.traffic.empty',        '(未填写流量来源)','(No traffic source)');
+  add('mpf.payment.method',       '收款方式',         'Payment Method');
+  add('mpf.payment.placeholder',  '請輸入',           'Enter…');
+  add('mpf.payment.tip',          '如需修改收款方式,请联系商户运营', 'To change your payment info, please contact merchant operations');
+
+  // 安全设置
+  add('mpf.sec.title',            '登入安全',         'Login Security');
+  add('mpf.sec.password',         '登入密码',         'Login Password');
+  add('mpf.sec.lastChanged',      '上次修改时间:',   'Last changed:');
+  add('mpf.sec.change',           '修改密码',         'Change Password');
+  add('mpf.sec.modal.title',      '修改登录密码',     'Change Login Password');
+  add('mpf.sec.cur',              '当前密码',         'Current Password');
+  add('mpf.sec.new',              '新密码 (至少 12 位,包含大小写 + 数字 + 符号)', 'New Password (≥12 chars, with upper+lower+digit+symbol)');
+  add('mpf.sec.confirm',          '确认新密码',       'Confirm New Password');
+  add('mpf.sec.cancel',           '取消',             'Cancel');
+  add('mpf.sec.ok',               '确认修改',         'Confirm');
+  add('mpf.sec.toast',            '密码已修改',       'Password changed');
+
+  // v3.1.88 Code 上限提示
+  add('mcm.limit.counter_a', '已创建', 'Created');
+  add('mcm.limit.title', '已达 Code 创建上限', 'Code Creation Limit Reached');
+  add('mcm.limit.sub', '如需创建更多 Code,请联系管理员', 'Contact admin to create more codes');
+  add('mcm.limit.ok', '我知道了', 'Got it');
+  add('mcm.limit.body_a', '您当前已创建', 'You have created');
+  add('mcm.limit.body_b', '条邀请 Code,已达系统创建上限', 'invite codes, reaching the system limit of');
+  add('mcm.limit.body_c', '条。', '.');
+  add('mcm.limit.tip', '请联系管理员申请提高创建上限,或先删除/停用闲置的 Code 后再创建新的。', 'Please contact admin to raise your limit, or delete/disable unused codes before creating new ones.');
+
+  // v3.1.88 ===== 分润报表 (mr.*) =====
+  add('mr.cycle.weekly',     '每周结算',         'Weekly');
+  add('mr.cycle.monthly',    '每月结算',         'Monthly');
+  add('mr.tab.estimate',     '本期预估分润',     'Current Estimate');
+  add('mr.tab.settled',      '已结算分润',       'Settled');
+  add('mr.info.week',        '期号',             'Period');
+  add('mr.info.status',      '结算状态',         'Status');
+  add('mr.info.unsettled',   '未结算预估分润',   'Pending · Estimated');
+  add('mr.info.period',      '周期',             'Cycle');
+  add('mr.info.switch',      '切换期号',         'Switch Period');
+  add('mr.kpi.players',      '玩家总数',         'Total Players');
+  add('mr.kpi.deposit',      '总充值金额',       'Total Deposits');
+  add('mr.kpi.withdraw',     '总提款金额',       'Total Withdrawals');
+  add('mr.kpi.gap',          '充提差',           'Net');
+  add('mr.kpi.balance',      '总玩家余额',       'Total Balance');
+  add('mr.kpi.commission',   '总佣金',           'Total Commission');
+  add('mr.filter.search_ph', '玩家UID / 邀请Code', 'Player UID / Invite Code');
+  add('mr.filter.all_status','全部用户状态',     'All User Status');
+  add('mr.status.profit',    '盈利',             'Profit');
+  add('mr.status.loss',      '亏损',             'Loss');
+  add('mr.col.uid',          '玩家 UID',         'Player UID');
+  add('mr.col.source_code',  '邀请 Code',        'Invite Code');
+  add('mr.col.registered',   '注册时间',         'Registered At');
+  add('mr.col.deposit',      '充值金额',         'Deposit');
+  add('mr.col.withdraw',     '提款金额',         'Withdraw');
+  add('mr.col.gap',          '充提差',           'Net');
+  add('mr.col.cur_balance',  '当前余额',         'Current Balance');
+  add('mr.col.end_balance',  '期末余额',         'Ending Balance');
+  add('mr.col.prev_balance', '上期期末余额',     'Prev Ending Balance');
+  add('mr.col.prev_base',    '上期佣金基数',     'Prev Commission Base');
+  add('mr.col.base',         '佣金基数',         'Commission Base');
+  add('mr.col.rate',         '分润比例',         'RevShare %');
+  add('mr.col.est_com',      '预估佣金',         'Est. Commission');
+  add('mr.col.settled_com',  '结算佣金',         'Settled Commission');
+  add('mr.col.user_status',  '用户状态',         'User Status');
+  add('mr.col.history',      '结算记录',         'History');
+  add('mr.action.query',     '查询',             'View');
+  add('mr.empty',            '暂无数据',         'No data');
+  add('mr.pagination.total', '共',               'Total');
+  add('mr.pagination.items', '条',               '');
+  add('mr.pagination.page',  '第',               'Page');
+  add('mr.pagination.page_unit', '页',           '');
 
   // 通用面包屑 / 框架
   add('crumb.home', '首页', 'Home');

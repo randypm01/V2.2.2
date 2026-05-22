@@ -178,8 +178,8 @@ function PlayersModule() {
         <button className="btn"><Icon name="download" size={13}/>导出</button>
       </PUI.PageHead>
 
-      {/* KPI 9 张：5 列网格，5+4 自动换行 */}
-      <div className="kpi-grid mb-4" style={{ gridTemplateColumns: 'repeat(5,1fr)' }}>
+      {/* v3.1.87 KPI 6 张 — 删除「总投注 / 总派彩 / GGR」 */}
+      <div className="kpi-grid mb-4" style={{ gridTemplateColumns: 'repeat(6,1fr)' }}>
         {[
           { l: '玩家总数',    v: F.fmtNum(totalPlayers) },
           { l: '总首存人数',  v: F.fmtNum(totalFtdUsers) },
@@ -189,10 +189,6 @@ function PlayersModule() {
           { l: '充提差',      v: fmtGap(totalGap),
             valColor: totalGap >= 0 ? 'var(--success)' : 'var(--danger)',
             highlight: true },
-          { l: '总投注',      v: money(totalWager) },
-          { l: '总派彩',      v: money(totalPayout) },
-          { l: 'GGR',         v: money(totalGgr),
-            valColor: totalGgr >= 0 ? 'var(--success)' : 'var(--danger)' },
         ].map(k => (
           <div key={k.l} className="kpi" style={k.highlight ? {
             borderColor: totalGap >= 0 ? 'rgba(34,197,94,.35)' : 'rgba(239,68,68,.35)',
@@ -230,9 +226,7 @@ function PlayersModule() {
                 <Th k="dep" right>充值金额</Th>
                 <Th k="wd" right>提款金额</Th>
                 <Th k="gap" right>充提差</Th>
-                <Th k="wager" right>投注</Th>
-                <Th k="payout" right>派彩</Th>
-                <Th k="ggr" right>GGR</Th>
+                {/* v3.1.87 删除 投注 / 派彩 / GGR 三列 */}
               </tr>
             </thead>
             <tbody>
@@ -253,16 +247,11 @@ function PlayersModule() {
                       style={{ color: r.gap >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
                     {fmtGap(r.gap)}
                   </td>
-                  <td className="right text-mono">{moneyDec(r.wager)}</td>
-                  <td className="right text-mono">{moneyDec(r.payout)}</td>
-                  <td className="right text-mono"
-                      style={{ color: r.ggr >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
-                    {moneyDec(r.ggr)}
-                  </td>
+                  {/* v3.1.87 删除 投注 / 派彩 / GGR 三列 */}
                 </tr>
               ))}
               {paged.length === 0 && (
-                <tr><td colSpan={12} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
               )}
             </tbody>
           </table>

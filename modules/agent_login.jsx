@@ -413,6 +413,12 @@ function LoginModal({ onClose, onLogin, onSwitchRegister, onSupplement }) {
   const [progressApp, setProgressApp] = React.useState(null);
 
   React.useEffect(() => {
+    // v3.1.94 主动触发商户已创建代理 store 初始化 — 否则首次进入登录页时 ACSamples
+    //         尚未推送到 APS_AGENT_ACCOUNTS,快捷填入只能看到 4 个 reviewing 申请;
+    //         必须先去「商户后台 → 代理账户管理」走一遍才能凑齐 12 个
+    if (typeof window.APS_ensureMerchantAgentsStore === 'function') {
+      window.APS_ensureMerchantAgentsStore();
+    }
     const unsub = window.APS_AGENT_ACCOUNTS.subscribe(force);
     const saved = localStorage.getItem('APS_REMEMBER_LOGIN');
     if (saved) { setLoginName(saved); setRemember(true); }

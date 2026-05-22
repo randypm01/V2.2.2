@@ -1,21 +1,100 @@
 // 代理账户管理
 const { Modal: AM, StatusBadge: AS, RiskBadge: AR, PageHead: APH, SearchInput: ASI, Pagination: APG, Tabs: ATAB, Avatar: AAV, useToast: AUT, Drawer: ADR } = window.UI;
 
+// v3.1.89 单一示例资料源 — 8 个示例代理的「流量来源 / 收款方式 / 备注」
+// 在「自行申请代理 → 查看&配置」(_appData._formSnapshot)和
+// 「已创建代理 → 查看&配置」(agent._traffic / agent._payment)两处都用同一份,确保数据一致且无未填项
+const AGENT_PROFILES = {
+  AC100001: {
+    trafficUrls: ['https://youtube.com/@apexpromo', 'https://t.me/apexpromo_official'],
+    ifsc: 'HDFC0001234', account: '50100123456789', realName: 'Aman Patel',          payEmail: 'apex_promo@gmail.com',
+    remark: '通过专业代理后台网址直接注册申请;主推 YouTube + Telegram 渠道',
+  },
+  AC100002: {
+    trafficUrls: ['https://instagram.com/sara_ig_official', 'https://instagram.com/stories/sara_ig'],
+    ifsc: 'SBIN0005678', account: '38291746528374', realName: 'Sara Sharma',         payEmail: 'sara_ig@gmail.com',
+    remark: 'Instagram 投放主播,30k 粉丝,已合作 Brand Deal 12+',
+  },
+  AC100003: {
+    trafficUrls: ['https://youtube.com/@rohan_tech', 'https://t.me/rohan_tech_group', 'https://discord.gg/rohantech'],
+    ifsc: 'ICIC0009876', account: '12345678901234', realName: 'Rohan Kumar',         payEmail: 'rohan@gmail.com',
+    remark: '已有完整推广团队和工具栈,YouTube + Telegram + Discord 多渠道分发',
+  },
+  AC100004: {
+    trafficUrls: ['https://t.me/priyamedia_5k', 'https://wa.me/919730044004'],
+    ifsc: 'AXIS0004321', account: '91827364554637', realName: 'Priya Mehta',         payEmail: 'priya_media@gmail.com',
+    remark: '团队 8 人,主投 Telegram 群 5,000+ 成员 + WhatsApp 一对一咨询',
+  },
+  AC100005: {
+    trafficUrls: ['https://t.me/arjun_aff_super', 'https://arjunaff.affiliate-network.com'],
+    ifsc: 'KKBK0001122', account: '64738291046572', realName: 'Arjun Reddy',         payEmail: 'arjun_aff@gmail.com',
+    remark: '隔壁平台代理 2 年,月均流水 ₹300 万;主走 Affiliate 网络分发',
+  },
+  AC100006: {
+    trafficUrls: ['https://t.me/rajeshmedia_channel', 'https://youtube.com/@rajeshmedia'],
+    ifsc: 'HDFC0002468', account: '70183927465821', realName: 'Rajesh Iyer',         payEmail: 'rajesh_aff@gmail.com',
+    remark: '通过代理后台注册申请;主投 Telegram + YouTube,日均新增 30~50 注册',
+  },
+  AC100007: {
+    trafficUrls: ['https://instagram.com/meena_promo', 'https://tiktok.com/@meena_promo_in'],
+    ifsc: 'ICIC0003355', account: '83617495028361', realName: 'Meena Joshi',         payEmail: 'meena_promo@gmail.com',
+    remark: '团队 6 人;Instagram + TikTok 双线投放,近期因投诉率超标临时冻结',
+  },
+  AC100008: {
+    trafficUrls: ['https://fakeaff-x.affiliate-network.com'],
+    ifsc: 'SBIN0007788', account: '20394857162083', realName: 'Vikram Singh',        payEmail: 'fakeaff@gmail.com',
+    remark: '已停用 — 查实虚假推广行为,终止合作',
+  },
+};
+// 默认分润 / 权限配置(已创建代理用),保证「查看&配置 → 分润模式 / 权限配置」也有数据
+const DEFAULT_COMM = {
+  kind: 'weekly',
+  weekday: 1, monthday: 1,
+  plans: ['revenue:RV-001'],
+  minCommission: 200,
+  maxCommission: 100000,
+};
+const DEFAULT_PERMS = {
+  myAccount: true,
+  codeManage: true,
+  codeLimit: 20,
+  reportCode: true,
+  reportPlayer: true,
+  reportRevshare: true,
+};
+
 // v2.3.0 自行申请代理 共享 store — 让网站前台提交的数据能流入商户后台
 // v2.4.9 代理ID 规则：商户创建代理 = AG1xxxxx；自行申请代理 = AP2xxxxx
 // v2.4.35 根据 app 当前 state 生成符合状态机的示例操作日志(若已有 _logs 则不动)
 function seedAppLogs(app) {
   // v3.1.17 自动构造 _formSnapshot.contacts(Email + 手机)— 让所有自行申请代理示例都有完整联系方式
+  // v3.1.89 同时自动注入 trafficUrls / ifsc / account / realName / payEmail / remark,
+  //         让「自行申请代理 → 查看&配置」内每一项都有数据,不再有「未填」
   let next = app;
-  if (!app._formSnapshot?.contacts && (app.contact || app.phone)) {
+  const prof = AGENT_PROFILES[app.id];
+  const needFill = !app._formSnapshot ||
+    !app._formSnapshot.contacts ||
+    !app._formSnapshot.trafficUrls ||
+    !app._formSnapshot.ifsc ||
+    !app._formSnapshot.account ||
+    !app._formSnapshot.realName ||
+    !app._formSnapshot.payEmail ||
+    !app._formSnapshot.remark;
+  if (needFill) {
     next = {
       ...app,
       _formSnapshot: {
         ...(app._formSnapshot || {}),
-        contacts: [
+        contacts: app._formSnapshot?.contacts || [
           { type:'Email',  value: app.contact || '' },
           { type:'手机',   value: app.phone   || '', dial:'+91' },
         ].filter(c => c.value),
+        trafficUrls: app._formSnapshot?.trafficUrls || prof?.trafficUrls || [],
+        ifsc:        app._formSnapshot?.ifsc        || prof?.ifsc        || '',
+        account:     app._formSnapshot?.account     || prof?.account     || '',
+        realName:    app._formSnapshot?.realName    || prof?.realName    || '',
+        payEmail:    app._formSnapshot?.payEmail    || prof?.payEmail    || '',
+        remark:      app._formSnapshot?.remark      || prof?.remark      || (app.reason || ''),
       },
     };
   }
@@ -286,6 +365,8 @@ function ensureMerchantAgentsStore() {
     if (s.activatedAt) logs.push({ at: s.activatedAt, by: '代理:' + s.id, type: 'login' });
     if (s.status === 'frozen' && s.frozenReason) logs.push({ at: '2026-05-10 14:00:00', by: '商户:管理员-randy', type: 'freeze', note: s.frozenReason });
     if (s.status === 'suspended' && s.suspendReason) logs.push({ at: '2026-05-08 16:00:00', by: '商户:管理员-randy', type: 'suspend', note: s.suspendReason });
+    // v3.1.89 取该代理的示例资料(流量/收款/备注),把 _traffic / _payment / _comm / _perms / _formSnapshot 全部烘入
+    const prof = AGENT_PROFILES[s.id] || {};
     window.APS_MERCHANT_AGENTS_STORE.list.push({
       id: s.id,
       name: s.name,
@@ -298,6 +379,17 @@ function ensureMerchantAgentsStore() {
       _channel: 'agentportal',
       _displayId: s.id,
       _logs: logs,
+      // v3.1.89 烘入「查看&配置」各 tab 用到的资料
+      _traffic: prof.trafficUrls ? [...prof.trafficUrls] : [],
+      _payment: {
+        method: 'UPI',
+        ifsc: prof.ifsc || '',
+        account: prof.account || '',
+        realName: prof.realName || '',
+        email: prof.payEmail || '',
+      },
+      _comm: { ...DEFAULT_COMM },
+      _perms: { ...DEFAULT_PERMS },
       level: 1,
       players: s.players || 0,
       commission: s.commission || 0,
@@ -319,7 +411,19 @@ function ensureMerchantAgentsStore() {
           { type:'Email', value: s.contact || '' },
           { type:'手机',  value: s.phone   || '', dial:'+91' },
         ].filter(c => c.value),
-        _formSnapshot: null,
+        // v3.1.89 _formSnapshot 用同一份 AGENT_PROFILES,确保「自行申请代理」与「已创建代理」detail 字段一致
+        _formSnapshot: {
+          contacts: [
+            { type:'Email', value: s.contact || '' },
+            { type:'手机',  value: s.phone   || '', dial:'+91' },
+          ].filter(c => c.value),
+          trafficUrls: prof.trafficUrls || [],
+          ifsc: prof.ifsc || '',
+          account: prof.account || '',
+          realName: prof.realName || '',
+          payEmail: prof.payEmail || '',
+          remark: prof.remark || s.reason || '',
+        },
       },
     });
     if (window.APS_AGENT_ACCOUNTS && window.APS_AGENT_ACCOUNTS.add) {

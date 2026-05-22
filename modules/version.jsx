@@ -2,9 +2,105 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.1.84',
+    ver: 'v3.1.95',
     date: '2026-05-22',
     current: true,
+    changes: [
+      { type: 'fix', text: '專業代理後台 → 我的账户 → RevShare Mode:EN 模式下「分潤方案」(週期資產變動分潤)与「計算口徑流程」(整段中文 STEP-1~STEP-4 公式)未翻译。原因:plan label 与 formula 直接来自 revshare.jsx 的中文常量 FORMULA_PERIOD_ASSET / REV_TYPES,没经过 i18n' },
+      { type: 'add', text: 'agent_common.jsx 新增 rv.plan.period + rv.formula.period 两个 i18n key,EN 文案:Periodic Asset Change RevShare + 完整翻译 STEP-1 ~ STEP-4 公式(含 Commission Base / Ending Balance / Deposits / Withdrawals 等术语)' },
+      { type: 'modify', text: 'agent_profile.jsx commission tab 在解析到 type==="period" 方案时用 T() 包裹 label 与 formula,中文模式保持原中文不变;其他方案类型保持原样' },
+    ],
+  },
+  {
+    ver: 'v3.1.94',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '專業代理後台 登入弹窗 Quick-pick 不会主动读取商户后台已创建代理 — 必须先手动去点「代理帐户管理」让 ensureMerchantAgentsStore() 执行,Quick-pick 才会从 8 个(4 申请中 + 4 已创建?)增到 12 个。原因:agent_login.jsx 只 subscribe APS_AGENT_ACCOUNTS,而 ACSamples(AC100005~AC100008)是在 ensureMerchantAgentsStore() 里 push 进 APS_AGENT_ACCOUNTS,如果用户没进过 agents.jsx 这段代码不会执行' },
+      { type: 'modify', text: 'agent_login.jsx mount useEffect 顶部强制调用 window.APS_ensureMerchantAgentsStore(),让 store 在首次显示登入弹窗时就完成初始化,8 个 AC 账户(4 申请中 + 4 已创建)+ 4 商户创建 全部立即可见' },
+    ],
+  },
+  {
+    ver: 'v3.1.93',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '專業代理後台 → 我的账户 EN 翻译补全 — agent_profile.jsx 全页硬编码中文换成 T(),agent_common.jsx 新增 70+ 翻译键(mp_prof.*):6 个 tab 标签 / 基本资料 8 字段 / 联系方式表头 / 帐户状态 pill / 分润模式 7 行(结算周期/币种/最低最高金额/分润方案/比例/计算口径)/ 权限配置 2 section(运营 + 报表)+ 5 项 + Code 上限 / 流量来源标题副标题 + 空态 / 收款方式联系商户提示 / 安全设置 + 修改密码弹窗' },
+      { type: 'modify', text: '代理创建方式 显示文案改用 i18n key 而非直接读 me._createWay(原本中文字段在 EN 下也会硬显中文)' },
+    ],
+  },
+  {
+    ver: 'v3.1.92',
+    date: '2026-05-22',
+    changes: [
+      { type: 'modify', text: '专业代理后台 → 分润报表 信息条按图调整 — ① 隐藏「周期」后面的时间(00:00:00 / 23:59:59),只显示日期 2026/6/1 - 2026/6/7;② 期号 / 周期 拆为两行(原一行三段)' },
+      { type: 'modify', text: '预估期信息条:第 1 行 期号 + 结算状态,第 2 行 周期;已结算期信息条:第 1 行 期号,第 2 行 周期 + 右侧「切换期号」按钮;期号下拉列表项 同样拆两行' },
+      { type: 'add', text: '新增 _stripTime 工具函数 用正则剥离 "YYYY/M/D HH:MM:SS" 尾部时间,只保留日期' },
+    ],
+  },
+  {
+    ver: 'v3.1.91',
+    date: '2026-05-22',
+    changes: [
+      { type: 'modify', text: 'agent_profile.jsx 流量来源 tab 优先读 me._traffic(商户后台 已创建代理 → 查看&配置 烘入的字段),其次 _appData._formSnapshot.trafficUrls,最后才生成默认 — 让 4 个 tab(基本资料 / 分润模式 / 流量来源 / 收款方式)的字段优先级与权限配置一致,都从 agents store 取真实数据' },
+      { type: 'fix', text: '验证数据流:AC100006 store hit 已含 _comm(每周 · revenue:RV-001 · ₹200~₹100,000)/ _traffic(2 条 URL)/ _payment(IFSC HDFC0002468 + 账号 + 真实姓名 + Email)/ _appData.loginName(rajeshmedia)/ _appData.contacts(Email + 手机)/ _appData._formSnapshot 完整快照 — 全部数据已正确写入,4 个 tab 渲染时会读到真实值' },
+    ],
+  },
+  {
+    ver: 'v3.1.90',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '專業代理後台 → 我的账户 → 權限配置 全部显示 ❌ (红 X) — 原因:agent_profile.jsx 用旧 perms 键(shareCode/viewPlayers/viewCommission/...),但 agents.jsx 已改为新 schema(myAccount/codeManage/codeLimit/reportCode/reportPlayer/reportRevshare);v3.1.89 烘入的 DEFAULT_PERMS 用新 schema 但代理后台读不到 → 全部 undefined → 全显示 ❌' },
+      { type: 'modify', text: 'agent_profile.jsx perms tab 改读新 schema:运营 section → myAccount(我的帐户)/ codeManage(Code 与链接管理)/ codeLimit(可创建上限,实际数字而不再硬编码 20);报表 section → reportCode(邀请 Code 与链接管理)/ reportPlayer(玩家损益)/ reportRevshare(分润报表)。默认 perms fallback 同步更新' },
+      { type: 'fix', text: '收款方式同样修复:优先读 me._payment(商户后台烘入的 IFSC/Account/RealName/Email),其次读 _formSnapshot 新键 ifsc/account/realName/payEmail,移除旧的 holder/payMethod 占位与「123123」假数据' },
+    ],
+  },
+  {
+    ver: 'v3.1.89',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '商户后台 → 已创建代理 + 自行申请代理 「查看&配置」内 8 个示例代理(AC100001~AC100008)资料补全,不再有「未填写」项 — 新增 AGENT_PROFILES 单一数据源,每个代理预填:流量来源链接(2~3 条匹配渠道的真实风格 URL)/ 收款方式(IFSC + 银行卡号 + 真实姓名 + 收款 Email)/ 备注(合作背景说明)' },
+      { type: 'add', text: 'seedAppLogs 自动注入 _formSnapshot.trafficUrls / ifsc / account / realName / payEmail / remark,自行申请代理 detail 各 tab 全部有数据;ACSamples(已创建代理 AC100005~AC100008)同步烘入 _traffic / _payment / _comm(每周结算 · RV-001 方案 · ₹200~₹100,000)/ _perms(全开 + Code 上限 20)/ _formSnapshot' },
+      { type: 'modify', text: '同一 ID 在「自行申请代理」与「已创建代理」两个列表中显示的资料完全一致,避免审核通过前后字段不对齐' },
+    ],
+  },
+  {
+    ver: 'v3.1.88',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '专业代理后台 EN 语言切换:补齐多处缺失的英文翻译 — ① my_revshare 整页(每周/每月结算、本期预估分润/已结算分润、期号/结算状态/未结算预估分润/周期/切换期号、6 个 KPI、表头 16 列含「注册时间/当前余额/期末余额/上期期末余额/上期佣金基数/佣金基数/分润比例/预估佣金/结算佣金/用户状态/结算记录」、盈利/亏损 pill、查询 action、空态)' },
+      { type: 'fix', text: '② my_players 表头「注册时间」(mp.col.registered → Registered At)' },
+      { type: 'fix', text: '③ my_codes_mgmt 工具栏「已创建 N / 20」counter(mcm.limit.counter_a → Created) 与上限弹窗 title/sub/body/tip 全部翻译' },
+      { type: 'modify', text: 'my_revshare 分页统计「共 N 条 · 第 1/1 页」改用全局 pg.summary 模板,避免「Total N · Page 1/1」拼接散文' },
+    ],
+  },
+  {
+    ver: 'v3.1.87',
+    date: '2026-05-22',
+    changes: [
+      { type: 'remove', text: '代理玩家损益(商戶後台 players.jsx) + 玩家损益(代理後台 my_players.jsx):删除「投注 / 派彩 / GGR」3 列与对应 3 个 KPI(总投注 / 总派彩 / GGR);与 v3.1.86 分潤報表的精简口径同步' },
+      { type: 'modify', text: 'players.jsx KPI 9 → 6(玩家总数 / 总首存人数 / 总首存金额 / 总充值 / 累计提款 / 充提差),网格 5 列 → 6 列;表格 13 列 → 10 列,colSpan 12 → 9' },
+      { type: 'modify', text: 'my_players.jsx KPI 9 → 6,网格 5 → 6;表格 10 列 → 7 列,colSpan 10 → 7' },
+    ],
+  },
+  {
+    ver: 'v3.1.86',
+    date: '2026-05-22',
+    changes: [
+      { type: 'remove', text: '代理分潤報表(商戶後台) + 分潤報表(代理後台):删除「投注 / 派彩 / GGR」3 列与对应 KPI(总投注 / 总派彩 / GGR);分潤口徑改用 充值 - 提款 - 期末餘額 一條線,不再展示投注/派彩明細' },
+      { type: 'remove', text: '同时删除「分润规则」tab — 规则实际由「商戶後台 → 運營 → 分潤管理」与「代理账户管理 → 查看&配置 → 分潤模式」配置,报表页不重复展示' },
+      { type: 'modify', text: 'agent_revshare KPI 4 列 → 5 列网格(玩家总数 / 总充值 / 总提款 / 充提差 / 佣金合计);my_revshare KPI 5 列 → 6 列网格(玩家总数 / 充值 / 提款 / 充提差 / 总余额 / 总佣金);表格 colSpan 同步更新 estimate 13→10、settled 17→14' },
+    ],
+  },
+  {
+    ver: 'v3.1.85',
+    date: '2026-05-22',
+    changes: [
+      { type: 'fix', text: '分潤管理 → 收益分潤 / 單付費分潤:新增方案後,切走頁面再回來,新增的那條消失 — 原因 useState(SEED_*) 在組件卸載時重置回種子。修復:把 rows 提升到 window.RV_SINGLE_ROWS / window.RV_REVENUE_ROWS 模塊級持久化,setRows 同時寫回 window 並 rebuildPlans() 重建下拉選項,切頁回來從 window 取最新值' },
+      { type: 'fix', text: '順帶修復新 ID 撞車 — 原 id 用 rows.length+1,刪除某條後再新增會產生重複 ID。改成 max(現有 ID 數字部分) + 1,單付費分潤 / 收益分潤 兩個 tab 同步修復' },
+    ],
+  },
+  {
+    ver: 'v3.1.84',
+    date: '2026-05-22',
     changes: [
       { type: 'fix', text: '自行申請代理 審核通過後 已創建代理 查看&配置 流量來源 / 收款方式 數據沒關聯過去 — 修复 3 处:① 通过弹窗 onCreateAgent 时 _traffic 优先用 form 里(管理员补填),为空时回落到 app._formSnapshot.trafficUrls(用户注册时填的);_payment 各字段同样回落到 _formSnapshot.ifsc/account/realName/payEmail' },
       { type: 'fix', text: '② 新代理 _appData._formSnapshot 写入时把 form 里的 trafficUrls / payment 字段合并进去(原来只浅拷贝 app._formSnapshot,丢失管理员在弹窗里补的内容)' },

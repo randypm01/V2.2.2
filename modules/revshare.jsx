@@ -114,6 +114,14 @@ const SEED_REVENUE = [
   { id: 'RV-001', type: 'period', name: '建議個人代理適用', ratio: 0.05, remark: '此方案為與 XXX 談過的合作內容,經上級批准配置的' },
 ];
 
+// v3.1.85 — 模塊級持久化:把 rows 存到 window,切頁回來不丟新增資料
+// 同時每次變更後重建 window.RV_PLANS,讓「創建代理 / 分潤模式」下拉同步刷新
+if (!window.RV_SINGLE_ROWS)  window.RV_SINGLE_ROWS  = SEED_SINGLE;
+if (!window.RV_REVENUE_ROWS) window.RV_REVENUE_ROWS = SEED_REVENUE;
+function rebuildPlans() {
+  window.RV_PLANS = buildPlanStore(window.RV_SINGLE_ROWS, window.RV_REVENUE_ROWS);
+}
+
 // =================== 主模块 ===================
 function RevShareModule() {
   const [tab, setTab] = React.useState('single');
@@ -135,13 +143,23 @@ function RevShareModule() {
 // =================== 單付費分潤 ===================
 function SinglePayPanel() {
   const toast = RVTOAST();
-  const [rows, setRows] = React.useState(SEED_SINGLE);
+  const [rows, _setRows] = React.useState(window.RV_SINGLE_ROWS);
+  const setRows = (next) => {
+    window.RV_SINGLE_ROWS = next;
+    rebuildPlans();
+    _setRows(next);
+  };
   const [editing, setEditing] = React.useState(null);  // {mode:'create'|'edit', data?}
   const [delTarget, setDelTarget] = React.useState(null);
 
   const onSave = (data) => {
     if (editing.mode === 'create') {
-      const id = 'SP-' + String(rows.length + 1).padStart(3, '0');
+      // v3.1.85 用 max(id) + 1 算新 ID,避免删后又加导致 ID 撞车
+      const maxNum = rows.reduce((m, r) => {
+        const n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0;
+        return Math.max(m, n);
+      }, 0);
+      const id = 'SP-' + String(maxNum + 1).padStart(3, '0');
       setRows([...rows, { ...data, id }]);
       toast('已新增單付費分潤方案');
     } else {
@@ -275,14 +293,24 @@ function SinglePayModal({ mode, data, onClose, onSave }) {
 // =================== 收益分潤 ===================
 function RevenuePanel() {
   const toast = RVTOAST();
-  const [rows, setRows] = React.useState(SEED_REVENUE);
+  const [rows, _setRows] = React.useState(window.RV_REVENUE_ROWS);
+  const setRows = (next) => {
+    window.RV_REVENUE_ROWS = next;
+    rebuildPlans();
+    _setRows(next);
+  };
   const [editing, setEditing] = React.useState(null);  // null | {mode:'create'|'edit', data?}
   const [delTarget, setDelTarget] = React.useState(null);
   const [viewFormula, setViewFormula] = React.useState(null);
 
   const onSave = (data) => {
     if (editing.mode === 'create') {
-      const id = 'RV-' + String(rows.length + 1).padStart(3, '0');
+      // v3.1.85 用 max(id) + 1 算新 ID,避免删后又加导致 ID 撞车
+      const maxNum = rows.reduce((m, r) => {
+        const n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0;
+        return Math.max(m, n);
+      }, 0);
+      const id = 'RV-' + String(maxNum + 1).padStart(3, '0');
       setRows([...rows, { ...data, id }]);
       toast('已新增收益分潤方案');
     } else {
@@ -462,8 +490,8 @@ function Field({ label, required, hint, children }) {
   );
 }
 
-// v2.4.43 初次挂载到 window,供创建代理弹窗下拉读取
-window.RV_PLANS = buildPlanStore(SEED_SINGLE, SEED_REVENUE);
+// v3.1.85 初次挂载到 window — 用持久化 rows 重建(切页回来时使用最新数据)
+rebuildPlans();
 
 window.RevShareModule = RevShareModule;
 

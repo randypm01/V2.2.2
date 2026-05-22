@@ -100,6 +100,11 @@ function _ARV_buildPeriodRows(agentList, periodSeed) {
   return out;
 }
 
+// v3.1.88 去掉时间部分(`HH:mm:ss` / `H:mm:ss`),只保留日期
+function _arvStripTime(s) {
+  return String(s || '').replace(/\s*\d{1,2}:\d{2}:\d{2}/g, '').trim();
+}
+
 function AgentRevshareModule() {
   const F = window.APS_FMT;
   const [cycleType, setCycleType] = React.useState('weekly'); // weekly | monthly
@@ -391,10 +396,9 @@ function AgentRevshareModule() {
         <ARV_UI.Tabs value={tab} onChange={switchTab} tabs={[
           { key: 'estimate', label: '本期预估分润' },
           { key: 'settled',  label: '已结算分润' },
-          { key: 'rule',     label: '分润规则' },
         ]}/>
 
-        {/* —— 信息条（v3.1.47 加背景 + 阴影，作为独立卡片）—— */}
+        {/* —— 信息条（v3.1.88 改两行布局 + 隐藏时间部分） —— */}
         {tab === 'estimate' && (
           <div style={{
             padding: '14px 18px',
@@ -407,11 +411,13 @@ function AgentRevshareModule() {
               background: '#fff',
               border: '1px solid var(--line)', borderRadius: 8,
               boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
-              display: 'flex', alignItems: 'center', gap: 32, fontSize: 12.5,
+              display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12.5,
             }}>
-              <ARV_InfoCell l="期號" v={ESTIMATE_INFO.week}/>
-              <ARV_InfoCell l="結算狀態" v={<span style={{color:'#f59e0b',fontWeight:600}}>未結算預估分潤</span>}/>
-              <ARV_InfoCell l="週期" v={<span className="text-mono">{ESTIMATE_INFO.period}</span>}/>
+              <div style={{display:'flex',alignItems:'center',gap:32}}>
+                <ARV_InfoCell l="期號" v={ESTIMATE_INFO.week}/>
+                <ARV_InfoCell l="結算狀態" v={<span style={{color:'#f59e0b',fontWeight:600}}>未結算預估分潤</span>}/>
+              </div>
+              <ARV_InfoCell l="週期" v={<span className="text-mono">{_arvStripTime(ESTIMATE_INFO.period)}</span>}/>
             </div>
           </div>
         )}
@@ -432,12 +438,13 @@ function AgentRevshareModule() {
                 border: '1.5px solid ' + (pickerOpen ? 'var(--brand)' : '#93c5fd'),
                 borderRadius: 8,
                 boxShadow: pickerOpen ? '0 0 0 3px rgba(59,130,246,0.12)' : '0 1px 3px rgba(59,130,246,0.08)',
-                display: 'flex', alignItems: 'center', gap: 32, fontSize: 12.5,
+                display: 'flex', alignItems: 'center', gap: 16, fontSize: 12.5,
                 cursor: 'pointer', userSelect: 'none', transition: 'all .15s',
               }}>
-              <ARV_InfoCell l="期號" v={selectedPeriod.label}/>
-              <ARV_InfoCell l="週期" v={<span className="text-mono">{selectedPeriod.start} - {selectedPeriod.end}</span>}/>
-              <span style={{ flex: 1 }}/>
+              <div style={{display:'flex',flexDirection:'column',gap:8,flex:1}}>
+                <ARV_InfoCell l="期號" v={selectedPeriod.label}/>
+                <ARV_InfoCell l="週期" v={<span className="text-mono">{_arvStripTime(selectedPeriod.start)} - {_arvStripTime(selectedPeriod.end)}</span>}/>
+              </div>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 12px', borderRadius: 6,
@@ -460,14 +467,14 @@ function AgentRevshareModule() {
                     onClick={() => { setSelectedWeek(p.key); setPickerOpen(false); setPage(1); }}
                     style={{
                       padding: '10px 16px', cursor: 'pointer', fontSize: 12.5,
-                      display: 'flex', alignItems: 'center', gap: 32,
+                      display: 'flex', flexDirection:'column', gap: 6,
                       background: p.key === selectedWeek ? 'var(--bg-2)' : '#fff',
                       borderBottom: '1px solid var(--line-soft)',
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
                     onMouseLeave={e => e.currentTarget.style.background = p.key === selectedWeek ? 'var(--bg-2)' : '#fff'}>
                     <ARV_InfoCell l="期號" v={p.label}/>
-                    <ARV_InfoCell l="週期" v={<span className="text-mono">{p.start} - {p.end}</span>}/>
+                    <ARV_InfoCell l="週期" v={<span className="text-mono">{_arvStripTime(p.start)} - {_arvStripTime(p.end)}</span>}/>
                   </div>
                 ))}
               </div>
@@ -479,8 +486,8 @@ function AgentRevshareModule() {
         {tab !== 'rule' && (
           <div style={{ padding: '14px 18px 18px' }}>
             {/* KPI 10 张：5 列网格 */}
-            {/* v3.1.42 KPI 8 张 — 删除「代理总数」+ 「盈利户数」 */}
-            <div className="kpi-grid mb-4" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+            {/* v3.1.86 KPI 5 张 — 删除「总投注 / 总派彩 / GGR」 */}
+            <div className="kpi-grid mb-4" style={{ gridTemplateColumns: 'repeat(5,1fr)' }}>
               {[
                 { l: '玩家总数',  v: F.fmtNum(totalPlayers) },
                 { l: '总充值金额', v: money(totalDep) },
@@ -488,10 +495,6 @@ function AgentRevshareModule() {
                 { l: '充提差',    v: fmtGap(totalGap),
                   valColor: totalGap >= 0 ? 'var(--success)' : 'var(--danger)',
                   highlight: true },
-                { l: '总投注',    v: money(totalWager) },
-                { l: '总派彩',    v: money(totalPayout) },
-                { l: 'GGR',       v: money(totalGgr),
-                  valColor: totalGgr >= 0 ? 'var(--success)' : 'var(--danger)' },
                 { l: tab === 'estimate' ? '预估佣金合计' : '结算佣金合计',
                   v: money(tab === 'estimate' ? totalEstCom : totalSetCom),
                   valColor: 'var(--brand)' },
@@ -534,9 +537,7 @@ function AgentRevshareModule() {
                       {tab === 'estimate' ? '当前余额' : '期末余额'}
                     </Th>
                     {tab === 'settled' && <Th k="prevBalance" right>上期期末余额</Th>}
-                    <Th k="wager" right>投注</Th>
-                    <Th k="payout" right>派彩</Th>
-                    <Th k="ggr" right>GGR</Th>
+                    {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
                     {tab === 'settled' && <Th k="prevBase" right>上期佣金基数</Th>}
                     {tab === 'settled' && <Th k="base" right>佣金基数</Th>}
                     <Th k="rate" right>分润比例</Th>
@@ -567,12 +568,7 @@ function AgentRevshareModule() {
                       {tab === 'settled' && (
                         <td className="right text-mono" style={{color:'var(--text-2)'}}>{moneyDec(r.prevUnsettled || 0)}</td>
                       )}
-                      <td className="right text-mono">{moneyDec(r.wager)}</td>
-                      <td className="right text-mono">{moneyDec(r.payout)}</td>
-                      <td className="right text-mono"
-                          style={{ color: r.ggr >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
-                        {moneyDec(r.ggr)}
-                      </td>
+                      {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
                         {tab === 'settled' && (
                           <td className="right text-mono" style={{color: (r.prevBase||0) < 0 ? 'var(--danger)' : 'var(--text-2)'}}>{moneyDec(r.prevBase || 0)}</td>
                         )}
@@ -604,7 +600,7 @@ function AgentRevshareModule() {
                     </tr>
                   ))}
                   {paged.length === 0 && (
-                    <tr><td colSpan={tab === 'settled' ? 17 : 13} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
+                    <tr><td colSpan={tab === 'settled' ? 14 : 10} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
                   )}
                 </tbody>
               </table>
@@ -614,29 +610,7 @@ function AgentRevshareModule() {
           </div>
         )}
 
-        {/* —— 分润规则 tab —— */}
-        {tab === 'rule' && (
-          <div style={{ padding: '18px' }}>
-            <div className="card-inner" style={{ maxWidth: 720, margin: '0 auto' }}>
-              <div className="form-section-title" style={{ marginTop: 0 }}>RevShare 分润方案</div>
-              <table style={{ width: '100%', fontSize: 12.5 }}>
-                <tbody>
-                  <ARV_RuleRow l="分润比例" v="5% × GGR（基准）"/>
-                  <ARV_RuleRow l="分润计算公式" v="分润基数 × 分润比例"/>
-                  <ARV_RuleRow l="结算周期" v="每周一结算上一周"/>
-                  <ARV_RuleRow l="负盈利结转" v="是 · 上期负数计入下期，直至清偿"/>
-                  <ARV_RuleRow l="结算币种" v="INR (₹)"/>
-                  <ARV_RuleRow l="最低结算金额" v="₹200（低于该金额顺延至下期）"/>
-                  <ARV_RuleRow l="持有期" v="结算后 7 天可申请提款"/>
-                </tbody>
-              </table>
-              <div className="form-section-title mt-3">分润管理</div>
-              <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 }}>
-                各代理的具体分润比例与方案，由「运营 → 分润管理」与「代理账户管理 → 查看&配置 → 分润模式」配置；本页只展示按当前配置计算的结果。
-              </div>
-            </div>
-          </div>
-        )}
+        {/* v3.1.86 删除「分润规则」tab — 实际规则在「运营 → 分润管理」配置 */}
       </div>
 
       {/* v3.1.44 说明弹窗 */}

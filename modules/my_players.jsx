@@ -74,8 +74,8 @@ function MyPlayersModule() {
         subtitle={MP_T('page.my_players.sub','查看邀请玩家的清单')}
       />
 
-      {/* KPI:2 行 × 5 + 1 个 = 11 个;用 5 列网格自动换行 */}
-      <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
+      {/* v3.1.87 KPI 6 个 — 删除「总投注 / 总派彩 / GGR」 */}
+      <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(6,1fr)'}}>
         {[
           [MP_T('mp.kpi.total_players','玩家总数'),  F.fmtNum(players.length)],
           [MP_T('mp.kpi.ftd_users','总首存人数'),    F.fmtNum(totalFtdUsers)],
@@ -83,9 +83,6 @@ function MyPlayersModule() {
           [MP_T('mp.kpi.deposit','总充值金额'),      money(totalDep)],
           [MP_T('mp.kpi.withdraw','总提款金额'),     money(totalWd)],
           [MP_T('mp.kpi.gap','充提差'),              fmtGap(totalGap), totalGap>=0?'up':'down'],
-          [MP_T('mp.kpi.wager','总投注'),            money(totalWager)],
-          [MP_T('mp.kpi.payout','总派彩'),           money(totalPayout)],
-          [MP_T('mp.kpi.ggr','GGR'),                 fmtGap(totalGgr), totalGgr>=0?'up':'down'],
         ].map(([l,v,delta]) => (
           <div key={l} className="kpi">
             <div className="label">{l}</div>
@@ -111,9 +108,7 @@ function MyPlayersModule() {
               <th className="right">{MP_T('mp.col.deposit','充值金额')}</th>
               <th className="right">{MP_T('mp.col.withdraw','提款金额')}</th>
               <th className="right">{MP_T('mp.col.gap','充提差')}</th>
-              <th className="right">{MP_T('mp.col.wager','投注')}</th>
-              <th className="right">{MP_T('mp.col.payout','派彩')}</th>
-              <th className="right">{MP_T('mp.col.ggr','GGR')}</th>
+              {/* v3.1.87 删除 投注 / 派彩 / GGR 三列 */}
             </tr></thead>
             <tbody>
               {paged.map(p => {
@@ -127,14 +122,12 @@ function MyPlayersModule() {
                     <td className="right text-mono">{money(p.deposit)}</td>
                     <td className="right text-mono">{money(p.withdraw)}</td>
                     <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
-                    <td className="right text-mono">{money(p.wager)}</td>
-                    <td className="right text-mono">{money(p.payout)}</td>
-                    <td className="right text-mono" style={{color: p.ggr>=0?'var(--success)':'var(--danger)'}}>{(p.ggr>=0?'+':'-')+'₹'+F.money(Math.abs(p.ggr||0))}</td>
+                    {/* v3.1.87 删除 投注 / 派彩 / GGR 三列 */}
                   </tr>
                 );
               })}
               {paged.length === 0 && (
-                <tr><td colSpan={10} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MP_T('mp.empty','暂无玩家数据')}</td></tr>
+                <tr><td colSpan={7} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MP_T('mp.empty','暂无玩家数据')}</td></tr>
               )}
             </tbody>
           </table>

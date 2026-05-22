@@ -94,6 +94,9 @@ function buildSettledPeriodList(cycleType) {
     { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1 },
   ];
 }
+// v3.1.92 隐藏日期后面的时间 — '2026/6/1 00:00:00' → '2026/6/1'
+const _stripTime = (s) => String(s || '').replace(/\s+\d{1,2}:\d{2}(:\d{2})?\s*$/, '');
+
 const MR_ESTIMATE_INFO = {
   weekly:  { week: 'W26061', period: '2026/6/1 00:00:00 - 2026/6/7 23:59:59',  seed: 3  },
   monthly: { week: 'M2606',  period: '2026/6/1 00:00:00 - 2026/6/30 23:59:59', seed: 26 },
@@ -204,7 +207,6 @@ function MyRevshareModule() {
         <MRUI.Tabs value={tab} onChange={switchTab} tabs={[
           {key:'estimate', label: MR_T('mr.tab.estimate','本期预估分润')},
           {key:'settled',  label: MR_T('mr.tab.settled','已结算分润')},
-          {key:'rule',     label: MR_T('mr.tab.rule','分润规则')},
         ]}/>
 
         {/* —— 信息条 v3.1.50 与商户后台样式统一(灰色外层 + 白底内层) —— */}
@@ -220,11 +222,14 @@ function MyRevshareModule() {
               background:'#fff',
               border:'1px solid var(--line)', borderRadius:8,
               boxShadow:'0 1px 2px rgba(15,23,42,0.04)',
-              display:'flex',alignItems:'center',gap:32,fontSize:12.5,
+              display:'flex',flexDirection:'column',alignItems:'flex-start',gap:8,fontSize:12.5,
             }}>
-              <InfoCell l={MR_T('mr.info.week','期號')} v={estimateInfo.week}/>
-              <InfoCell l={MR_T('mr.info.status','結算狀態')} v={<span style={{color:'#f59e0b',fontWeight:600}}>{MR_T('mr.info.unsettled','未結算預估分潤')}</span>}/>
-              <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{estimateInfo.period}</span>}/>
+              {/* v3.1.92 期号 + 状态 一行；周期 另起一行；周期隐藏时间 */}
+              <div style={{display:'flex',alignItems:'center',gap:32}}>
+                <InfoCell l={MR_T('mr.info.week','期號')} v={estimateInfo.week}/>
+                <InfoCell l={MR_T('mr.info.status','結算狀態')} v={<span style={{color:'#f59e0b',fontWeight:600}}>{MR_T('mr.info.unsettled','未結算預估分潤')}</span>}/>
+              </div>
+              <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{_stripTime(estimateInfo.period.split(' - ')[0])} - {_stripTime(estimateInfo.period.split(' - ')[1])}</span>}/>
             </div>
           </div>
         )}
@@ -245,12 +250,14 @@ function MyRevshareModule() {
                 border:'1.5px solid ' + (pickerOpen ? 'var(--brand)' : '#93c5fd'),
                 borderRadius:8,
                 boxShadow: pickerOpen ? '0 0 0 3px rgba(59,130,246,0.12)' : '0 1px 3px rgba(59,130,246,0.08)',
-                display:'flex',alignItems:'center',gap:32,fontSize:12.5,
+                display:'flex',alignItems:'center',gap:18,fontSize:12.5,
                 cursor:'pointer', userSelect:'none', transition:'all .15s',
               }}>
-              <InfoCell l={MR_T('mr.info.week','期號')} v={selectedPeriod.week}/>
-              <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{selectedPeriod.start} - {selectedPeriod.end}</span>}/>
-              <span style={{flex:1}}/>
+              {/* v3.1.92 期號 / 周期 拆为两行，周期隐藏时间 */}
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:8,flex:1}}>
+                <InfoCell l={MR_T('mr.info.week','期號')} v={selectedPeriod.week}/>
+                <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{_stripTime(selectedPeriod.start)} - {_stripTime(selectedPeriod.end)}</span>}/>
+              </div>
               <span style={{
                 display:'inline-flex',alignItems:'center',gap:6,
                 padding:'6px 12px',borderRadius:6,
@@ -274,14 +281,15 @@ function MyRevshareModule() {
                     onClick={()=>{setSelectedWeek(p.week);setPickerOpen(false);setPage(1);}}
                     style={{
                       padding:'10px 16px', cursor:'pointer', fontSize:12.5,
-                      display:'flex',alignItems:'center',gap:32,
+                      display:'flex',flexDirection:'column',alignItems:'flex-start',gap:6,
                       background:p.week===selectedWeek?'var(--bg-2)':'#fff',
                       borderBottom:'1px solid var(--line-soft)'
                     }}
                     onMouseEnter={e=>e.currentTarget.style.background='var(--bg-2)'}
                     onMouseLeave={e=>e.currentTarget.style.background=p.week===selectedWeek?'var(--bg-2)':'#fff'}>
+                    {/* v3.1.92 下拉项 期號 / 周期 也拆两行，周期只显示日期 */}
                     <InfoCell l={MR_T('mr.info.week','期號')} v={p.week}/>
-                    <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{p.start} - {p.end}</span>}/>
+                    <InfoCell l={MR_T('mr.info.period','週期')} v={<span className="text-mono">{_stripTime(p.start)} - {_stripTime(p.end)}</span>}/>
                   </div>
                 ))}
               </div>
@@ -292,17 +300,14 @@ function MyRevshareModule() {
         {/* —— Tab 内容 —— */}
         {tab !== 'rule' && (
           <div style={{padding:'14px 18px 18px'}}>
-            {/* KPI:9 个,5 列网格自动换行(5 + 4) */}
-            <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
+            {/* v3.1.86 KPI:6 个 — 移除 总投注 / 总派彩 / GGR */}
+            <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(6,1fr)'}}>
               {[
                 [MR_T('mr.kpi.players','玩家總數'),  F.fmtNum(totalPlayers)],
                 [MR_T('mr.kpi.deposit','總充值金額'),    money(totalDep)],
                 [MR_T('mr.kpi.withdraw','總提款金額'),   money(totalWd)],
                 [MR_T('mr.kpi.gap','充提差'),            fmtGap(totalGap), totalGap>=0?'up':'down'],
                 [MR_T('mr.kpi.balance','總玩家餘額'),    money(totalBalance)],
-                [MR_T('mr.kpi.wager','總投注'),          money(totalWager)],
-                [MR_T('mr.kpi.payout','總派彩'),         money(totalPayout)],
-                [MR_T('mr.kpi.ggr','GGR'),               fmtGap(totalGgr), totalGgr>=0?'up':'down'],
                 [MR_T('mr.kpi.commission','總佣金'),     money(totalCom)],
               ].map(([l,v,delta]) => (
                 <div key={l} className="kpi">
@@ -343,9 +348,7 @@ function MyRevshareModule() {
                   {tab === 'settled' && (
                     <th className="right">{MR_T('mr.col.prev_balance','上期期末余额')}</th>
                   )}
-                  <th className="right">{MR_T('mr.col.wager','投注')}</th>
-                  <th className="right">{MR_T('mr.col.payout','派彩')}</th>
-                  <th className="right">GGR</th>
+                  {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
                   {tab === 'settled' && (
                     <th className="right">{MR_T('mr.col.prev_base','上期佣金基数')}</th>
                   )}
@@ -378,9 +381,7 @@ function MyRevshareModule() {
                         {tab === 'settled' && (
                           <td className="right text-mono" style={{color:'var(--text-2)'}}>{money(p.prevUnsettled || 0)}</td>
                         )}
-                        <td className="right text-mono">{money(p.wager)}</td>
-                        <td className="right text-mono">{money(p.payout)}</td>
-                        <td className="right text-mono" style={{color: p.ggr>=0?'var(--success)':'var(--danger)'}}>{(p.ggr>=0?'+':'-')+'₹'+F.money(Math.abs(p.ggr||0))}</td>
+                        {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
                         {tab === 'settled' && (
                           <td className="right text-mono" style={{color: (p.prevBase||0) < 0 ? 'var(--danger)' : 'var(--text-2)'}}>{money(p.prevBase || 0)}</td>
                         )}
@@ -409,53 +410,20 @@ function MyRevshareModule() {
                     );
                   })}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={tab === 'settled' ? 17 : 13} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
+                    <tr><td colSpan={tab === 'settled' ? 14 : 10} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
 
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12,fontSize:12,color:'var(--text-3)'}}>
-              <span>{MR_T('mr.pagination.total','共')} {filtered.length} {MR_T('mr.pagination.items','条')} · {MR_T('mr.pagination.page','第')} 1/1 {MR_T('mr.pagination.page_unit','页')}</span>
+              <span>{(window.t('pg.summary','共 {total} 条 · 第 {page} / {totalPages} 页') || '').replace('{total}', filtered.length).replace('{page}', 1).replace('{totalPages}', 1)}</span>
             </div>
             </div>
           </div>
         )}
 
-        {/* —— 分润规则 tab —— */}
-        {tab === 'rule' && (
-          <div style={{padding:'18px'}}>
-            <div className="card-inner" style={{maxWidth:720,margin:'0 auto'}}>
-              <div className="form-section-title" style={{marginTop:0}}>{MR_T('mr.rule.title','RevShare 方案')}</div>
-              <table style={{width:'100%',fontSize:12.5}}>
-                <tbody>
-                  <RuleRow l={MR_T('mr.rule.rate','分润比例')} v="5% × GGR"/>
-                  <RuleRow l={MR_T('mr.rule.ngr','分润计算公式')} v="GGR(投注 − 派彩) × 分润比例"/>
-                  <RuleRow l={MR_T('mr.rule.cycle','结算周期')} v={MR_T('mr.rule.cycle_v','每周一结算上一周')}/>
-                  <RuleRow l={MR_T('mr.rule.carry','负盈利结转')} v={MR_T('mr.rule.carry_v','是 · 上期负数计入下期,直至清偿')}/>
-                  <RuleRow l={MR_T('mr.rule.currency','结算币种')} v="INR (₹)"/>
-                  <RuleRow l={MR_T('mr.rule.min','最低结算金额')} v="₹200 (低于该金额顺延至下期)"/>
-                  <RuleRow l={MR_T('mr.rule.hold','持有期')} v={MR_T('mr.rule.hold_v','结算后 7 天可申请提款')}/>
-                </tbody>
-              </table>
-              <div className="form-section-title mt-3">{MR_T('mr.rule.tier','阶梯奖励 (达成额外奖励)')}</div>
-              <div style={{display:'grid',gap:6,fontSize:12.5}}>
-                {[
-                  ['月 GGR ≥ ₹5,000', '+2%', '本月分润比例 → 7%'],
-                  ['月 GGR ≥ ₹20,000', '+5%', '本月分润比例 → 10%'],
-                  ['月 GGR ≥ ₹50,000', '+8% + 升级', '分润 → 13%,等级升白金'],
-                  ['月 GGR ≥ ₹100,000', '一对一专属经理', '议价空间 + 加速结算'],
-                ].map(([t, b, d], i) => (
-                  <div key={i} style={{display:'flex',padding:'10px 14px',background:'var(--bg-2)',borderRadius:6,gap:12,alignItems:'center'}}>
-                    <span style={{width:160,color:'var(--text-1)'}}>{t}</span>
-                    <span className="badge b-success" style={{minWidth:80,textAlign:'center'}}>{b}</span>
-                    <span className="text-mute" style={{fontSize:11.5,flex:1}}>{d}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* v3.1.86 删除「分润规则」tab —— 内容由商户后台「分润管理」配置统一展示 */}
       </div>
 
       {/* v3.1.57 已结算记录查询 */}
