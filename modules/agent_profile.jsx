@@ -10,6 +10,11 @@ function AgentProfileModule() {
   const T = (k, fb) => window.t(k, fb);
   const [tab, setTab] = React.useState('basic');
   const [showPwd, setShowPwd] = React.useState(false);
+  // v3.2.3 帐户被冻结时,「收款方式 → 编辑」和「安全设置 → 修改密码」改弹「帐户已被冻结」提示
+  const [showFrozen, setShowFrozen] = React.useState(false);
+  const [showSuspended, setShowSuspended] = React.useState(false);
+  const isFrozen = me.status === 'frozen';
+  const isSuspended = me.status === 'suspended';
   // v3.2.1 收款方式 tab 编辑态 + draft(与商户后台同步)
   const [payEditing, setPayEditing] = React.useState(false);
   const [payDraft, setPayDraft] = React.useState(null);
@@ -51,8 +56,13 @@ function AgentProfileModule() {
     email:    me._payment?.email    || snap.payEmail  || '',
   };
 
-  // v3.2.1 进入编辑态：拷贝现值到 draft
-  const startEditPayment = () => { setPayDraft({...payment}); setPayEditing(true); };
+  // v3.2.4 被停用 → 弹「帐户已停用」 点「我知道了」自动登出
+  // v3.2.3 若帐户已被冻结,改弹「帐户已被冻结」提示
+  const startEditPayment = () => {
+    if (isSuspended) { setShowSuspended(true); return; }
+    if (isFrozen) { setShowFrozen(true); return; }
+    setPayDraft({...payment}); setPayEditing(true);
+  };
   // 取消：清 draft + 退出编辑态
   const cancelEditPayment = () => { setPayDraft(null); setPayEditing(false); };
   // 保存：写回 APS_MERCHANT_AGENTS_STORE.list、追加一条操作日志，让商户后台「查看&配置」同步看到
@@ -317,10 +327,27 @@ function AgentProfileModule() {
             <div className="ad-section-title">{T('mp_prof.security.title','登入安全')}</div>
             <SecurityRow icon="shield" title={T('mp_prof.security.pwd','登入密码')}
               desc={T('mp_prof.security.last','上次修改时间:') + new Date(Date.now()-30*86400000).toISOString().slice(0,10) + ' ' + new Date().toTimeString().slice(0,8)}
-              action={<button className="btn sm" style={{borderColor:'var(--brand)',color:'var(--brand)'}} onClick={()=>setShowPwd(true)}>{T('mp_prof.security.change','修改密码')}</button>}/>
+              action={<button className="btn sm" style={{borderColor:'var(--brand)',color:'var(--brand)'}} onClick={()=>{ if (isSuspended) { setShowSuspended(true); return; } if (isFrozen) { setShowFrozen(true); return; } setShowPwd(true); }}>{T('mp_prof.security.change','修改密码')}</button>}/>
           </div>
         )}
       </div>
+
+      {/* v3.2.3 帐户已被冻结 弹窗 */}
+      <window.FrozenAccountModal
+        open={showFrozen}
+        onClose={()=>setShowFrozen(false)}
+        agentId={me._displayId || me.id}
+        loginName={me.loginName}
+        reason={me.frozenReason}
+      />
+      {/* v3.2.4 帐户已被停用 弹窗 — 關閉時自動登出 */}
+      <window.SuspendedAccountModal
+        open={showSuspended}
+        onClose={()=>setShowSuspended(false)}
+        agentId={me._displayId || me.id}
+        loginName={me.loginName}
+        reason={(me._appData && me._appData.suspendReason) || me.suspendReason}
+      />
 
       {/* 修改密码 Modal */}
       <PFUI.Modal open={showPwd} onClose={()=>setShowPwd(false)} title={T('mp_prof.pwd.modal.title','修改登录密码')}

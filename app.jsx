@@ -26,6 +26,14 @@ function App() {
   // v2.3.28 专业代理后台登入态
   const [loggedInAgent, setLoggedInAgent] = useState(null);
   const [agentUserMenuOpen, setAgentUserMenuOpen] = useState(false);
+  // v3.2.4 暴露 代理后台「登出」函数 — 供 SuspendedAccountModal 等模块调用
+  React.useEffect(() => {
+    window.APS_AGENT_LOGOUT = () => {
+      setLoggedInAgent(null);
+      setAgentRoute('home');
+      window.CURRENT_AGENT_ID = null;
+    };
+  }, []);
   // v3.0.16 响应式 — 侧栏抽屉开关(仅低于 1024px 生效;桌面忘取此 state)
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // v3.0.26 PC / 手机 浏览模式切换(动态改 viewport meta)

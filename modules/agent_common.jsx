@@ -672,3 +672,180 @@ window.AgentHero = function AgentHero({ icon='dashboard', tone='#3b82f6' }) {
     </div>
   );
 };
+
+// ============================================================
+// v3.2.3 帳戶已被凍結 彈窗 — 供 我的账户(收款方式 编辑 / 安全设置 修改密码)
+// 与 Code 与链接管理(创建邀请 Code)共用
+// ============================================================
+window.FrozenAccountModal = function FrozenAccountModal({ open, onClose, agentId, loginName, reason }) {
+  if (!open) return null;
+  const Icon = (window.UI && window.UI.Icon) || (() => null);
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1100,
+        background: 'rgba(15,23,42,0.55)',
+        display: 'grid', placeItems: 'center', padding: 16,
+      }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}
+    >
+      <div style={{
+        position: 'relative', width: '100%', maxWidth: 420,
+        background: '#fff', borderRadius: 14, padding: '32px 28px',
+        boxShadow: '0 24px 60px rgba(15,23,42,0.25)',
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 14, right: 14, width: 28, height: 28,
+          display: 'grid', placeItems: 'center', border: 'none', background: 'transparent',
+          color: '#94a3b8', cursor: 'pointer', borderRadius: 6,
+        }}><Icon name="x" size={16}/></button>
+
+        <div style={{ textAlign: 'center' }}>
+          {/* 大圖示 — 凍結 = 藍色 lock */}
+          <div style={{
+            width: 72, height: 72, margin: '0 auto 18px', borderRadius: '50%',
+            background: '#eff6ff', color: '#2563eb',
+            display: 'grid', placeItems: 'center',
+          }}>
+            <Icon name="lock" size={32}/>
+          </div>
+
+          <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 700, color: '#0f172a' }}>帳戶已凍結</h2>
+          <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#475569', lineHeight: 1.65 }}>
+            您的代理帳戶已被商戶凍結,暫無 創建 / 編輯 / 刪除 權限。
+          </p>
+
+          {/* 凍結原因 — 藍色框 */}
+          <div style={{
+            margin: '14px 0', padding: '10px 12px',
+            background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6,
+            fontSize: 13, lineHeight: 1.55, color: '#1d4ed8', textAlign: 'left',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#2563eb', marginBottom: 4 }}>凍結原因</div>
+            {reason || '帳戶已被凍結'}
+          </div>
+
+          <p style={{ margin: '14px 0 20px', fontSize: 12.5, color: '#94a3b8', lineHeight: 1.6 }}>
+            請聯絡運營管理員 / 商戶客服處理
+          </p>
+
+          {/* 帳號資訊 */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 8,
+            padding: '14px 16px', background: '#f8fafc', borderRadius: 8,
+            fontSize: 12.5, textAlign: 'left',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>代理ID</span>
+              <span style={{ color: '#0f172a', fontFamily: 'JetBrains Mono', fontWeight: 600 }}>{agentId || '—'}</span>
+            </div>
+            {loginName && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>登錄帳號</span>
+                <span style={{ color: '#0f172a', fontFamily: 'JetBrains Mono' }}>{loginName}</span>
+              </div>
+            )}
+          </div>
+
+          <button onClick={onClose} style={{
+            marginTop: 18, width: '100%', padding: 12, borderRadius: 8, border: 'none',
+            background: '#2563eb', color: '#fff', fontSize: 14.5, fontWeight: 600, cursor: 'pointer',
+          }}>我知道了</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// v3.2.4 帳戶已停用 彈窗 — 共用組件
+// 觸發場景:代理已登入 + status === 'suspended',點擊 編輯/創建/查看/刪除 按鈕
+// 行為:點「我知道了」或點遮罩 → 自動登出(調 window.APS_AGENT_LOGOUT)
+// 樣式:紅色 / ban 圖示 / 紅色原因框 — 與「凍結」做視覺區分
+// ============================================================
+window.SuspendedAccountModal = function SuspendedAccountModal({ open, onClose, agentId, loginName, reason }) {
+  if (!open) return null;
+  const Icon = (window.UI && window.UI.Icon) || (() => null);
+  const handleClose = () => {
+    if (typeof onClose === 'function') onClose();
+    // 自動登出
+    setTimeout(() => {
+      if (typeof window.APS_AGENT_LOGOUT === 'function') window.APS_AGENT_LOGOUT();
+    }, 0);
+  };
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1100,
+        background: 'rgba(15,23,42,0.55)',
+        display: 'grid', placeItems: 'center', padding: 16,
+      }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+    >
+      <div style={{
+        position: 'relative', width: '100%', maxWidth: 420,
+        background: '#fff', borderRadius: 14, padding: '32px 28px',
+        boxShadow: '0 24px 60px rgba(15,23,42,0.25)',
+      }}>
+        <button onClick={handleClose} style={{
+          position: 'absolute', top: 14, right: 14, width: 28, height: 28,
+          display: 'grid', placeItems: 'center', border: 'none', background: 'transparent',
+          color: '#94a3b8', cursor: 'pointer', borderRadius: 6,
+        }}><Icon name="x" size={16}/></button>
+
+        <div style={{ textAlign: 'center' }}>
+          {/* 大圖示 — 停用 = 紅色 x */}
+          <div style={{
+            width: 72, height: 72, margin: '0 auto 18px', borderRadius: '50%',
+            background: '#fef2f2', color: '#dc2626',
+            display: 'grid', placeItems: 'center',
+          }}>
+            <Icon name="x" size={36}/>
+          </div>
+
+          <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 700, color: '#0f172a' }}>帳戶已停用</h2>
+          <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#475569', lineHeight: 1.65 }}>
+            您的代理帳戶已被商戶停用(終態,不可撤銷),系統將自動登出。
+          </p>
+
+          {/* 停用原因 — 紅色框 */}
+          <div style={{
+            margin: '14px 0', padding: '10px 12px',
+            background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6,
+            fontSize: 13, lineHeight: 1.55, color: '#b91c1c', textAlign: 'left',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#dc2626', marginBottom: 4 }}>停用原因</div>
+            {reason || '帳戶已被停用'}
+          </div>
+
+          <p style={{ margin: '14px 0 20px', fontSize: 12.5, color: '#94a3b8', lineHeight: 1.6 }}>
+            如有疑問,請聯絡運營管理員 / 商戶客服
+          </p>
+
+          {/* 帳號資訊 */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 8,
+            padding: '14px 16px', background: '#f8fafc', borderRadius: 8,
+            fontSize: 12.5, textAlign: 'left',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>代理ID</span>
+              <span style={{ color: '#0f172a', fontFamily: 'JetBrains Mono', fontWeight: 600 }}>{agentId || '—'}</span>
+            </div>
+            {loginName && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>登錄帳號</span>
+                <span style={{ color: '#0f172a', fontFamily: 'JetBrains Mono' }}>{loginName}</span>
+              </div>
+            )}
+          </div>
+
+          <button onClick={handleClose} style={{
+            marginTop: 18, width: '100%', padding: 12, borderRadius: 8, border: 'none',
+            background: '#dc2626', color: '#fff', fontSize: 14.5, fontWeight: 600, cursor: 'pointer',
+          }}>我知道了 (登出)</button>
+        </div>
+      </div>
+    </div>
+  );
+};

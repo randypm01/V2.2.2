@@ -2,9 +2,38 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.2.2',
+    ver: 'v3.2.5',
     date: '2026-05-25',
     current: true,
+    changes: [
+      { type: 'feat', text: 'Code 与链接管理 — 表格行 操作列 「编辑」「删除」按鈕 也加上 已冻结 / 已停用 拦截:点击改弹对应「帳戶已凍結」/「帳戶已停用」弹窗,不再進入編輯彈窗 / 刪除確認(原 创建邀请 Code 已加,本版補齊行內操作)' },
+      { type: 'modify', text: 'my_codes_mgmt.jsx 抽出 handleClickEdit / handleClickDelete,顺序 isSuspended → isFrozen → 原逻辑(setShowEdit / setDelTarget)' },
+    ],
+  },
+  {
+    ver: 'v3.2.4',
+    date: '2026-05-25',
+    changes: [
+      { type: 'feat', text: '專業代理後台 帳戶被停用(status==="suspended")时,以下 3 个操作按钮 改弹「帳戶已停用」红色提示弹窗,不再进入原流程: ① 我的账户 → 收款方式 → 编辑 ② 我的账户 → 安全设置 → 修改密码 ③ Code 与链接管理 → 创建邀请 Code' },
+      { type: 'feat', text: '「帳戶已停用」弹窗 行为差异(对比「已冻结」):点击「我知道了 (登出)」或点遮罩关闭 → 自動 setLoggedInAgent(null) 強制登出,跳回登入页;按钮文案改为「我知道了 (登出)」+ 紅色背景' },
+      { type: 'feat', text: '刷新网站 = 自動登出 — 因 loggedInAgent 為非持久化的 React state(不寫 localStorage),整页刷新後本就回到登入页,符合「帐户已停用 → 不允许继续停留」要求' },
+      { type: 'add', text: 'agent_common.jsx 新增共用组件 window.SuspendedAccountModal — 樣式參考 FrozenAccountModal 但配色改為紅色:紅色 x 圖示 + 標題「帳戶已停用」+ 「您的代理帳戶已被商戶停用(終態,不可撤銷),系統將自動登出。」+ 紅色「停用原因」框 + 紅色全寬「我知道了 (登出)」按鈕' },
+      { type: 'add', text: 'app.jsx 暴露 window.APS_AGENT_LOGOUT() 全局函数 — 供 SuspendedAccountModal 等组件触发登出(setLoggedInAgent(null) + setAgentRoute("home") + CURRENT_AGENT_ID=null);後續其他停用相關行為都可調用此函數' },
+      { type: 'modify', text: 'agent_profile.jsx / my_codes_mgmt.jsx 在原 click handler 加 isSuspended 检查,顺序为 isSuspended → isFrozen → 原逻辑,优先弹停用提示' },
+    ],
+  },
+  {
+    ver: 'v3.2.3',
+    date: '2026-05-25',
+    changes: [
+      { type: 'feat', text: '專業代理後台 帳戶被凍結(status==="frozen")时,以下 3 个 操作按钮 改弹「帳戶已凍結」提示弹窗,不再进入原流程: ① 我的账户 → 收款方式 → 编辑 ② 我的账户 → 安全设置 → 修改密码 ③ Code 与链接管理 → 创建邀请 Code' },
+      { type: 'add', text: 'agent_common.jsx 新增共用组件 window.FrozenAccountModal — 樣式對齊 agent_login.jsx 的「帳戶已停用」弹窗:大圆形蓝色 lock 图标 + 标题「帳戶已凍結」+ 「您的代理帳戶已被商戶凍結,暫無 創建/編輯/刪除 權限」+ 蓝色「凍結原因」框 + 灰色「請聯絡運營管理員 / 商戶客服處理」+ 底部代理ID + 登錄帳號 + 全宽「我知道了」蓝按钮' },
+      { type: 'add', text: 'agent_profile.jsx / my_codes_mgmt.jsx 引入 useCurrentAgent + isFrozen 判定,在原 click handler 最前面 if (isFrozen) → setShowFrozen(true) 早退,避免开原本的编辑/创建弹窗' },
+    ],
+  },
+  {
+    ver: 'v3.2.2',
+    date: '2026-05-25',
     changes: [
       { type: 'fix', text: '🐛 收款方式 tab 多出一条横线 — agent_profile.jsx 编辑/保存/取消按钮用了 .agent-detail-foot 类,它带 border-top:1px solid var(--line)。删掉 className,改用相同 flex 内联样式,横线消失' },
       { type: 'fix', text: '🐛 收款方式 编辑模式下 输入框每输入 1 个字就要重新点击才能继续输入 — PaymentInfoView 内部把 Field 定义为组件内嵌函数,每次 render React 视作新组件类型,会 unmount/remount input 导致丢焦点。把 Field 提取到 PaymentInfoView 外部成为 _PayField 静态组件,React 复用同一 DOM 节点,焦点保留' },

@@ -61,6 +61,12 @@ function MyCodesMgmtModule() {
   const F = window.APS_FMT;
   const T = (k, fb) => window.t(k, fb);
   const toast = MCM_UI.useToast();
+  const me = window.useCurrentAgent();
+  // v3.2.3 帐户被冻结 — 創建邀请 Code 按钮 改弹 「帐户已被冻结」 弹窗
+  const [showFrozen, setShowFrozen] = React.useState(false);
+  const [showSuspended, setShowSuspended] = React.useState(false);
+  const isFrozen = me && me.status === 'frozen';
+  const isSuspended = me && me.status === 'suspended';
   const [q, setQ] = React.useState('');
   const [statusF, setStatusF] = React.useState('all');
   const [page, setPage] = React.useState(1);
@@ -73,7 +79,21 @@ function MyCodesMgmtModule() {
   // Code 创建数量上限 — 超出后弹窗提示用户联系管理员
   const MAX_CODES = 20;
   const reachedLimit = codes.length >= MAX_CODES;
+  // v3.2.5 編輯/刪除 也要受 凍結 / 停用 攔截
+  const handleClickEdit = (c) => {
+    if (isSuspended) { setShowSuspended(true); return; }
+    if (isFrozen) { setShowFrozen(true); return; }
+    setShowEdit(c);
+  };
+  const handleClickDelete = (c) => {
+    if (isSuspended) { setShowSuspended(true); return; }
+    if (isFrozen) { setShowFrozen(true); return; }
+    setDelTarget(c);
+  };
+
   const handleClickCreate = () => {
+    if (isSuspended) { setShowSuspended(true); return; }
+    if (isFrozen) { setShowFrozen(true); return; }
     if (reachedLimit) { setShowLimit(true); return; }
     setShowCreate(true);
   };
@@ -180,9 +200,9 @@ function MyCodesMgmtModule() {
                   </td>
                   <td>
                     <div style={{display:'flex',gap:12,alignItems:'center'}}>
-                      <a href="#" onClick={e=>{e.preventDefault();setShowEdit(c);}}
+                      <a href="#" onClick={e=>{e.preventDefault();handleClickEdit(c);}}
                         style={{color:'var(--brand)',fontSize:12,textDecoration:'none'}}>{MCM_T('mcm.action.edit','编辑')}</a>
-                      <a href="#" onClick={e=>{e.preventDefault();setDelTarget(c);}}
+                      <a href="#" onClick={e=>{e.preventDefault();handleClickDelete(c);}}
                         style={{color:'var(--danger)',fontSize:12,textDecoration:'none'}}>{MCM_T('mcm.action.delete','删除')}</a>
                     </div>
                   </td>
@@ -196,6 +216,23 @@ function MyCodesMgmtModule() {
         </div>
         <MCM_UI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
       </div>
+
+      {/* v3.2.3 帐户已被冻结 弹窗 */}
+      <window.FrozenAccountModal
+        open={showFrozen}
+        onClose={()=>setShowFrozen(false)}
+        agentId={me && (me._displayId || me.id)}
+        loginName={me && me.loginName}
+        reason={me && me.frozenReason}
+      />
+      {/* v3.2.4 帐户已被停用 弹窗 — 關閉時自動登出 */}
+      <window.SuspendedAccountModal
+        open={showSuspended}
+        onClose={()=>setShowSuspended(false)}
+        agentId={me && (me._displayId || me.id)}
+        loginName={me && me.loginName}
+        reason={me && ((me._appData && me._appData.suspendReason) || me.suspendReason)}
+      />
 
       {/* 上限提示弹窗 */}
       <MCM_UI.Modal open={showLimit} onClose={()=>setShowLimit(false)} width={440}
