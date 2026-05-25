@@ -2399,6 +2399,16 @@ function TplConfigModal({ open, tpls, onClose, onSave, onReset }) {
 // 布局:收款方式(整宽,锁定 UPI) → Account/IFSC → Email/Real Name
 // props: { editing, value:{method,ifsc,account,realName,email}, onChange }
 // =============================================================
+// v3.2.2 Field 提到 PaymentInfoView 外部 — 之前定义在函数内,每次 render 都
+// 是新组件类型,React 把 input 卸载重建导致每输 1 字丢焦点
+function _PayField({ label, children }) {
+  return (
+    <div>
+      <label style={{fontSize:12, color:'var(--text-2)', display:'block', marginBottom:6}}>{label}</label>
+      {children}
+    </div>
+  );
+}
 window.PaymentInfoView = function PaymentInfoView({ editing, value, onChange }) {
   const v = value || { method:'UPI', ifsc:'', account:'', realName:'', email:'' };
   const set = (patch) => onChange && onChange({ ...v, ...patch });
@@ -2419,13 +2429,7 @@ window.PaymentInfoView = function PaymentInfoView({ editing, value, onChange }) 
     background:'var(--bg-2)', color:'var(--text-1)',
     outline:'none', cursor:'not-allowed', boxSizing:'border-box',
   };
-
-  const Field = ({ label, children }) => (
-    <div>
-      <label style={{fontSize:12, color:'var(--text-2)', display:'block', marginBottom:6}}>{label}</label>
-      {children}
-    </div>
-  );
+  const Field = _PayField;
 
   // v3.1.78 placeholder 改为「請輸入」;只读态没值时显示空白(不再带 fallback 示例值)
   return (

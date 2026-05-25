@@ -2,9 +2,25 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.2.0',
-    date: '2026-05-22',
+    ver: 'v3.2.2',
+    date: '2026-05-25',
     current: true,
+    changes: [
+      { type: 'fix', text: '🐛 收款方式 tab 多出一条横线 — agent_profile.jsx 编辑/保存/取消按钮用了 .agent-detail-foot 类,它带 border-top:1px solid var(--line)。删掉 className,改用相同 flex 内联样式,横线消失' },
+      { type: 'fix', text: '🐛 收款方式 编辑模式下 输入框每输入 1 个字就要重新点击才能继续输入 — PaymentInfoView 内部把 Field 定义为组件内嵌函数,每次 render React 视作新组件类型,会 unmount/remount input 导致丢焦点。把 Field 提取到 PaymentInfoView 外部成为 _PayField 静态组件,React 复用同一 DOM 节点,焦点保留' },
+    ],
+  },
+  {
+    ver: 'v3.2.1',
+    changes: [
+      { type: 'add', text: '專業代理後台 → 我的账户 → 收款方式 tab 加上「编辑 / 取消 / 保存」按钮(右下,样式与商户后台「查看&配置」完全一致 .agent-detail-foot + btn sm primary/ghost)— 替换原黄底「如需修改请联系商户运营」提示' },
+      { type: 'add', text: '编辑流程:点 编辑 → PaymentInfoView 切换到 editing 态(input 可编辑) → 改完点 保存,写回 window.APS_MERCHANT_AGENTS_STORE.list[当前代理]._payment;同时往 _logs 追加一条「代理:XXX · edit · 代理自助修改:收款方式」操作日志,商户后台「操作记录」tab 立即可见同步' },
+      { type: 'add', text: 'agent_common.jsx 新增 i18n key:mp_prof.payment.edit / cancel / save / saved(EN: Edit / Cancel / Save / Payment method saved)' },
+      { type: 'fix', text: '移除「如需修改收款方式,请联系商户运营」黄色提示条 — 代理已可自助编辑' },
+    ],
+  },
+  {
+    ver: 'v3.2.0',
     changes: [
       { type: 'fix', text: '邀请Code与链接 / 玩家损益 → 时间选择器弹出的「双月历 RangeCalendar」桌面 width:560 在 390 屏外溢一半(图1)— 加 .time-range-cal CSS:width:calc(100vw - 16px) + max-width:380;.trc-months gap → 0;.trc-divider + 第二个月 display:none 收为单月;.trc-head 字号 11.5 → 11 紧凑' },
       { type: 'modify', text: 'my_codes.jsx TimeRange recomputePos 之前已用 Math.min(560, innerWidth-16) 限制左移,这次配合 CSS 双月 → 单月,弹窗不再超出 iPhone 框' },

@@ -157,6 +157,11 @@ window.CURRENT_AGENT_ID = 'AC100006';
 
   // 收款方式 tab
   add('mp_prof.payment.contact', '如需修改收款方式,请联系商户运营', 'Contact merchant ops to modify payment info');
+  // v3.2.1 编辑/取消/保存/已保存
+  add('mp_prof.payment.edit',   '编辑',         'Edit');
+  add('mp_prof.payment.cancel', '取消',         'Cancel');
+  add('mp_prof.payment.save',   '保存',         'Save');
+  add('mp_prof.payment.saved',  '收款方式已保存', 'Payment method saved');
 
   // 安全设置 tab
   add('mp_prof.security.title',      '登入安全',         'Login Security');

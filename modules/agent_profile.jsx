@@ -10,6 +10,9 @@ function AgentProfileModule() {
   const T = (k, fb) => window.t(k, fb);
   const [tab, setTab] = React.useState('basic');
   const [showPwd, setShowPwd] = React.useState(false);
+  // v3.2.1 收款方式 tab 编辑态 + draft(与商户后台同步)
+  const [payEditing, setPayEditing] = React.useState(false);
+  const [payDraft, setPayDraft] = React.useState(null);
 
   // v3.1.11 從代理對象讀:分潤模式 / 權限 / 流量來源 / 收款方式
   // _comm 由商戶創建時烘入(agents.jsx v2.4.47);未烘入時給默認示例(週期資產變動分潤)
@@ -46,6 +49,32 @@ function AgentProfileModule() {
     account:  me._payment?.account  || snap.account   || '',
     realName: me._payment?.realName || snap.realName  || snap.holder  || me.name || '',
     email:    me._payment?.email    || snap.payEmail  || '',
+  };
+
+  // v3.2.1 进入编辑态：拷贝现值到 draft
+  const startEditPayment = () => { setPayDraft({...payment}); setPayEditing(true); };
+  // 取消：清 draft + 退出编辑态
+  const cancelEditPayment = () => { setPayDraft(null); setPayEditing(false); };
+  // 保存：写回 APS_MERCHANT_AGENTS_STORE.list、追加一条操作日志，让商户后台「查看&配置」同步看到
+  const savePayment = () => {
+    if (!payDraft) return;
+    const nowStr = new Date().toISOString().slice(0,19).replace('T',' ');
+    const log = { at: nowStr, by: '代理:' + (me.name || me.id), type: 'edit', note: '代理自助修改:收款方式' };
+    if (window.APS_MERCHANT_AGENTS_STORE && window.APS_MERCHANT_AGENTS_STORE.setList) {
+      window.APS_MERCHANT_AGENTS_STORE.setList(list =>
+        list.map(x => {
+          if (x.id !== me.id) return x;
+          return {
+            ...x,
+            _payment: { ...payDraft },
+            _logs: [...(x._logs || []), log],
+          };
+        })
+      );
+    }
+    toast(T('mp_prof.payment.saved','收款方式已保存'));
+    setPayEditing(false);
+    setPayDraft(null);
   };
 
   return (
@@ -262,9 +291,23 @@ function AgentProfileModule() {
 
         {tab === 'payment' && (
           <div className="mp-tab-body" style={{padding:'18px 22px'}}>
-            <window.PaymentInfoView editing={false} value={payment}/>
-            <div style={{marginTop:14,padding:'10px 14px',background:'#fef3c7',border:'1px solid #fcd34d',borderRadius:6,fontSize:12.5,color:'#92400e',lineHeight:1.6}}>
-              <Icon name="info" size={12}/> {T('mp_prof.payment.contact','如需修改收款方式,请联系商户运营')}
+            <window.PaymentInfoView
+              editing={payEditing}
+              value={payEditing ? payDraft : payment}
+              onChange={setPayDraft}
+            />
+            {/* v3.2.1 编辑 / 保存 / 取消 按钮 —— 样式与商户后台查看&配置一致
+                v3.2.2 不复用 .agent-detail-foot 类(它带 border-top 会多出一条线),改用同样的 flex 内联样式 */}
+            <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:14}}>
+              {!payEditing && (
+                <button className="btn sm" style={{borderColor:'var(--brand)',color:'var(--brand)'}} onClick={startEditPayment}>
+                  <Icon name="edit" size={12}/> {T('mp_prof.payment.edit','编辑')}
+                </button>
+              )}
+              {payEditing && (<>
+                <button className="btn sm ghost" onClick={cancelEditPayment}>{T('mp_prof.payment.cancel','取消')}</button>
+                <button className="btn sm primary" onClick={savePayment}>{T('mp_prof.payment.save','保存')}</button>
+              </>)}
             </div>
           </div>
         )}
