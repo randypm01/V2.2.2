@@ -495,7 +495,7 @@ function AgentRevshareModule() {
                 { l: '充提差',    v: fmtGap(totalGap),
                   valColor: totalGap >= 0 ? 'var(--success)' : 'var(--danger)',
                   highlight: true },
-                { l: tab === 'estimate' ? '预估佣金合计' : '结算佣金合计',
+                { l: tab === 'estimate' ? '總預估佣金' : '總佣金',
                   v: money(tab === 'estimate' ? totalEstCom : totalSetCom),
                   valColor: 'var(--brand)' },
               ].map(k => (
@@ -514,11 +514,7 @@ function AgentRevshareModule() {
               <div className="toolbar" style={{ padding: '0 0 12px' }}>
                 <ARV_UI.SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }}
                   placeholder="邀请Code / 玩家UID" width={260}/>
-                <select className="filter-select" value={statusF} onChange={e => { setStatusF(e.target.value); setPage(1); }}>
-                  <option value="all">全部用户状态</option>
-                  <option value="profit">盈利</option>
-                  <option value="loss">亏损</option>
-                </select>
+                {/* v3.2.10 删除「全部用户状态」下拉——“用户状态”列已移除 */}
                 <span style={{ flex: 1 }}/>
               </div>
 
@@ -536,16 +532,7 @@ function AgentRevshareModule() {
                     <Th k="balance" right highlight>
                       {tab === 'estimate' ? '当前余额' : '期末余额'}
                     </Th>
-                    {tab === 'settled' && <Th k="prevBalance" right>上期期末余额</Th>}
-                    {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
-                    {tab === 'settled' && <Th k="prevBase" right>上期佣金基数</Th>}
-                    {tab === 'settled' && <Th k="base" right>佣金基数</Th>}
-                    <Th k="rate" right>分润比例</Th>
-                    <Th k={tab === 'estimate' ? 'estCom' : 'settledCom'} right highlight>
-                      {tab === 'estimate' ? '预估佣金' : '结算佣金'}
-                    </Th>
-                    <th>用户状态</th>
-                    {tab === 'settled' && <th>结算记录</th>}
+                    {/* v3.2.10 两个 tab 统一删除 上期期末余额 / 上期佣金基数 / 佣金基数 / 分润比例 / [预估|结算]佣金 / 用户状态 / 结算记录 */}
                   </tr>
                 </thead>
                 <tbody>
@@ -565,42 +552,10 @@ function AgentRevshareModule() {
                         {fmtGap(r.gap)}
                       </td>
                       <td className="right text-mono">{moneyDec(r.balance)}</td>
-                      {tab === 'settled' && (
-                        <td className="right text-mono" style={{color:'var(--text-2)'}}>{moneyDec(r.prevUnsettled || 0)}</td>
-                      )}
-                      {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
-                        {tab === 'settled' && (
-                          <td className="right text-mono" style={{color: (r.prevBase||0) < 0 ? 'var(--danger)' : 'var(--text-2)'}}>{moneyDec(r.prevBase || 0)}</td>
-                        )}
-                      {tab === 'settled' && (
-                        <td className="right text-mono">{moneyDec(r.base)}</td>
-                      )}
-                      <td className="right text-mono">{r.rate}%</td>
-                      <td className="right text-mono" style={{ color: 'var(--brand)', fontWeight: 600 }}>
-                        {moneyDec(tab === 'estimate' ? r.estCom : r.settledCom)}
-                      </td>
-                      <td>
-                        {r.isLoss
-                          ? <span className="badge b-danger">亏损</span>
-                          : <span className="badge b-success">盈利</span>}
-                      </td>
-                      {tab === 'settled' && (
-                        <td>
-                          <button
-                            className="btn-link"
-                            onClick={() => setHistoryRow(r)}
-                            style={{
-                              background:'none', border:'none', cursor:'pointer',
-                              color:'var(--brand)', fontSize:12.5, fontWeight:500,
-                              padding:0,
-                            }}
-                          >查询</button>
-                        </td>
-                      )}
                     </tr>
                   ))}
                   {paged.length === 0 && (
-                    <tr><td colSpan={tab === 'settled' ? 14 : 10} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>无匹配数据</td></tr>
                   )}
                 </tbody>
               </table>

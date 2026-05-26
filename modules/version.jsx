@@ -2,9 +2,50 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.2.10',
+    date: '2026-05-26',
+    current: true,
+    changes: [
+      { type: 'modify', text: '商戶後台 → 報表 → 代理分潤報表 KPI 第 5 张 label 改名:① 本期預估分潤 tab「預估佣金合計」→「總預估佣金」② 已結算分潤 tab「結算佣金合計」→「總佣金」。每周結算 / 每月結算同步生效' },
+      { type: 'remove', text: '代理分潤報表 表格刪列 — 本期預估分潤 tab 刪 分潤比例 / 預估佣金 / 用戶狀態;已結算分潤 tab 刪 上期期末餘額 / 上期佣金基數 / 佣金基數 / 分潤比例 / 結算佣金 / 用戶狀態 / 結算記錄。兩 tab 删后剩同 7 列:玩家UID / 邀請Code / 註冊時間 / 充值金額 / 提款金額 / 充提差 / [當前餘額|期末餘額]' },
+      { type: 'remove', text: '工具欄移除「全部用戶狀態」筛选下拉(對應列已删);空狀態 colSpan 統一改為 7;SettlementHistoryModal 实例保留但 historyRow 永远 null 不會觸發,避免连带改动' },
+    ],
+  },
+  {
+    ver: 'v3.2.9',
+    date: '2026-05-26',
+    changes: [
+      { type: 'modify', text: '專業代理後台 → 分潤報表 KPI 卡片區 動態切換:① 本期預估分潤 tab → 第 4 张 KPI 由「總玩家餘額」改為「總玩家當前餘額」,第 5 张 KPI 由「總佣金」改為「總預估佣金」;② 已結算分潤 tab → 第 4 张 KPI 改為「總玩家期末餘額」,第 5 张 KPI 保持「總佣金」。每周結算 / 每月結算 同步生效。' },
+      { type: 'modify', text: 'my_revshare.jsx KPI labels 抽出 tab===\"estimate\"/\"settled\" 三元判斷;新增 i18n keys mr.kpi.balance_cur / mr.kpi.balance_end / mr.kpi.commission_est' },
+    ],
+  },
+  {
+    ver: 'v3.2.8',
+    date: '2026-05-26',
+    changes: [
+      { type: 'remove', text: '專業代理後台 → 分潤報表 → 本期預估分潤 / 已結算分潤 表格刪列 — 兩 tab 共同刪:上期期末余额 / 上期佣金基数 / 佣金基数 / 分润比例 / [預估佣金|結算佣金] / 用户状态 6 列;已結算 tab 額外刪「結算記錄」列。剩 7 列:玩家UID / 邀請Code / 註冊時間 / 充值金額 / 提款金額 / 充提差 / [當前余额|期末余额]' },
+      { type: 'remove', text: '同步移除工具栏「全部用户状态」筛选下拉(对应列已删) + 移除 SettlementHistoryModal 引用(对应「查询」按钮已删) + 移除 statusF / historyRow state' },
+    ],
+  },
+  {
+    ver: 'v3.2.7',
+    date: '2026-05-26',
+    changes: [
+      { type: 'modify', text: '商戶後台 → 分潤管理 → 收益分潤 → 計算口徑流程(週期資產變動分潤)改版 — 由原 STEP-1~4 拆為 5 步:STEP-1-1(計算本期所有用戶總合行為判斷本期實際消耗了多少歷史資產 → 總本期變動佣金基數)+ STEP-1-2(加上總上期結算佣金基數 → 總本期結算佣金基數)+ STEP-2 校驗盈虧 + STEP-3 算佣金 + STEP-4 帶入下期。所有變量加「總」前綴,強調是整個代理下所有玩家加總,避免与单玩家口径混淆' },
+      { type: 'modify', text: '影响位置:① 商户后台 → 分润管理 → 收益分润(revshare.jsx FORMULA_PERIOD_ASSET)② 创建专业代理 Step 2 → 分润模式 ③ 已创建代理 → 查看&配置 → 分润模式 ④ 专业代理后台 → 我的账户 → RevShare Mode(agent_profile.jsx 走 i18n key rv.formula.period;中英文同步更新)' },
+    ],
+  },
+  {
+    ver: 'v3.2.6',
+    date: '2026-05-26',
+    changes: [
+      { type: 'modify', text: '專業代理後台 → 分潤報表 → 本期預估分潤 tab(每周結算 / 每月結算)表格,在「當前餘額」右邊新增 3 列「上期期末餘額 / 上期佣金基數 / 佣金基數」,跟已結算 tab 一致,方便代理在估算階段就能看到完整的佣金基數構成(本期佣金基數 = 上期期末餘額 + 上期佣金基數 + 本期充提差 − 本期期末餘額)' },
+      { type: 'modify', text: 'my_revshare.jsx 移除 3 列的 tab===\"settled\" 守衛 + 同步空狀態 colSpan 由 estimate 的 10 改為 13(已结算仍为 14,多 1 个结算记录列)' },
+    ],
+  },
+  {
     ver: 'v3.2.5',
     date: '2026-05-25',
-    current: true,
     changes: [
       { type: 'feat', text: 'Code 与链接管理 — 表格行 操作列 「编辑」「删除」按鈕 也加上 已冻结 / 已停用 拦截:点击改弹对应「帳戶已凍結」/「帳戶已停用」弹窗,不再進入編輯彈窗 / 刪除確認(原 创建邀请 Code 已加,本版補齊行內操作)' },
       { type: 'modify', text: 'my_codes_mgmt.jsx 抽出 handleClickEdit / handleClickDelete,顺序 isSuspended → isFrozen → 原逻辑(setShowEdit / setDelTarget)' },

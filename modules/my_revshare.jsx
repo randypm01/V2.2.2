@@ -112,12 +112,9 @@ function MyRevshareModule() {
   // 3 个 tab
   const [tab, setTab] = React.useState('estimate'); // estimate | settled | rule
 
-  // 工具栏筛选(两期共用)
+  // 工具栏筛选(两期共用) — v3.2.8 移除「全部用户状态」筛选(用户状态列已删)
   const [q, setQ] = React.useState('');
-  const [statusF, setStatusF] = React.useState('all'); // all | profit | loss
   const [page, setPage] = React.useState(1);
-  // v3.1.57 已结算记录查询 弹窗
-  const [historyRow, setHistoryRow] = React.useState(null);
 
   // 已结算期 选中哪一期 — 随 cycleType 重算
   const settledList = React.useMemo(() => buildSettledPeriodList(cycleType), [cycleType]);
@@ -150,8 +147,6 @@ function MyRevshareModule() {
 
   const filtered = players.filter(p => {
     if (q && !(p.id + p.code).toLowerCase().includes(q.toLowerCase())) return false;
-    if (statusF === 'profit' && p.isLoss) return false;
-    if (statusF === 'loss' && !p.isLoss) return false;
     return true;
   });
 
@@ -310,8 +305,14 @@ function MyRevshareModule() {
                 [MR_T('mr.kpi.deposit','總充值金額'),    money(totalDep)],
                 [MR_T('mr.kpi.withdraw','總提款金額'),   money(totalWd)],
                 [MR_T('mr.kpi.gap','充提差'),            fmtGap(totalGap), totalGap>=0?'up':'down'],
-                [MR_T('mr.kpi.balance','總玩家餘額'),    money(totalBalance)],
-                [MR_T('mr.kpi.commission','總佣金'),     money(totalCom)],
+                [tab === 'estimate'
+                    ? MR_T('mr.kpi.balance_cur','總玩家當前餘額')
+                    : MR_T('mr.kpi.balance_end','總玩家期末餘額'),
+                  money(totalBalance)],
+                [tab === 'estimate'
+                    ? MR_T('mr.kpi.commission_est','總預估佣金')
+                    : MR_T('mr.kpi.commission','總佣金'),
+                  money(totalCom)],
               ].map(([l,v,delta]) => (
                 <div key={l} className="kpi">
                   <div className="label">{l}</div>
@@ -322,18 +323,13 @@ function MyRevshareModule() {
 
             {/* v3.1.47 工具栏 + 表格 + 分页 用一层 card 包起来 */}
             <div style={{ border:'1px solid var(--line)', borderRadius:8, background:'#fff', padding:'14px 16px' }}>
-            {/* 工具栏 */}
+            {/* 工具栏 — v3.2.8 移除「全部用户状态」筛选(列已删) */}
             <div className="toolbar" style={{padding:'0 0 12px'}}>
               <MRUI.SearchInput value={q} onChange={(v)=>{setQ(v);setPage(1);}} placeholder={MR_T('mr.filter.search_ph','玩家UID / 邀请Code')} width={220}/>
-              <select className="filter-select" value={statusF} onChange={e=>{setStatusF(e.target.value);setPage(1);}}>
-                <option value="all">{MR_T('mr.filter.all_status','全部用户状态')}</option>
-                <option value="profit">{MR_T('mr.status.profit','盈利')}</option>
-                <option value="loss">{MR_T('mr.status.loss','亏损')}</option>
-              </select>
               <span style={{flex:1}}/>
             </div>
 
-            {/* 表格 13 列 */}
+            {/* 表格 7 列 — v3.2.8 删除 上期期末余额 / 上期佣金基数 / 佣金基数 / 分润比例 / [预估佣金|结算佣金] / 用户状态 / 结算记录 */}
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead><tr>
@@ -348,26 +344,6 @@ function MyRevshareModule() {
                       ? MR_T('mr.col.cur_balance','当前余额')
                       : MR_T('mr.col.end_balance','期末余额')}
                   </th>
-                  {tab === 'settled' && (
-                    <th className="right">{MR_T('mr.col.prev_balance','上期期末余额')}</th>
-                  )}
-                  {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
-                  {tab === 'settled' && (
-                    <th className="right">{MR_T('mr.col.prev_base','上期佣金基数')}</th>
-                  )}
-                  {tab === 'settled' && (
-                    <th className="right">{MR_T('mr.col.base','佣金基数')}</th>
-                  )}
-                  <th className="right">{MR_T('mr.col.rate','分润比例')}</th>
-                  <th className="right" style={{color:'var(--brand)'}}>
-                    {tab === 'estimate'
-                      ? MR_T('mr.col.est_com','预估佣金')
-                      : MR_T('mr.col.settled_com','结算佣金')}
-                  </th>
-                  <th>{MR_T('mr.col.user_status','用户状态')}</th>
-                  {tab === 'settled' && (
-                    <th>{MR_T('mr.col.history','结算记录')}</th>
-                  )}
                 </tr></thead>
                 <tbody>
                   {filtered.map(p => {
@@ -381,39 +357,11 @@ function MyRevshareModule() {
                         <td className="right text-mono">{money(p.withdraw)}</td>
                         <td className="right text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>{fmtGap(gap)}</td>
                         <td className="right text-mono">{money(p.balance)}</td>
-                        {tab === 'settled' && (
-                          <td className="right text-mono" style={{color:'var(--text-2)'}}>{money(p.prevUnsettled || 0)}</td>
-                        )}
-                        {/* v3.1.86 删除 投注 / 派彩 / GGR 三列 */}
-                        {tab === 'settled' && (
-                          <td className="right text-mono" style={{color: (p.prevBase||0) < 0 ? 'var(--danger)' : 'var(--text-2)'}}>{money(p.prevBase || 0)}</td>
-                        )}
-                        {tab === 'settled' && (
-                          <td className="right text-mono">{money(p.base)}</td>
-                        )}
-                        <td className="right text-mono">{p.rate}%</td>
-                        <td className="right text-mono">{money(tab === 'estimate' ? p.estCom : p.settledCom)}</td>
-                        <td>
-                          {p.isLoss
-                            ? <span className="badge b-danger">{MR_T('mr.status.loss','亏损')}</span>
-                            : <span className="badge b-success">{MR_T('mr.status.profit','盈利')}</span>}
-                        </td>
-                        {tab === 'settled' && (
-                          <td>
-                            <button
-                              onClick={() => setHistoryRow(p)}
-                              style={{
-                                background:'none', border:'none', cursor:'pointer',
-                                color:'var(--brand)', fontSize:12.5, fontWeight:500, padding:0,
-                              }}
-                            >{MR_T('mr.action.query','查询')}</button>
-                          </td>
-                        )}
                       </tr>
                     );
                   })}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={tab === 'settled' ? 14 : 10} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
+                    <tr><td colSpan={7} style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>{MR_T('mr.empty','暂无数据')}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -429,17 +377,7 @@ function MyRevshareModule() {
         {/* v3.1.86 删除「分润规则」tab —— 内容由商户后台「分润管理」配置统一展示 */}
       </div>
 
-      {/* v3.1.57 已结算记录查询 */}
-      {window.SettlementHistoryModal && (
-        <window.SettlementHistoryModal
-          open={!!historyRow}
-          onClose={() => setHistoryRow(null)}
-          agentId={me?._displayId || me?.id}
-          agentName={me?.name}
-          code={historyRow?.code}
-          uid={historyRow?.id}
-        />
-      )}
+      {/* v3.2.8 已删除「结算记录」列 — SettlementHistoryModal 不再使用 */}
     </div>
   );
 }
