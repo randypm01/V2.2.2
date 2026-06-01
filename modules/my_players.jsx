@@ -34,6 +34,8 @@ function buildSamplePlayers(agentId) {
 function MyPlayersModule() {
   const me = window.useCurrentAgent();
   const F = window.APS_FMT;
+  const [lang] = window.useAgentLang();   // v3.2.67 说明弹窗双语
+  const EN = lang === 'en';
   const [q, setQ] = React.useState('');
   const [timeRange, setTimeRange] = React.useState(() => {
     const end = new Date(); end.setHours(23,59,59,0);
@@ -51,9 +53,9 @@ function MyPlayersModule() {
   const pageSize = 14;
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
-  // KPI 合计
-  const sum = (k) => players.reduce((a,p)=>a+(p[k]||0),0);
-  const totalFtdUsers = players.length;  // 全部都已首存
+  // KPI 合计 — 与商户后台一致:上方总计 = 当前搜索+筛选命中的结果总计(搜索时随之变化)
+  const sum = (k) => filtered.reduce((a,p)=>a+(p[k]||0),0);
+  const totalFtdUsers = filtered.length;  // 全部都已首存
   const totalFtdAmt   = sum('ftdAmt');
   const totalDep      = sum('deposit');
   const totalWd       = sum('withdraw');
@@ -72,19 +74,51 @@ function MyPlayersModule() {
       <APUI.PageHead
         title={MP_T('page.my_players.title','玩家损益')}
         subtitle={MP_T('page.my_players.sub','查看邀请玩家的清单')}
-      />
+      >
+        <APUI.FormulaHelp
+          buttonLabel={EN ? 'Help' : '说明'}
+          title={EN ? 'Player P&L · Field Calculations' : '玩家损益 · 字段计算说明'}
+          subtitle={EN ? 'Search scope & how each top-total field is computed' : '搜索范围与上方总计各字段口径'}
+          sections={EN ? [
+            { heading: 'Search scope', desc: 'Keyed by player (each row = 1 player). Searching syncs the top totals with the list below — only matched player rows are counted.', items: [
+              { name: 'Player UID / Invite Code', note: 'Fuzzy match on either; top totals change with the match' },
+            ] },
+            { heading: 'Top-total field formulas', desc: 'All items below aggregate the player rows matched by the current search.', items: [
+              { name: 'Total players', formula: '= matched player row count' },
+              { name: 'FTD users', formula: '= matched players who have made first deposit' },
+              { name: 'FTD amount', formula: '= Σ first-time-deposit (FTD) amount per player' },
+              { name: 'Total deposit', formula: '= Σ deposit per player' },
+              { name: 'Total withdrawal', formula: '= Σ withdrawal per player' },
+              { name: 'Net deposit', formula: '= total deposit − total withdrawal' },
+            ] },
+          ] : [
+            { heading: '搜索范围', desc: '以「玩家」为主维度(每行 = 1 个玩家),搜索时上方总计与下方列表同步,只统计命中的玩家行。', items: [
+              { name: '玩家UID / 邀请Code', note: '模糊匹配两者任一;命中后上方总计随之变化' },
+            ] },
+            { heading: '上方总计字段公式', desc: '以下各项均对「当前搜索命中的玩家行」汇总。', items: [
+              { name: '玩家总数', formula: '= 命中结果的玩家行数' },
+              { name: '总首存人数', formula: '= 命中结果中已首存的玩家数' },
+              { name: '总首存金额', formula: '= Σ 各玩家首存(FTD)金额' },
+              { name: '总充值金额', formula: '= Σ 各玩家充值金额' },
+              { name: '总提款金额', formula: '= Σ 各玩家提款金额' },
+              { name: '充提差', formula: '= 总充值金额 − 总提款金额' },
+            ] },
+          ]} />
+      </APUI.PageHead>
 
       {/* v3.1.87 KPI 6 个 — 删除「总投注 / 总派彩 / GGR」 */}
       <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(6,1fr)'}}>
         {[
-          [MP_T('mp.kpi.total_players','玩家总数'),  F.fmtNum(players.length)],
+          [MP_T('mp.kpi.total_players','玩家总数'),  F.fmtNum(filtered.length)],
           [MP_T('mp.kpi.ftd_users','总首存人数'),    F.fmtNum(totalFtdUsers)],
           [MP_T('mp.kpi.ftd_amt','总首存金额'),      money(totalFtdAmt)],
           [MP_T('mp.kpi.deposit','总充值金额'),      money(totalDep)],
           [MP_T('mp.kpi.withdraw','总提款金额'),     money(totalWd)],
-          [MP_T('mp.kpi.gap','充提差'),              fmtGap(totalGap), totalGap>=0?'up':'down'],
-        ].map(([l,v,delta]) => (
-          <div key={l} className="kpi">
+          [MP_T('mp.kpi.gap','充提差'),              fmtGap(totalGap), totalGap>=0?'up':'down', 'green'],
+        ].map(([l,v,delta,flag]) => (
+          <div key={l} className="kpi" style={flag==='green'?{
+            borderColor:'rgba(34,197,94,.35)', background:'rgba(34,197,94,.07)'
+          }:undefined}>
             <div className="label">{l}</div>
             <div className="val" style={delta==='up'?{color:'var(--success)'}:delta==='down'?{color:'var(--danger)'}:undefined}>{v}</div>
           </div>

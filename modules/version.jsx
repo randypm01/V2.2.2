@@ -2,9 +2,144 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
-    ver: 'v3.2.51',
+    ver: 'v3.2.67',
     date: '2026-06-01',
     current: true,
+    changes: [
+      { type: 'add', text: '专业代理后台 邀请Code与链接(my_codes) / 玩家损益(my_players):「说明」按钮+公式弹窗改为双语 — 跟随顶部语言切换(中/EN)显示,含按钮文字/标题/副标题/搜索范围/上方总计各字段公式;通过 useAgentLang 订阅语言切换重渲' },
+    ],
+  },
+  {
+    ver: 'v3.2.66',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'add', text: '专业代理后台 分润报表(my_revshare):「说明」按钮+公式弹窗改为双语 — 跟随顶部语言切换(中/EN)显示中文或英文(含标题/副标题/按钮文字/搜索范围/上方总计公式/4-step 步骤);通过 useAgentLang 订阅语言切换重渲' },
+    ],
+  },
+  {
+    ver: 'v3.2.65',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'fix', text: '商户后台 代理分润报表(agent_revshare):上方「總預估佣金 / 總佣金」同步改为 4-step 聚合公式(与专业代理后台 my_revshare 同口径)— 先汇总全期所有玩家行为再整体校验盈亏×分润比例,不再逐户 clamp 后求和(会高估)' },
+      { type: 'modify', text: '商户后台 代理分润报表「说明」(字段计算说明)同步更新:总佣金公式改为 max(0,总结算佣金基数)×分润比例,新增「佣金计算步骤(4-step 聚合)」段(STEP 1-1 → STEP 4)' },
+    ],
+  },
+  {
+    ver: 'v3.2.64',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'fix', text: '专业代理后台 分润报表(my_revshare):上方「總預估佣金 / 總佣金」改为 4-step 聚合公式计算 — 先汇总全期所有玩家行为(总上期期末余额+总本期充-提-期末余额+总上期结算佣金基数),再整体校验盈亏×分润比例;原本是「逐户 max(0,...) 后求和」会高估(亏损玩家未冲抵盈利玩家)。示例数据下总佣金 ₹420→₹125' },
+      { type: 'modify', text: 'window.getSettledRevsharePeriods(供「我的结算单」读取)的每期总佣金同步改为 4-step 聚合公式,保证结算单金额与分润报表一致' },
+      { type: 'modify', text: '分润报表「说明」弹窗新增「佣金计算步骤(4-step 聚合)」段,列出 STEP 1-1 到 STEP 4 完整公式' },
+    ],
+  },
+  {
+    ver: 'v3.2.63',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '专业代理后台 分润报表(my_revshare):隐藏「每周/每月结算」切换钮,报表固定只显示每周结算(cycleType 锁定 weekly);逻辑保留,{false &&} 包裹,需恢复取消注释即可' },
+    ],
+  },
+  {
+    ver: 'v3.2.62',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'add', text: '专业代理后台 分润报表(my_revshare):标题右侧新增「说明」按钮 + 公式弹窗,列出搜索范围及上方总计各字段公式(特别标注玩家UID/Code 搜索只过滤下方列表、不影响上方总计)' },
+    ],
+  },
+  {
+    ver: 'v3.2.61',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '专业代理后台 邀请Code与链接(my_codes) / 玩家损益(my_players):上方总计逻辑改为与商户后台一致 — KPI 汇总改为对 filtered(当前搜索+筛选命中)汇总,搜索时总计随之变化(原本对全量 codes/players 汇总不受搜索影响);Code总数量/玩家总数同改为 filtered.length' },
+      { type: 'add', text: '专业代理后台 邀请Code与链接 / 玩家损益:标题右侧新增「说明」按钮 + 公式弹窗(UI.FormulaHelp),列出搜索范围及上方总计各字段计算公式' },
+    ],
+  },
+  {
+    ver: 'v3.2.60',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '专业代理后台 邀请Code与链接(my_codes) / 玩家损益(my_players) / 分润报表(my_revshare):「总充提差/充提差」KPI 框加淡绿色背景(rgba(34,197,94,.07))+淡绿边框' },
+    ],
+  },
+  {
+    ver: 'v3.2.59',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '商户后台 代理分润报表 + 专业代理后台 分润报表:每周/每月结算的「總預估佣金 / 總佣金」KPI 框加淡蓝色背景(rgba(59,130,246,.07))+淡蓝边框,突出佣金总计' },
+    ],
+  },
+  {
+    ver: 'v3.2.58',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'fix', text: '搜索框提示显示不全真因:.search-input input 写死 width:180px,外框加宽无效。改为 input flex:1 + width:100% 填满外框 — 代理玩家损益等长提示现可完整显示(全局生效)' },
+    ],
+  },
+  {
+    ver: 'v3.2.57',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'fix', text: '商户后台 → 代理玩家损益:搜索框提示「代理ID / 代理名称 / 邀请Code / 玩家UID」显示不全,搜索框宽度 280→340px' },
+    ],
+  },
+  {
+    ver: 'v3.2.56',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '商户后台 → 代理收益:搜索框提示「代理ID / 名称」改为「代理ID / 代理名称」' },
+    ],
+  },
+  {
+    ver: 'v3.2.55',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'remove', text: '商户后台 → 代理收益:删除工具栏「全部代理类型」下拉筛选;「说明」弹窗同步移除「代理类型」搜索项' },
+    ],
+  },
+  {
+    ver: 'v3.2.54',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'add', text: 'ui.jsx 新增共享组件 UI.FormulaHelp(「说明」按钮 + 公式弹窗):传入 sections 即可列出搜索范围与上方总计各字段计算公式' },
+      { type: 'modify', text: '商户后台 代理收益 / 代理推广链接 / 代理玩家损益 / 代理分润报表 四个报表:原「导出」按钮改为「说明」按钮,点击弹出公式说明弹窗 — 列出该报表的搜索范围及上方总计每个字段的计算公式' },
+      { type: 'modify', text: '代理分润报表:原有「说明」按钮(结算周期/期编号/切换规则)改名为「结算周期说明」,与新增的「说明」(字段公式)区分' },
+    ],
+  },
+  {
+    ver: 'v3.2.53',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '商户后台 代理收益(agent_revenue) / 代理推广链接(codes) / 代理玩家损益(players) 三个报表:明确上方 KPI 总计 = 当前搜索(代理ID/代理名称)+筛选后的结果总计 — 搜索代理时总计随之变化(代理为主维度,与 revshare 报表「玩家UID/Code 搜索不影响总计」相反)。此为原有正确行为,本版仅补注释阐明意图,无逻辑变更' },
+    ],
+  },
+  {
+    ver: 'v3.2.52',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'fix', text: '商戸后台 → 代理分润报表(agent_revshare) 本期预估分润/已结算分润 两 tab:上方 KPI 总计改为对 rows(该代理该期全量)汇总,不再受下方「玩家UID/邀请Code」搜索影响 — 原本用 sorted(=filtered 含搜索)导致搜索后总计跟着变;总佣金仍为该期全量按公式计算后总计' },
+      { type: 'fix', text: '专业代理后台 → 分润报表(my_revshare) 本期预估分润 tab:「總預估佣金」KPI 改为汇总 estCom(max(0,充值-提款-余额)),不再误用已结算佣金 settledCom;两 tab 总计仍对 players 全期量汇总,不受搜索影响(原本已是 players,本次仅修正预估 tab 的公式口径)' },
+    ],
+  },
+  {
+    ver: 'v3.2.51',
+    date: '2026-06-01',
+    current: false,
     changes: [
       { type: 'modify', text: '專業代理後台「联系我们」弹窗(ContactModal)渠道列表改为读取商户后台「客服管理」配置(window.APS_CS_STORE),按 sort 升序展示;商户增删改客服配置 → 代理端弹窗实时同步(订阅 store)' },
       { type: 'modify', text: 'ContactModal 行渲染映射 store 字段:type→图标(Live Chat=bell / Telegram=send / WhatsApp=whatsapp / Email=mail)、title、subtitle(Email/WhatsApp 等宽灰色)、hasBtn 控制按钮显隐、btnText 为按钮文案;点击 Live Chat 行打开右下角 Live Chat 面板,其它行打开 btnLink' },

@@ -81,6 +81,22 @@ function buildPeriodPlayers(agentId, seed) {
   });
 }
 
+// —— 聚合佣金计算 v3.2.64 严格按 CLAUDE.md 4-step 公式:
+//   先汇总「本期所有玩家」总合行为,再整体校验平台盈亏,而非「逐户 clamp 后求和」。
+//   亏损玩家的负基数会冲抵盈利玩家 → 平台净额视角。
+//   STEP-1-1 总本期变动佣金基数 = (总上期期末余额) + (总本期充值 − 总本期提现 − 总本期期末余额)
+//   STEP-1-2 总本期结算佣金基数 = 总本期变动佣金基数 + (总上期结算佣金基数)
+//   STEP-2   结算佣金基数 ≤ 0 → 平台亏损/持平,佣金 = 0
+//   STEP-3   结算佣金基数 > 0 → 佣金 = 结算佣金基数 × 分润比例
+function aggregateCommission(players) {
+  const rate = (players[0] && players[0].rate) || 5;
+  const s = (k) => players.reduce((a, p) => a + (p[k] || 0), 0);
+  const changeBase = s('prevUnsettled') + (s('deposit') - s('withdraw') - s('balance')); // STEP-1-1
+  const settleBase = changeBase + s('prevBase');                                          // STEP-1-2
+  const commission = settleBase > 0 ? Math.round(settleBase * rate / 100) : 0;            // STEP-2/3
+  return { rate, changeBase, settleBase, commission };
+}
+
 // —— 期次列表(已结算) v3.1.46 按结算周期拆分为 周 / 月 两套
 // v3.2.26 weekly 扩充到 5 期,并为每期附「结算单」元数据(cpa/adj/提款状态),
 //         供「我的结算单」生成与本报表一一对应的结算单(同期号 / 同分润金额)
@@ -105,7 +121,8 @@ function buildSettledPeriodList(cycleType) {
 window.getSettledRevsharePeriods = function (agentId, cycleType = 'weekly') {
   return buildSettledPeriodList(cycleType).map(p => {
     const players = buildPeriodPlayers(agentId, p.seed);
-    const commission = players.reduce((a, pl) => a + (pl.commission || 0), 0);
+    // v3.2.64 该期「总佣金」改为 4-step 聚合公式(先汇总再整体 clamp×rate),与分润报表上方总计一致
+    const commission = aggregateCommission(players).commission;
     return {
       ...p,
       commission,                 // 本报表该期「总佣金」(已结算分润)
@@ -125,6 +142,8 @@ const MR_ESTIMATE_INFO = {
 function MyRevshareModule() {
   const F = window.APS_FMT;
   const me = window.useCurrentAgent();
+  const [lang] = window.useAgentLang();   // v3.2.66 说明弹窗双语 — 订阅语言切换触发重渲染
+  const EN = lang === 'en';
 
   // v3.1.45 结算周期 segmented (每周 / 每月)
   const [cycleType, setCycleType] = React.useState('weekly');
@@ -180,7 +199,9 @@ function MyRevshareModule() {
   const totalWager     = sum(players,'wager');
   const totalPayout    = sum(players,'payout');
   const totalGgr       = sum(players,'ggr');
-  const totalCom       = sum(players,'commission');
+  // 上方「總預估佣金 / 總佣金」按 4-step 聚合公式(先汇总全期所有玩家行为,再整体校验盈亏×分润比例),
+  // 而非「逐户 clamp 后求和」—亏损玩家会冲抵盈利玩家。不受下方搜索影响。
+  const totalCommission = aggregateCommission(players).commission;
 
   const money = (n) => (n < 0 ? '-₹' : '₹') + F.money(Math.abs(n||0));
   const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.money(Math.abs(n||0));
@@ -193,9 +214,55 @@ function MyRevshareModule() {
       <MRUI.PageHead
         title={MR_T('page.my_revshare.title','分润报表')}
         subtitle={MR_T('page.my_revshare.sub','查看本期预估分润与历史结算')}
-      />
+      >
+        <MRUI.FormulaHelp
+          buttonLabel={EN ? 'Help' : '说明'}
+          title={EN ? 'Revenue Share Report · Field Calculations' : '分润报表 · 字段计算说明'}
+          subtitle={EN ? 'Search scope & how each top-total field is computed' : '搜索范围与上方总计各字段口径'}
+          sections={EN ? [
+            { heading: 'Search scope', desc: 'Keyed by period + player. Searching "Player UID / Invite Code" only filters the list below — it does NOT affect the top totals, which always reflect the full current period.', items: [
+              { name: 'Cycle / period', note: 'Weekly / monthly + period no.; switching period changes both totals and list' },
+              { name: 'Player UID / Invite Code', note: 'Filters the list below only; top totals unaffected' },
+            ] },
+            { heading: 'Top-total field formulas', desc: 'All items below aggregate every player in the current period (unaffected by UID/Code search).', items: [
+              { name: 'Total players', formula: '= row count of all players in the period' },
+              { name: 'Total deposit', formula: '= Σ each player deposit' },
+              { name: 'Total withdrawal', formula: '= Σ each player withdrawal' },
+              { name: 'Net deposit', formula: '= total deposit − total withdrawal' },
+              { name: 'Est. / Total commission', formula: 'max(0, total settlement base) × share rate', note: 'Key: aggregate ALL players first, then check profit/loss once — NOT per-player then summed. Losing players offset winning ones (platform-net view).' },
+            ] },
+            { heading: 'Commission steps (4-step aggregate)', desc: 'Both Est. commission (current period) and Total commission (settled) follow these steps; they differ only in whether current or historical data is used.', items: [
+              { name: 'STEP 1-1', formula: 'Total change base = total prev ending balance + (total deposit − total withdrawal − total ending balance)' },
+              { name: 'STEP 1-2', formula: 'Total settlement base = total change base + total prev settlement base' },
+              { name: 'STEP 2', formula: 'settlement base ≤ 0 → platform loss/break-even, commission = 0' },
+              { name: 'STEP 3', formula: 'settlement base > 0 → commission = settlement base × share rate' },
+              { name: 'STEP 4', note: 'Carry to next period: total ending balance; total settlement base (carry the negative as-is, carry 0 if positive)' },
+            ] },
+          ] : [
+            { heading: '搜索范围', desc: '以「期 + 玩家」为主维度。搜索「玩家UID / 邀请Code」只过滤下方列表,不影响上方总计 — 上方总计始终为当前期全量数据。', items: [
+              { name: '结算周期 / 期选择', note: '每周结算 / 每月结算 + 期编号;切换期时上方总计与列表一起变化' },
+              { name: '玩家UID / 邀请Code', note: '仅过滤下方列表,上方总计不受影响' },
+            ] },
+            { heading: '上方总计字段公式', desc: '以下各项均对「当前期」全量玩家汇总(不受玩家UID/Code 搜索影响)。', items: [
+              { name: '玩家总数', formula: '= 当前期全量玩家行数' },
+              { name: '总充值金额', formula: '= Σ 各玩家充值金额' },
+              { name: '总提款金额', formula: '= Σ 各玩家提款金额' },
+              { name: '充提差', formula: '= 总充值金额 − 总提款金额' },
+              { name: '總預估佣金 / 總佣金', formula: 'max(0, 总结算佣金基数) × 分润比例', note: '关键:先汇总全期所有玩家行为再整体校验盈亏,非逐户计算后求和 —— 亏损玩家的负基数会冲抵盈利玩家(平台净额视角)' },
+            ] },
+            { heading: '佣金计算步骤(4-step 聚合)', desc: '總預估佣金(本期预估)与 總佣金(已结算)均按此步骤计算,差别只在取「本期」或「历史期」数据。', items: [
+              { name: 'STEP 1-1', formula: '总变动佣金基数 = 总上期期末余额 + (总本期充值 − 总本期提现 − 总本期期末余额)' },
+              { name: 'STEP 1-2', formula: '总结算佣金基数 = 总变动佣金基数 + 总上期结算佣金基数' },
+              { name: 'STEP 2', formula: '总结算佣金基数 ≤ 0 → 平台亏损/持平,佣金 = 0' },
+              { name: 'STEP 3', formula: '总结算佣金基数 > 0 → 佣金 = 总结算佣金基数 × 分润比例' },
+              { name: 'STEP 4', note: '带入下期:总本期期末余额;总结算佣金基数(负值原样带入、正值带入 0)' },
+            ] },
+          ]} />
+      </MRUI.PageHead>
 
-      {/* v3.1.45 结算周期 segmented (每周 / 每月) */}
+      {/* v3.2.63 暂时隐藏「每周/每月结算」切换钮,报表仅显示每周结算(cycleType 固定 weekly);
+          需恢复时取消下方注释即可 */}
+      {false && (
       <div className="mr-cycle-seg" style={{ display: 'flex', gap: 0, marginBottom: 14, border: '1px solid var(--line)', borderRadius: 8, padding: 4, background: 'var(--bg-2)', width: 'fit-content' }}>
         {[
           { k: 'weekly',  l: MR_T('mr.cycle.weekly','每周结算') },
@@ -216,6 +283,7 @@ function MyRevshareModule() {
           </div>
         ))}
       </div>
+      )}
 
       {/* 3 个 tab */}
       <div className="card" style={{padding:0,overflow:'visible'}}>
@@ -324,7 +392,7 @@ function MyRevshareModule() {
                 [MR_T('mr.kpi.players','玩家總數'),  F.fmtNum(totalPlayers)],
                 [MR_T('mr.kpi.deposit','總充值金額'),    money(totalDep)],
                 [MR_T('mr.kpi.withdraw','總提款金額'),   money(totalWd)],
-                [MR_T('mr.kpi.gap','充提差'),            fmtGap(totalGap), totalGap>=0?'up':'down'],
+                [MR_T('mr.kpi.gap','充提差'),            fmtGap(totalGap), totalGap>=0?'up':'down', 'green'],
                 [tab === 'estimate'
                     ? MR_T('mr.kpi.balance_cur','總玩家當前餘額')
                     : MR_T('mr.kpi.balance_end','總玩家期末餘額'),
@@ -332,11 +400,15 @@ function MyRevshareModule() {
                 [tab === 'estimate'
                     ? MR_T('mr.kpi.commission_est','總預估佣金')
                     : MR_T('mr.kpi.commission','總佣金'),
-                  money(totalCom)],
-              ].map(([l,v,delta]) => (
-                <div key={l} className="kpi">
+                  money(totalCommission), null, 'blue'],
+              ].map(([l,v,delta,flag]) => (
+                <div key={l} className="kpi" style={flag==='blue'?{
+                  borderColor:'rgba(59,130,246,.35)', background:'rgba(59,130,246,.07)'
+                }:flag==='green'?{
+                  borderColor:'rgba(34,197,94,.35)', background:'rgba(34,197,94,.07)'
+                }:undefined}>
                   <div className="label">{l}</div>
-                  <div className="val" style={delta==='up'?{color:'var(--success)'}:delta==='down'?{color:'var(--danger)'}:undefined}>{v}</div>
+                  <div className="val" style={delta==='up'?{color:'var(--success)'}:delta==='down'?{color:'var(--danger)'}:flag==='blue'?{color:'var(--brand)'}:undefined}>{v}</div>
                 </div>
               ))}
             </div>

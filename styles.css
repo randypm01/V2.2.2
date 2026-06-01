@@ -750,7 +750,7 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 }
 .search-input input {
   background: transparent; border: 0; outline: none;
-  color: var(--text-0); font-size: 12px; width: 180px;
+  color: var(--text-0); font-size: 12px; flex: 1 1 auto; width: 100%; min-width: 0;
 }
 .search-input input::placeholder { color: var(--text-3); }
 .filter-select {

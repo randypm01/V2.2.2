@@ -129,7 +129,9 @@ function PlayersModule() {
   const safePage = Math.min(page, totalPages);
   const paged = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  // —— KPI 合计（基于当前筛选）
+  // —— KPI 合计（基于当前搜索+筛选结果）
+  // 注:本报表以「代理 × Code × 玩家」为主维度,上方总计 = 当前搜索(代理ID/代理名称/邀请Code/玩家UID)结果总计,
+  //     故对 sorted(已含 q 搜索)汇总 — 搜索时总计随之变化(与 revshare 报表相反)
   const sum = (k) => sorted.reduce((s, r) => s + (r[k] || 0), 0);
   const totalPlayers = sorted.length; // 每行 = 1 个玩家
   const totalFtdUsers = sorted.filter(r => r.ftd > 0).length;
@@ -175,7 +177,22 @@ function PlayersModule() {
   return (
     <div className="page">
       <PUI.PageHead title="代理玩家损益" subtitle="查看代理邀请的玩家收益">
-        <button className="btn"><Icon name="download" size={13}/>导出</button>
+        <PUI.FormulaHelp
+          title="代理玩家损益 · 字段计算说明"
+          subtitle="搜索范围与上方总计各字段口径"
+          sections={[
+            { heading: '搜索范围', desc: '本报表以「代理 × Code × 玩家」为主维度(每行 = 1 个玩家),搜索时上方总计与下方列表同步,只统计命中的玩家行。', items: [
+              { name: '代理ID / 名称 / 邀请Code / 玩家UID', note: '模糊匹配四者任一;命中后上方总计随之变化' },
+            ] },
+            { heading: '上方总计字段公式', desc: '以下各项均对「当前搜索命中的玩家行」汇总。', items: [
+              { name: '玩家总数', formula: '= 命中结果的玩家行数' },
+              { name: '总首存人数', formula: '= 命中结果中 首存金额 > 0 的玩家数' },
+              { name: '总首存金额', formula: '= Σ 各玩家首存(FTD)金额' },
+              { name: '总充值金额', formula: '= Σ 各玩家充值金额' },
+              { name: '累计提款金额', formula: '= Σ 各玩家提款金额' },
+              { name: '充提差', formula: '= 总充值金额 − 累计提款金额' },
+            ] },
+          ]} />
       </PUI.PageHead>
 
       {/* v3.1.87 KPI 6 张 — 删除「总投注 / 总派彩 / GGR」 */}
@@ -203,7 +220,7 @@ function PlayersModule() {
       <div className="card">
         <div className="toolbar">
           <PUI.SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }}
-            placeholder="代理ID / 代理名称 / 邀请Code / 玩家UID" width={280}/>
+            placeholder="代理ID / 代理名称 / 邀请Code / 玩家UID" width={340}/>
           {window.TimeRange ? (
             <window.TimeRange value={timeRange} onChange={(v) => { setTimeRange(v); setPage(1); }} />
           ) : (

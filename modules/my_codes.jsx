@@ -320,6 +320,8 @@ function MyCodesModule() {
   const D = window.APS_DATA;
   const F = window.APS_FMT;
   const T = (k, fb) => window.t(k, fb);
+  const [lang] = window.useAgentLang();   // v3.2.67 说明弹窗双语
+  const EN = lang === 'en';
   const toast = ACUI.useToast();
   const me = window.useCurrentAgent();
   const [q, setQ] = React.useState('');
@@ -355,8 +357,8 @@ function MyCodesModule() {
   const pageSize = 10;
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
-  // 顶部 KPI 合计
-  const sum = (k) => codes.reduce((a,c)=>a+(c[k]||0),0);
+  // 顶部 KPI 合计 — 与商户后台一致:上方总计 = 当前搜索+筛选命中的结果总计(搜索时随之变化)
+  const sum = (k) => filtered.reduce((a,c)=>a+(c[k]||0),0);
   const totalReg = sum('regUsers');
   const totalDepUsers = sum('depositUsers');
   const totalDeposit = sum('deposit');
@@ -400,21 +402,61 @@ function MyCodesModule() {
 
   return (
     <div className="page">
-      <ACUI.PageHead title={T('page.my_codes.title','邀请Code与链接')} subtitle={T('page.my_codes.sub','查看各 Code 推广链接累计数据')}/>
+      <ACUI.PageHead title={T('page.my_codes.title','邀请Code与链接')} subtitle={T('page.my_codes.sub','查看各 Code 推广链接累计数据')}>
+        <ACUI.FormulaHelp
+          buttonLabel={EN ? 'Help' : '说明'}
+          title={EN ? 'Invite Codes & Links · Field Calculations' : '邀请Code与链接 · 字段计算说明'}
+          subtitle={EN ? 'Search scope & how each top-total field is computed' : '搜索范围与上方总计各字段口径'}
+          sections={EN ? [
+            { heading: 'Search scope', desc: 'Keyed by Code. Searching syncs the top totals with the list below — only matched Code rows are counted.', items: [
+              { name: 'Invite Code / description', note: 'Fuzzy match on Code or description; top totals change with the match' },
+            ] },
+            { heading: 'Top-total field formulas', desc: 'All items below aggregate the Code rows matched by the current search.', items: [
+              { name: 'Total codes', formula: '= matched Code row count' },
+              { name: 'Total registrations', formula: '= Σ registrations per Code' },
+              { name: 'Total depositors', formula: '= Σ depositors per Code' },
+              { name: 'Total deposit', formula: '= Σ deposit per Code' },
+              { name: 'Total withdrawers', formula: '= Σ withdrawers per Code' },
+              { name: 'Total withdrawal', formula: '= Σ withdrawal per Code' },
+              { name: 'Deposit conversion', formula: '= total depositors ÷ total registrations × 100%' },
+              { name: 'Net deposit', formula: '= total deposit − total withdrawal' },
+              { name: 'Player balance', formula: '= Σ player balance per Code' },
+              { name: 'Total commission', formula: '= Σ commission per Code' },
+            ] },
+          ] : [
+            { heading: '搜索范围', desc: '以「Code」为主维度,搜索时上方总计与下方列表同步,只统计命中的 Code 行。', items: [
+              { name: '邀请Code / 描述', note: '模糊匹配邀请Code 或描述;命中后上方总计随之变化' },
+            ] },
+            { heading: '上方总计字段公式', desc: '以下各项均对「当前搜索命中的 Code 行」汇总。', items: [
+              { name: 'Code 总数量', formula: '= 命中结果的 Code 行数' },
+              { name: '总注册人数', formula: '= Σ 各 Code 注册人数' },
+              { name: '总充值人数', formula: '= Σ 各 Code 充值人数' },
+              { name: '总充值金额', formula: '= Σ 各 Code 充值金额' },
+              { name: '总提款人数', formula: '= Σ 各 Code 提款人数' },
+              { name: '总提款金额', formula: '= Σ 各 Code 提款金额' },
+              { name: '充值转化率', formula: '= 总充值人数 ÷ 总注册人数 × 100%' },
+              { name: '充提差', formula: '= 总充值金额 − 总提款金额' },
+              { name: '玩家余额', formula: '= Σ 各 Code 玩家余额' },
+              { name: '总佣金', formula: '= Σ 各 Code 佣金' },
+            ] },
+          ]} />
+      </ACUI.PageHead>
 
       {/* KPI:2 行 × 5 */}
       <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
         {[
-          [T('mc.kpi.codes_total','Code 总数量'), F.fmtNum(codes.length)],
+          [T('mc.kpi.codes_total','Code 总数量'), F.fmtNum(filtered.length)],
           [T('mc.kpi.reg','总注册人数'), F.fmtNum(totalReg)],
           [T('mc.kpi.dep_users','总充值人数'), F.fmtNum(totalDepUsers)],
           [T('mc.kpi.dep_amt','总充值金额'), '₹' + F.money(totalDeposit)],
           [T('mc.kpi.wd_users','总提款人数'), F.fmtNum(totalWdUsers)],
           [T('mc.kpi.wd_amt','总提款金额'), '₹' + F.money(totalWithdraw)],
           [T('mc.kpi.cvr','充值转化率'), totalCvr.toFixed(1) + '%'],
-          [T('mc.kpi.gap','充提差'), (totalGap>=0?'+':'') + '₹' + F.money(Math.abs(totalGap)), totalGap>=0?'up':'down'],
-        ].map(([l,v,delta]) => (
-          <div key={l} className="kpi">
+          [T('mc.kpi.gap','充提差'), (totalGap>=0?'+':'') + '₹' + F.money(Math.abs(totalGap)), totalGap>=0?'up':'down', 'green'],
+        ].map(([l,v,delta,flag]) => (
+          <div key={l} className="kpi" style={flag==='green'?{
+            borderColor:'rgba(34,197,94,.35)', background:'rgba(34,197,94,.07)'
+          }:undefined}>
             <div className="label">{l}</div>
             <div className="val" style={delta==='up'?{color:'var(--success)'}:delta==='down'?{color:'var(--danger)'}:undefined}>{v}</div>
           </div>

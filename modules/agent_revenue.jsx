@@ -87,6 +87,8 @@ function AgentRevenueModule() {
   const paged = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   // —— KPI 聚合
+  // 注:本报表以「代理」为主维度,上方总计 = 当前搜索(代理ID/代理名称)+ 筛选后的结果总计,
+  //     故对 sorted(已含 q 搜索)汇总 — 搜索代理时总计随之变化(与 revshare 报表相反)
   const sum = (k) => sorted.reduce((s, r) => s + (r[k] || 0), 0);
   const totalReg = sum('reg');
   const totalDep = sum('dep');
@@ -129,7 +131,25 @@ function AgentRevenueModule() {
   return (
     <div className="page">
       <ARUI.PageHead title="代理收益" subtitle="查看各代理总数据">
-        <button className="btn"><Icon name="download" size={13} />导出</button>
+        <ARUI.FormulaHelp
+          title="代理收益 · 字段计算说明"
+          subtitle="搜索范围与上方总计各字段口径"
+          sections={[
+            { heading: '搜索范围', desc: '本报表以「代理」为主维度,搜索时上方总计与下方列表同步,只统计命中的代理。', items: [
+              { name: '代理ID / 名称', note: '模糊匹配代理ID或代理名称;命中后上方总计随之变化' },
+            ] },
+            { heading: '上方总计字段公式', desc: '以下各项均对「当前搜索+筛选命中的代理」汇总。', items: [
+              { name: '代理总数', formula: '= 命中搜索/筛选的代理条数', note: '子标「活跃」= 充值人数 > 0 的代理数' },
+              { name: '总注册人数', formula: '= Σ 各代理注册人数' },
+              { name: '总充值人数', formula: '= Σ 各代理充值人数' },
+              { name: '总充值金额', formula: '= Σ 各代理充值金额' },
+              { name: '总提款人数', formula: '= Σ 各代理提款人数' },
+              { name: '总提款金额', formula: '= Σ 各代理提款金额' },
+              { name: '充值转化率', formula: '= 总充值人数 ÷ 总注册人数 × 100%' },
+              { name: '充提差', formula: '= 总充值金额 − 总提款金额' },
+              { name: 'ARPPU', formula: '= 总充值金额 ÷ 总充值人数', note: '人均充值额(每付费用户)' },
+            ] },
+          ]} />
       </ARUI.PageHead>
 
       {/* —— KPI 9 张 · 5 + 4(充提差 hero 着色)—— */}
@@ -164,13 +184,7 @@ function AgentRevenueModule() {
       <div className="card">
         {/* —— 工具栏 —— */}
         <div className="toolbar">
-          <ARUI.SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="代理ID / 名称" width={220} />
-          <select className="filter-select" value={tier} onChange={e => { setTier(e.target.value); setPage(1); }}>
-            <option value="all">全部代理类型</option>
-            <option value="normal">个人代理</option>
-            <option value="general">团队代理</option>
-            <option value="super">总代理</option>
-          </select>
+          <ARUI.SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="代理ID / 代理名称" width={220} />
           {window.TimeRange ? (
             <window.TimeRange value={timeRange} onChange={(v) => { setTimeRange(v); setPage(1); }} />
           ) : (

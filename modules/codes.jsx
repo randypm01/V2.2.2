@@ -127,6 +127,8 @@ function CodesModule() {
   const paged = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   // —— KPI 8 张
+  // 注:本报表以「代理 × Code」为主维度,上方总计 = 当前搜索(代理ID/代理名称/邀请Code)+ 筛选后结果总计,
+  //     故对 sorted(已含 q 搜索)汇总 — 搜索时总计随之变化(与 revshare 报表相反)
   const sum = (k) => sorted.reduce((s, r) => s + (r[k] || 0), 0);
   const totalReg = sum('reg');
   const totalDep = sum('dep');
@@ -167,7 +169,24 @@ function CodesModule() {
   return (
     <div className="page">
       <CDUI.PageHead title="代理推广链接" subtitle="查看所有代理生成 code 链接的收益数据">
-        <button className="btn"><Icon name="download" size={13} />导出</button>
+        <CDUI.FormulaHelp
+          title="代理推广链接 · 字段计算说明"
+          subtitle="搜索范围与上方总计各字段口径"
+          sections={[
+            { heading: '搜索范围', desc: '本报表以「代理 × Code」为主维度,搜索时上方总计与下方列表同步,只统计命中的 Code 行。', items: [
+              { name: '代理ID / 名称 / 邀请Code', note: '模糊匹配三者任一;命中后上方总计随之变化' },
+            ] },
+            { heading: '上方总计字段公式', desc: '以下各项均对「当前搜索命中的 Code 行」汇总。', items: [
+              { name: 'Code 总数量', formula: '= 命中结果中不重复的邀请Code 数' },
+              { name: '总注册人数', formula: '= Σ 各 Code 注册人数' },
+              { name: '总充值人数', formula: '= Σ 各 Code 充值人数' },
+              { name: '总充值金额', formula: '= Σ 各 Code 充值金额' },
+              { name: '总提款人数', formula: '= Σ 各 Code 提款人数' },
+              { name: '总提款金额', formula: '= Σ 各 Code 提款金额' },
+              { name: '充值转化率', formula: '= 总充值人数 ÷ 总注册人数 × 100%' },
+              { name: '充提差', formula: '= 总充值金额 − 总提款金额' },
+            ] },
+          ]} />
       </CDUI.PageHead>
 
       {/* —— KPI 8 张 · 2 行 × 4 —— */}

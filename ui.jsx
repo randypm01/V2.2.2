@@ -424,10 +424,48 @@ function Field({ label, required, children, hint }) {
 
 }
 
+// ============= FormulaHelp =============
+// 「说明」按钮 + 公式说明弹窗。替代原「导出」按钮。
+// props.sections: [{ heading, desc?, items: [{ name, formula?, note? }] }]
+function FormulaHelp({ sections = [], title = '字段计算说明', subtitle, buttonLabel = '说明' }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <React.Fragment>
+      <button className="btn" onClick={() => setOpen(true)}>
+        <Icon name="info" size={13} />{buttonLabel}
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} title={title} subtitle={subtitle} width={600}>
+        {sections.map((sec, si) => (
+          <div key={si} style={{ marginBottom: si === sections.length - 1 ? 0 : 22 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4 }}>{sec.heading}</div>
+            {sec.desc && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10, lineHeight: 1.6 }}>{sec.desc}</div>}
+            {!sec.desc && <div style={{ height: 8 }} />}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              {sec.items.map((it, ii) => (
+                <div key={ii} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, padding: '9px 12px', background: ii % 2 ? 'var(--bg-1)' : 'var(--bg-2)', alignItems: 'baseline' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-0)' }}>{it.name}</div>
+                  <div>
+                    {it.formula && (
+                      <div className="text-mono" style={{ fontSize: 11.5, color: 'var(--brand)', lineHeight: 1.6, wordBreak: 'break-word' }}>{it.formula}</div>
+                    )}
+                    {it.note && (
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: it.formula ? 3 : 0, lineHeight: 1.55 }}>{it.note}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </Modal>
+    </React.Fragment>
+  );
+}
+
 window.UI = {
   Icon: window.Icon, Switch: window.Switch,
   ToastProvider, useToast,
   PageHead, Tabs, StatusBadge, RiskBadge, SearchInput, DateRange,
   Pagination, Avatar, Drawer, Modal, LineChart, BarChart, Sparkline, Donut,
-  Field
+  Field, FormulaHelp
 };

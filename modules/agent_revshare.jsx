@@ -85,6 +85,20 @@ function _ARV_makeRow(agent, code, periodSeed, idxInPool) {
   };
 }
 
+// v3.2.65 聚合佣金计算 — 与 my_revshare.aggregateCommission 同口径(4-step):
+//   先汇总「本期所有玩家」总合行为,再整体校验平台盈亏,而非「逐户 clamp 后求和」。
+//   STEP-1-1 总变动佣金基数 = 总上期期末余额 + (总本期充值 − 总本期提现 − 总本期期末余额)
+//   STEP-1-2 总结算佣金基数 = 总变动佣金基数 + 总上期结算佣金基数
+//   STEP-2/3 结算佣金基数 ≤0 → 佣金0;>0 → × 分润比例
+function _ARV_aggCommission(rows) {
+  const rate = (rows[0] && rows[0].rate) || 5;
+  const s = (k) => rows.reduce((a, r) => a + (r[k] || 0), 0);
+  const changeBase = s('prevUnsettled') + (s('deposit') - s('withdraw') - s('balance'));
+  const settleBase = changeBase + s('prevBase');
+  const commission = settleBase > 0 ? Math.round(settleBase * rate / 100) : 0;
+  return { rate, changeBase, settleBase, commission };
+}
+
 // —— 构造一期所有行（传入代理子集）
 function _ARV_buildPeriodRows(agentList, periodSeed) {
   const out = [];
@@ -239,18 +253,22 @@ function AgentRevshareModule() {
   const safePage = Math.min(page, totalPages);
   const paged = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  // KPI 合计
-  const sum = (k) => sorted.reduce((s, r) => s + (r[k] || 0), 0);
-  const totalAgents = new Set(sorted.map(r => r.agentId)).size;
-  const totalPlayers = sorted.length;
+  // KPI 合计 — 上方总计 = 该期所有数据(只受顶部「代理选择器」影响),不受下方「玩家UID/邀请Code」搜索影响
+  // 故 KPI 一律对 rows(该代理该期全量)汇总,而非搜索过滤后的 sorted/filtered
+  const sum = (k) => rows.reduce((s, r) => s + (r[k] || 0), 0);
+  const totalAgents = new Set(rows.map(r => r.agentId)).size;
+  const totalPlayers = rows.length;
   const totalDep = sum('deposit');
   const totalWd  = sum('withdraw');
   const totalGap = totalDep - totalWd;
   const totalWager = sum('wager');
   const totalPayout = sum('payout');
   const totalGgr = sum('ggr');
-  const totalEstCom = sum('estCom');
-  const totalSetCom = sum('settledCom');
+  // v3.2.65 总佣金按 4-step 聚合公式(先汇总全期所有玩家行为再整体 clamp×rate),与 my_revshare 一致;
+  //   不再用「逐户 max(0,...) 后求和」(会高估,亏损玩家未冲抵盈利玩家)
+  const _aggCom = _ARV_aggCommission(rows).commission;
+  const totalEstCom = _aggCom;
+  const totalSetCom = _aggCom;
 
   const money = (n) => (n < 0 ? '-₹' : '₹') + F.fmtNum(Math.abs(n || 0));
   const moneyDec = (n) => (n < 0 ? '-₹' : '₹') + F.money(Math.abs(n || 0));
@@ -279,7 +297,29 @@ function AgentRevshareModule() {
   return (
     <div className="page">
       <ARV_UI.PageHead title="代理分润报表" subtitle="按代理 × 玩家维度查看本期预估分润与历史结算">
-        <button className="btn"><Icon name="download" size={13}/>导出</button>
+        <ARV_UI.FormulaHelp
+          title="代理分润报表 · 字段计算说明"
+          subtitle="搜索范围与上方总计各字段口径"
+          sections={[
+            { heading: '搜索范围', desc: '本报表以「期 + 代理」为主维度。搜索「玩家UID / 邀请Code」只过滤下方列表,不影响上方总计 — 上方总计始终为该代理该期全量数据。', items: [
+              { name: '代理选择器', note: '选择查询的代理ID / 代理名称;切换代理时上方总计与列表一起变化' },
+              { name: '玩家UID / 邀请Code', note: '仅过滤下方列表,上方总计不受影响' },
+            ] },
+            { heading: '上方总计字段公式', desc: '以下各项均对「当前代理 · 当前期」全量玩家汇总(不受玩家UID/Code 搜索影响)。', items: [
+              { name: '玩家总数', formula: '= 该代理该期全量玩家行数' },
+              { name: '总充值金额', formula: '= Σ 各玩家充值金额' },
+              { name: '总提款金额', formula: '= Σ 各玩家提款金额' },
+              { name: '充提差', formula: '= 总充值金额 − 总提款金额' },
+              { name: '總預估佣金 / 總佣金', formula: 'max(0, 总结算佣金基数) × 分润比例', note: '关键:先汇总全期所有玩家行为再整体校验盈亏,非逐户计算后求和 —— 亏损玩家的负基数会冲抵盈利玩家(平台净额视角)' },
+            ] },
+            { heading: '佣金计算步骤(4-step 聚合)', desc: '總預估佣金(本期预估)与 總佣金(已结算)均按此步骤计算,差别只在取「本期」或「历史期」数据。', items: [
+              { name: 'STEP 1-1', formula: '总变动佣金基数 = 总上期期末余额 + (总本期充值 − 总本期提现 − 总本期期末余额)' },
+              { name: 'STEP 1-2', formula: '总结算佣金基数 = 总变动佣金基数 + 总上期结算佣金基数' },
+              { name: 'STEP 2', formula: '总结算佣金基数 ≤ 0 → 平台亏损/持平,佣金 = 0' },
+              { name: 'STEP 3', formula: '总结算佣金基数 > 0 → 佣金 = 总结算佣金基数 × 分润比例' },
+              { name: 'STEP 4', note: '带入下期:总本期期末余额;总结算佣金基数(负值原样带入、正值带入 0)' },
+            ] },
+          ]} />
       </ARV_UI.PageHead>
 
       {/* —— 代理选择器 —— */}
@@ -385,10 +425,10 @@ function AgentRevshareModule() {
           ))}
         </div>
         <span style={{ flex: 1 }}/>
-        {/* v3.1.44 说明按钮 */}
+        {/* v3.1.44 说明按钮 — 结算周期/期编号/切换规则 */}
         <button className="btn sm ghost" onClick={() => setHelpOpen(true)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="info" size={13}/>说明
+          <Icon name="info" size={13}/>结算周期说明
         </button>
       </div>
 
@@ -497,11 +537,14 @@ function AgentRevshareModule() {
                   highlight: true },
                 { l: tab === 'estimate' ? '總預估佣金' : '總佣金',
                   v: money(tab === 'estimate' ? totalEstCom : totalSetCom),
-                  valColor: 'var(--brand)' },
+                  valColor: 'var(--brand)', blue: true },
               ].map(k => (
                 <div key={k.l} className="kpi" style={k.highlight ? {
                   borderColor: totalGap >= 0 ? 'rgba(34,197,94,.35)' : 'rgba(239,68,68,.35)',
                   background: totalGap >= 0 ? 'rgba(34,197,94,.04)' : 'rgba(239,68,68,.04)',
+                } : k.blue ? {
+                  borderColor: 'rgba(59,130,246,.35)',
+                  background: 'rgba(59,130,246,.07)',
                 } : undefined}>
                   <div className="label">{k.l}</div>
                   <div className="val" style={k.valColor ? { color: k.valColor } : undefined}>{k.v}</div>
