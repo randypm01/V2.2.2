@@ -2,9 +2,366 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.2.51',
+    date: '2026-06-01',
+    current: true,
+    changes: [
+      { type: 'modify', text: '專業代理後台「联系我们」弹窗(ContactModal)渠道列表改为读取商户后台「客服管理」配置(window.APS_CS_STORE),按 sort 升序展示;商户增删改客服配置 → 代理端弹窗实时同步(订阅 store)' },
+      { type: 'modify', text: 'ContactModal 行渲染映射 store 字段:type→图标(Live Chat=bell / Telegram=send / WhatsApp=whatsapp / Email=mail)、title、subtitle(Email/WhatsApp 等宽灰色)、hasBtn 控制按钮显隐、btnText 为按钮文案;点击 Live Chat 行打开右下角 Live Chat 面板,其它行打开 btnLink' },
+      { type: 'modify', text: 'Live Chat 悬浮面板(agent_live_chat.jsx)示例对话保留不变,仅「联系我们」弹窗与客服管理关联' },
+    ],
+  },
+  {
+    ver: 'v3.2.50',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '商户后台「客服管理」重构为线框版:表格列改为 排序 / 类型 / 标题 / 副标题 / 是否有按钮 / 按钮文案 / 按钮跳转链接或license key / 操作;按排序升序显示;新增按钮文案改「+ 新增配置」' },
+      { type: 'modify', text: '客服管理 类型下拉精简为 Live Chat / Telegram / WhatsApp / Email;数据模型改为 {sort,type,title,subtitle,hasBtn,btnText,btnLink};Email 行 hasBtn=否,按钮文案/链接列显示 —' },
+      { type: 'modify', text: '客服管理 新增/编辑弹窗(改名「客服配置」)字段:排序*、类型*、标题*、副标题*、是否有按钮*(否/是),选「是」才显示 按钮文案*、按钮跳转链接或license key* 两个条件字段' },
+      { type: 'modify', text: '客服管理 移除原 服务时间/状态/备注 字段与启停操作;种子数据按线框(Live Chat license key 19426234、Telegram t.me/SuperAdmin_A23Plus、WhatsApp wa.me/919311453852、Email a23support@gmail.com)' },
+    ],
+  },
+  {
+    ver: 'v3.2.49',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'add', text: 'ContactModal 联系我们弹窗在 Telegram 下方新增 WhatsApp 渠道(action:whatsapp,副标题 +91 97300 44004,带「联系」按钮,点击打开 wa.me/919730044004);排序 在线客服 → Telegram → WhatsApp → 邮箱;EN 同步;ui.jsx 新增 whatsapp 图标' },
+    ],
+  },
+  {
+    ver: 'v3.2.48',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: 'ContactModal 邮箱行 partners@beans.gg 由蓝色加粗改为灰色(#94a3b8 等宽),与在线客服 / Telegram 行的灰色副标题统一' },
+    ],
+  },
+  {
+    ver: 'v3.2.47',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'fix', text: '專業代理後台 已登入顶栏:多语言切换框在 flex 顶栏内被拉伸到顶部对齐,加 align-self:center 使其与「联系我们」按钮、头像垂直居中对齐' },
+    ],
+  },
+  {
+    ver: 'v3.2.46',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 已登入顶栏「联系我们」按钮点击改为弹出 ContactModal 弹窗(与未登入着陆页同款:在线客服 / Telegram / 邮箱三行),不再直接打开 Live Chat;弹窗内「在线客服 → 联系」仍打开右下角 Live Chat' },
+      { type: 'modify', text: '專業代理後台 已登入顶栏多语言切换框取消顶栏绝对居中,移回「联系我们」按钮左侧紧邻,二者间距正常' },
+      { type: 'modify', text: 'ContactModal 重构为自取 i18n(内部 useAgentLang + LANDING_I18N)并导出 window.AgentContactModal,着陆页与已登入后台共用同一组件' },
+    ],
+  },
+  {
+    ver: 'v3.2.45',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 已登入顶栏:多语言切换框由原来贴右(头像左侧)改为在顶栏内水平居中(绝对定位 left:50% translateX(-50%)),与品牌 / 头像区互不挤压' },
+      { type: 'add', text: '專業代理後台 已登入顶栏:代理头像左侧新增「联系我们」按钮(message 图标 + 文字,白底胶囊,hover 变蓝),点击打开右下角 Live Chat 客服面板;窄屏只显示图标' },
+    ],
+  },
+  {
+    ver: 'v3.2.44',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 未登入着陆页「聯絡我們」由页面区块改为弹窗(ContactModal):删除原 #contact section,顶栏 + 汉堡菜单「聯絡我們」点击改为弹出弹窗(原 scrollTo(contact) → setShowContact)' },
+      { type: 'add', text: 'ContactModal 弹窗:头部 eyebrow + 标题 + 副标题 + 关闭 X(支持 Esc 关闭 / 点遮罩关闭),内含纵向渠道列表(按线框顺序 在线客服 → Telegram → 邮箱),每行 = 图标块 + 名称/副标题,在线客服与 Telegram 带「联系」按钮(分别开 Live Chat / Telegram),邮箱行展示 partners@beans.gg' },
+    ],
+  },
+  {
+    ver: 'v3.2.43',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 未登入着陆页「聯絡我們」3 卡:卡片改 flex 纵向布局 + 底部对齐槽位(aglp-contact-foot, margin-top:auto),邮箱 partners@beans.gg 现与 Telegram/在线客服 的按钮在同一水平线对齐' },
+      { type: 'modify', text: '在线客服 卡片副标题「登入后 7×24 在线」改为「7×24 在线」(删「登入后」);按钮「登入」改为「联系」,点击改为打开 Live Chat 悬浮客服(原 action login → livechat);EN 同步' },
+      { type: 'add', text: '新增 Live Chat 悬浮客服组件(modules/agent_live_chat.jsx):右下角悬浮蓝色圆形图标,点击展开 340px 客服面板(头部 7×24 在线状态 + 消息气泡 + 输入框,发送后模拟客服自动回复);全局开关 window.APS_openLiveChat() / closeLiveChat()' },
+      { type: 'add', text: 'Live Chat 同时挂载于 專業代理後台「未登入着陆页」与「已登入后台」右下角;index.html 引用 agent_live_chat.jsx' },
+    ],
+  },
+  {
+    ver: 'v3.2.42',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'modify', text: '招募落地页「联系我们」卡片:副标题(note)与邮箱/联系方式(d)位置对调,改为先显示灰色副标题再显示蓝色邮箱(三个渠道卡片统一,中英文版同步)' },
+    ],
+  },
+  {
+    ver: 'v3.2.41',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'add', text: '商户后台 → 运营 新增「客服管理」模块(modules/customer_service.jsx):配置平台客服渠道(在线客服/Telegram/WhatsApp/电话/邮箱/Line),含名称、类型、联系方式、服务时间、状态(启用/停用)、备注,支持新增/编辑/删除/快速启停;全局 store window.APS_CS_STORE 切页保留' },
+      { type: 'add', text: 'app.jsx 运营 section 加 customer_service 导航项(message 图标)+ 路由渲染 + 占位排除清单;index.html 引用 customer_service.jsx;ui.jsx ICONS 新增 message 对话气泡图标' },
+    ],
+  },
+  {
+    ver: 'v3.2.40',
+    date: '2026-06-01',
+    current: false,
+    changes: [
+      { type: 'remove', text: '移除 Email / 手机 验证码(OTP)功能 — 专业代理注册弹窗第 1 步不再要求发送+验证邮箱/短信验证码,联系方式填写格式正确即可下一步;step1Valid 去掉 otp.email.verified && otp.phone.verified 条件' },
+      { type: 'remove', text: 'agent_login.jsx 删除 otp state / 倒计时 effect / 值变重设 effect / sendOtp / verifyOtp / 验证码行 UI / reg.otp.* i18n 字串,不再写入 window.APS_OTP_LOG 与 localStorage(APS_OTP_LOG_V1)' },
+      { type: 'remove', text: '删除商户后台「注册验证码」模块 modules/register_otp.jsx;app.jsx 移除 运营 section 的 register_otp 导航项、路由渲染、占位符排除清单条目;index.html 移除该 jsx 引用' },
+    ],
+  },
+  {
+    ver: 'v3.2.39',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页:导航分页「费用」改为「分润方案」(en: Commission Plans);费用区块小标题→「分润方案」、标题「顶级条款」→「三种合作模式」、副标题→「依照不同推广策略选择最适合的合作方案。」(英文同步)' },
+    ],
+  },
+  {
+    ver: 'v3.2.38',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页 优势区 5 张卡文案改写:快速注册(简化申请,审核通过即可推广)/ 指导与支持(经理提供策略、素材、问题协助)/ 推广素材(Banner、短视频、社群文案、落地页)/ 快速付款(UPI、Bank Transfer、USDT)/ 透明数据(实时统计+报告公开可查);英文同步改写,「即用型素材→推广素材」「付款快速便捷→快速付款」' },
+    ],
+  },
+  {
+    ver: 'v3.2.37',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页 优势区块英文对齐中文三段式:Benefits→Core Advantages,标题改「Fast, Transparent, Easy to Start」(逗号三项,不再连成一句),副标题随中文改写' },
+    ],
+  },
+  {
+    ver: 'v3.2.36',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页 优势区块文案改写:小标题「福利」→「核心优势」,标题→「快速、透明、容易开始」,副标题→「从申请、推广到第一次结算,所有流程清楚可追踪。」' },
+    ],
+  },
+  {
+    ver: 'v3.2.35',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页:导航与区块小标题「如何運作」文案改为「合作流程」(nav.how 与 how.eyebrow);英文保持 How it Works' },
+    ],
+  },
+  {
+    ver: 'v3.2.34',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页 Hero 底部 4 项数据改为:40% 最高收益分成 / 1VS1 专属客服 / 24H 平均审核时间 / UPI 快速提款(原:15年在市场上 / 300万+每日玩家 / 62个国家 / 40%营收分享上限);英文同步' },
+    ],
+  },
+  {
+    ver: 'v3.2.33',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页 Hero 副标题文案改为「推荐玩家即可获得长期收益。RevShare 最高 40%,支援 UPI / 银行转账快速结算。」(英文:Refer players and earn long-term revenue. Up to 40% RevShare, with fast UPI / bank-transfer settlement.);40% 仍金色高亮' },
+    ],
+  },
+  {
+    ver: 'v3.2.32',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 着陆页 Hero 主标题文案改为三行:EARN UP TO / ₹1,000,000+(金色) / EVERY WEEK(中文:每周最高赚取 / ₹1,000,000+ / 轻松到手);标题渲染结构改为支持三行,金额行用 em 金色高亮' },
+    ],
+  },
+  {
+    ver: 'v3.2.31',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'remove', text: '撤回 v3.2.30:移除 Hero 右侧的 Facebook / Telegram / WhatsApp / Instagram 社交图标及相关样式,恢复原状' },
+    ],
+  },
+  {
+    ver: 'v3.2.30',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'add', text: '專業代理後台 未登入着陆页 Hero 右侧可视化区右上角新增社交媒体图标:Facebook / Telegram / WhatsApp / Instagram(圆形玻璃拟态按钮,hover 显各平台品牌色并上浮);Telegram 指向 t.me/BeansAffiliate' },
+    ],
+  },
+  {
+    ver: 'v3.2.29',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'remove', text: '專業代理後台 未登入着陆页「聯絡我們」:删除 Telegram 卡片的「@BeansAffiliate」与在线客服卡片的「后台右下角对话」蓝色明细行(两卡已有按钮,信息冗余);邮箱卡片保留地址' },
+    ],
+  },
+  {
+    ver: 'v3.2.28',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'add', text: '專業代理後台 未登入着陆页「聯絡我們」:Telegram 卡片新增蓝色「联系」按钮(打开 t.me/BeansAffiliate);在线客服卡片新增蓝色「登入」按钮(打开登入弹窗);邮箱卡片不加按钮' },
+      { type: 'remove', text: '删除「随时为你服务」联系区块底部的「成为合作伙伴」金色 CTA 按钮(页面底部 CTA 大区仍保留)' },
+    ],
+  },
+  {
+    ver: 'v3.2.27',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'add', text: '專業代理後台 未登入着陆页:导航「如何運作」右侧新增「聯絡我們」入口(桌面 nav + 汉堡菜单同步),点击平滑滚动到新建的 #contact 区块;zh/en 双语' },
+      { type: 'add', text: '新建「聯絡我們」区块(aglp-contact-grid 3 卡):Telegram @BeansAffiliate(最快响应)/ 邮箱 partners@beans.gg / 在线客服,卡片含图标+联系方式+说明,底部「成为合作伙伴」CTA;响应式 <980px 单列' },
+      { type: 'add', text: 'ui.jsx 新增 mail(信封)图标' },
+    ],
+  },
+  {
+    ver: 'v3.2.26',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'add', text: '專業代理後台 → 分润报表 → 已结算分润:每周结算示例由 2 期扩充到 5 期(W26054 / W26053 / W26052 / W26051 / W26050,覆盖 4/27~5/31 连续 5 周)' },
+      { type: 'feat', text: '「已结算分润」与「佣金结算单」打通对应:my_revshare.jsx 新增共享真源 window.getSettledRevsharePeriods(agentId),按 buildPeriodPlayers 算出每期「总佣金」;佣金结算单改为据此生成 5 张结算单(STM-W26054…),每张同期号、RevShare 金额 = 该期分润报表的总佣金,可逐期对账' },
+      { type: 'modify', text: '佣金结算单币种由 $ 统一改为 ₹(INR),与分润报表一致;结算单详情头部显示「期号 + 周期日期范围」,RevShare 行注明「同分润报表该期总佣金」;5 期分别预设 待提款×2 / 提款审核中×1 / 已提款×1 / 转结下期×1(W26050 仅 RevShare ₹374 < ₹1000 门槛→转结),完整覆盖状态机' },
+      { type: 'modify', text: '提款门槛由 $500 调整为 ₹1000(配合 ₹ 币种与示例金额量级)' },
+    ],
+  },
+  {
+    ver: 'v3.2.25',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'feat', text: '專業代理後台 → 佣金結算單 重构状态机,贴合完整流转链路:本期分润报表已结算 → 生成该期结算单 → 判定提款资格(达 $500 门槛=待提款 / 未达=转结下期合并) → 申请提款弹窗勾选待提款订单 → 提交后进入提款审核中 → 商户后台通过(已提款)/ 驳回(已驳回→可重新申请)' },
+      { type: 'add', text: '新增「转结下期」状态(b-neutral 灰):结算金额低于 $500 提款门槛的结算单自动结转下期合并,不可提款;新增「提款审核中」状态(已提交提款申请、等待商户审核)' },
+      { type: 'add', text: '提交提款申请后,所勾选的待提款结算单本地流转为「提款审核中」;已驳回结算单提供「重新申请」按钮,退回「待提款」可再次发起' },
+      { type: 'modify', text: 'KPI 改为 待提款 / 提款审核中 / 累计已提 / 转结下期(含门槛说明);筛选 tab 同步为 全部 / 待提款 / 提款审核中 / 已提款 / 已驳回 / 转结下期;详情 Drawer 流水时间线改为 6 步链路(报表结算→出单→判定资格→提交申请→商户审核→付款到账)' },
+      { type: 'modify', text: '「结算周期」tab 改为「结算与提款流转」6 步说明 + 转结规则提示(低于门槛并入下期);移除已废弃的 申诉 入口' },
+    ],
+  },
+  {
+    ver: 'v3.2.24',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'add', text: '專業代理後台 → 佣金結算單 新增「待提款」状态:审核通过(approved)的结算单统一显示为「待提款」(蓝色),「已付款」改称「已提款」;KPI 首格改为「待提款」金额(可提合计)并高亮,新增审核中金额格' },
+      { type: 'add', text: '申请提款支持勾选待提款订单:提款 Modal 改为列出全部「待提款」结算单的勾选清单(单号 / 周期 / CPA+RevShare 构成 / 金额),支持全选 / 取消全选,提款金额 = 所勾选订单合计并联动手续费与实际到账;待提款行内 & 详情 Drawer 新增「申请提款」按钮,点击带入该订单预勾选打开 Modal' },
+      { type: 'modify', text: '页头「申请提款」按钮显示可提款张数并在无可提订单时禁用;结算单表格操作列在「待提款」行显示「申请提款」主按钮,其余行保持查看/下载;列头「付款时间」改为「到账时间」' },
+    ],
+  },
+  {
+    ver: 'v3.2.23',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'add', text: '專業代理後台 → 財務 → 佣金結算單 页头新增「申请提款」按钮(主色),点击弹出申请提款 Modal:可提余额 = 已通过待付款的结算单合计,含收款方式选择、金额输入(快捷 $500/$1000/$2000/$5000/全部)、手续费与实际到账试算、2FA 验证码,与「我的钱包」提款弹窗口径一致;原「导出全部」改为 ghost 次按钮' },
+    ],
+  },
+  {
+    ver: 'v3.2.22',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'modify', text: '侧栏大項排序调整为 運營 / 報表 / 財務(原 運營 / 財務 / 報表)— 商户后台 NAV 与 专业代理后台 AGENT_NAV 同步调整,財務 移至最末' },
+    ],
+  },
+  {
+    ver: 'v3.2.21',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'fix', text: '修复 專業代理後台 → 財務 → 佣金結算單 点击白屏:my_settlement.jsx 读取的字段 revShare / adjust / paidAt 在 settlements 假数据中并不存在(实际字段为 rev / sub / adj / risk / tax / generated),导致传入 money(undefined) → undefined.toFixed() 抛 TypeError,整页崩溃白屏。已在模块内归一化:revShare = rev + sub,adjust = adj − risk − tax(保证 cpa+revShare+adjust === total),paidAt 取 generated,status 映射 pending_audit→待审核 / recalculating→审核中' },
+      { type: 'fix', text: 'data.js money() 加固:入参为 undefined / null / NaN 时按 0 处理,负数统一前缀「-」,避免任何模块字段缺失时再次因 .toFixed() 抛错白屏(全站防御)' },
+    ],
+  },
+  {
+    ver: 'v3.2.20',
+    date: '2026-05-29',
+    current: false,
+    changes: [
+      { type: 'add', text: '商戶後台 侧栏新增大項「財務」→ 分類「提款審核」(P0-9):新建 modules/withdraw_review.jsx(window.WithdrawReviewModule)。审核代理发起的提款申请 — KPI(待审核/处理中金额/风控标记/累计已付)+ 状态筛选(待审核/审核中/待付款/已付款/已拒绝/全部)+ 列表(单号/代理/方式/收款账户/金额/手续费/实付/风控信号/状态)+ 行内「通过/拒绝」+ 详情 Drawer(风控信号、余额校验、拒绝原因输入与快捷模板、通过→待付款→标记付款完成 状态流转)' },
+      { type: 'add', text: '專業代理後台 侧栏新增大項「財務」→ 分類「佣金結算單」(P0-8):AGENT_NAV 新增 财务 section,item k=my_settlement 复用已有 MySettlementModule(我的结算单 / CPA+RevShare+调整项)' },
+      { type: 'modify', text: 'app.jsx:商户 NAV 在 运营/报表 之间插入 财务 section;商户路由新增 r.k===\"withdraw_review\" → WithdrawReviewModule,并加入 mod fallback 排除清单;index.html 引入 modules/withdraw_review.jsx(置于 revshare.jsx 后)' },
+    ],
+  },
+  {
+    ver: 'v3.2.19',
+    date: '2026-05-27',
+    current: false,
+    changes: [
+      { type: 'fix', text: '註冊彈窗 手機驗證碼 無法完整輸入 — 排查到 OTP 輸入框視覺寬度過窄(模態 440px 下中間欄僅 ~56px,6 位數 + letterSpacing:2 易被裁切)。修正:① 移除 letterSpacing:2 改為 1,字體 13→14;② 外層 .otp-input-wrap 加 minWidth:130;③ input 加 minWidth:0 + width:100% 確保 flex 收縮不擠出;④ 加 inputMode=\"numeric\" + autoComplete=\"one-time-code\" + pattern=\"\\d*\" → 行動裝置自動跳出數字鍵盤,SMS 收到也能自動填入;⑤ type=\"text\" 顯式指定避免某些瀏覽器將 type=number 渲染成 spinner 佔位' },
+    ],
+  },
+  {
+    ver: 'v3.2.18',
+    date: '2026-05-27',
+    changes: [
+      { type: 'fix', text: '註冊彈窗 切回專業代理後台後 之前填的資料保留 — v3.2.17 用條件渲染 backend===\"agent\" && <Host/>,切走時 React unmount,form 内部 useState 全部丢失。改为 host 始终挂载,外层 div 用 display:none 隐藏,React 节点保持挂载状态 → 内部 form state 全部保留(姓名、Email、手机、验证码倒计时等)' },
+    ],
+  },
+  {
+    ver: 'v3.2.17',
+    date: '2026-05-27',
+    changes: [
+      { type: 'fix', text: '註冊彈窗 跨分頁顯示問題修正 — v3.2.16 全局掛載導致彈窗在 PRD 規劃 / 商戶後台 / 網站前台 也會浮現。改成 backend===\"agent\" 才顯示;切回專業代理後台仍會看到彈窗(store 狀態保留),切走會自動隱藏。' },
+    ],
+  },
+  {
+    ver: 'v3.2.16',
+    date: '2026-05-27',
+    changes: [
+      { type: 'fix', text: '專業代理註冊彈窗 彈出後 切換頂部分頁(PRD規劃 / 商戶後台 / 網站前台)時不再被關閉。原因:RegisterModal 渲染在 AgentLoginModule 內,而後者僅在 backend===\"agent\" && !loggedInAgent 時掛載,切 tab → unmount → 弹窗消失。' },
+      { type: 'modify', text: 'agent_login.jsx 新增全局 store window.__APS_REG_STORE + window.APS_openRegister / window.APS_closeRegister + window.RegisterModalHost 组件;app.jsx 顶层挂载 <window.RegisterModalHost/>,与 backend 渲染条件无关。模块内仍保留 setShowRegister 兼容包装(走 store)' },
+      { type: 'modify', text: 'app.jsx .backend-row z-index 加到 1300,zone tabs > register/login/frozen/suspended modal 遮罩,確保切換按鈕始終可見可點' },
+    ],
+  },
+  {
+    ver: 'v3.2.15',
+    date: '2026-05-27',
+    changes: [
+      { type: 'fix', text: '弹窗(注册 / 登入 / 帳戶已凍結 / 帳戶已停用)模糊遮罩擋住頂部 backend 分頁切換 — app.jsx .backend-row 加 position:relative + z-index:1300,跳到弹窗遮罩之上' },
+    ],
+  },
+  {
+    ver: 'v3.2.14',
+    date: '2026-05-27',
+    changes: [
+      { type: 'feat', text: '專業代理後台 註冊彈窗 點「發送驗證碼」生成的真實 6 位數,實時推到全局 window.APS_OTP_LOG + localStorage 持久化(LS key: APS_OTP_LOG_V1)。商戶後台 → 運營 → 注册验证码 模块每 2s 轮询读取,可即時看到代理發了什麼碼' },
+      { type: 'modify', text: 'agent_login.jsx sendOtp:① 隨機生成 6 位數驗證碼(不再固定原型行為)② push 到 window.APS_OTP_LOG + 寫 localStorage ③ 帶上 applyName / loginName / target(Email 或 手機)/ sentAt' },
+      { type: 'modify', text: 'register_otp.jsx ensureSeed 优先从 localStorage 恢复;每次表格 useMemo 触发时反向 saveLS 一次,使得跨 tab/跨页面也能同步;首次加载 seed 9 筆示意纪录(印度英文姓名 + 真实邮箱/手机)' },
+      { type: 'modify', text: '列表表头由「代理ID / 登录账号」改为「申请人(applyName)/ 登录账号(loginName)」— 注册阶段尚未生成代理ID,显示申请人姓名更直观' },
+    ],
+  },
+  {
+    ver: 'v3.2.13',
+    date: '2026-05-27',
+    changes: [
+      { type: 'add', text: 'agent_login.jsx sendOtp 推送验证码到 window.APS_OTP_LOG;register_otp.jsx 改读 APS_OTP_LOG + 2s 轮询' },
+    ],
+  },
+  {
+    ver: 'v3.2.12',
+    date: '2026-05-27',
+    changes: [
+      { type: 'modify', text: '專業代理後台 註冊彈窗 OTP 驗證 UI 全部 i18n 化 — 「郵箱驗證碼」「短信驗證碼」「發送驗證碼」「重發驗證碼」「{s}s 後重發」「驗證」「已驗證」「驗證碼已發送至」「請輸入 6 位數字驗證」「6 位驗證碼」 placeholder,EN 模式正確顯示 Email OTP / SMS OTP / Send Code / Resend Code / Verify / Verified 等' },
+      { type: 'add', text: '商戶後台 → 運營 新增「注册验证码」模块(register_otp)— 内容页:① 顶部 Email / 手机 切换 tab ② 列表展示 6 列:代理ID / 登录账号 / 收件邮箱或手机 / 验证码 / 发送时间 / 操作(复制按钮)③ 顶部搜索栏支持代理ID / 账号 / Email|手机 / 验证码 关键字 ④ 分页 20 笔 / 页;数据为模拟生成,与 agents 列表关联' },
+      { type: 'modify', text: 'app.jsx NAV 运营 section 第 5 项新增 register_otp(图标 shield)+ 路由 router + 占位符排除清单同步;index.html 引入 modules/register_otp.jsx' },
+    ],
+  },
+  {
+    ver: 'v3.2.11',
+    date: '2026-05-27',
+    changes: [
+      { type: 'feat', text: '專業代理後台 註冊彈窗 → Step 1 基本資料 → Email + 手機 兩個必填項各新增「驗證碼」校驗:① 填入有效 Email / 手機 后,右側出現「發送驗證碼」按鈕 ② 點擊後 60s 倒數,下方出現「6 位驗證碼」輸入框 ③ 輸入 6 位數字 → 出現「驗證」按鈕 → 點擊後綠勾標示「已驗證」+ 輸入框變綠 ④ Email / 手機 值若被修改,對應驗證狀態自動重置;⑤ Step 1「下一步」按鈕在兩個驗證碼都驗證通過後才能點擊' },
+      { type: 'modify', text: 'agent_login.jsx RegisterModal — 新增 otp state(email/phone 各一份:sent/countdown/code/verified/lockedTo)+ setInterval 倒數 + sendOtp / verifyOtp 工具函式;step1Valid 加 otp.email.verified && otp.phone.verified 條件;原型階段任意 6 位數字都接受' },
+    ],
+  },
+  {
     ver: 'v3.2.10',
     date: '2026-05-26',
-    current: true,
     changes: [
       { type: 'modify', text: '商戶後台 → 報表 → 代理分潤報表 KPI 第 5 张 label 改名:① 本期預估分潤 tab「預估佣金合計」→「總預估佣金」② 已結算分潤 tab「結算佣金合計」→「總佣金」。每周結算 / 每月結算同步生效' },
       { type: 'remove', text: '代理分潤報表 表格刪列 — 本期預估分潤 tab 刪 分潤比例 / 預估佣金 / 用戶狀態;已結算分潤 tab 刪 上期期末餘額 / 上期佣金基數 / 佣金基數 / 分潤比例 / 結算佣金 / 用戶狀態 / 結算記錄。兩 tab 删后剩同 7 列:玩家UID / 邀請Code / 註冊時間 / 充值金額 / 提款金額 / 充提差 / [當前餘額|期末餘額]' },

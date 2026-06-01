@@ -201,6 +201,7 @@ function ensureLandingStyle() {
 .aglp-viz-bars { display:flex; align-items:flex-end; gap:4px; height:32px; margin-top:8px; }
 .aglp-viz-bars span { flex:1; background:linear-gradient(to top,#3b82f6,#60a5fa); border-radius:2px 2px 0 0; }
 
+
 .aglp-lang { display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:99px; background:#f1f5f9; border:1px solid #e5e7eb; }
 .aglp-lang button { background:transparent; border:0; cursor:pointer; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600; color:#64748b; letter-spacing:0.3px; transition:.15s; }
 .aglp-lang button.active { background:#fff; color:#1e40af; box-shadow:0 1px 3px rgba(0,0,0,.08); }
@@ -269,6 +270,19 @@ function ensureLandingStyle() {
 .aglp-step-t { font-size:16px; font-weight:700; color:#0f172a; margin-bottom:6px; }
 .aglp-step-d { font-size:13.5px; color:#64748b; line-height:1.55; }
 
+/* 联系我们 v3.2.27 */
+.aglp-contact-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.aglp-contact-card { padding:30px 24px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; text-align:center; transition:border-color .15s, box-shadow .15s, transform .15s; display:flex; flex-direction:column; align-items:center; }
+.aglp-contact-foot { margin-top:auto; padding-top:14px; width:100%; display:flex; flex-direction:column; align-items:center; }
+.aglp-contact-card:hover { border-color:#bfdbfe; box-shadow:0 8px 24px rgba(59,130,246,.1); transform:translateY(-2px); }
+.aglp-contact-ic { width:52px; height:52px; margin:0 auto 16px; border-radius:12px; display:grid; place-items:center; color:#3b82f6; background:rgba(59,130,246,.1); }
+.aglp-contact-t { font-size:15px; font-weight:700; color:#0f172a; margin-bottom:6px; }
+.aglp-contact-d { font-size:15px; font-weight:600; color:#3b82f6; margin-bottom:0; font-family:var(--font-mono,monospace); }
+.aglp-contact-note { font-size:12.5px; color:#94a3b8; }
+.aglp-contact-btn { margin-top:0; padding:8px 28px; border:none; border-radius:8px; background:#3b82f6; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; transition:background .15s, transform .1s; }
+.aglp-contact-btn:hover { background:#2563eb; transform:translateY(-1px); }
+.aglp-contact-btn:active { transform:translateY(0); }
+
 /* CTA 大区 */
 .aglp-cta { padding:80px 0; background:linear-gradient(135deg,#2563eb 0%,#3b82f6 50%,#60a5fa 100%); color:#fff; text-align:center; position:relative; overflow:hidden; }
 .aglp-cta::before { content:''; position:absolute; inset:0; background-image:radial-gradient(ellipse 80% 60% at 30% 50%, rgba(255,255,255,.18), transparent 60%), radial-gradient(circle at 80% 80%, rgba(186,230,253,.2), transparent 50%); pointer-events:none; }
@@ -335,6 +349,7 @@ function ensureLandingStyle() {
   .aglp-comm-grid { grid-template-columns:1fr; }
   .aglp-tools { grid-template-columns:repeat(2,1fr); }
   .aglp-steps { grid-template-columns:repeat(2,1fr); }
+  .aglp-contact-grid { grid-template-columns:1fr; }
   .aglp-dash { grid-template-columns:1fr; }
   .aglp-nav-links { display:none; }
   .aglp-burger { display:inline-flex; }
@@ -848,7 +863,8 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
   const emailDup = emailValid && usedEmails.has(emailVal.toLowerCase());
   const phoneDup = phoneValid && usedPhones.has(phoneVal.toLowerCase());
   const loginNameDup = form.loginName && usedLoginNames.has(String(form.loginName).toLowerCase());
-  const step1Valid = form.applyName.trim() && form.contacts[0]?.value && form.contacts[1]?.value;
+  const step1Valid = form.applyName.trim() && form.contacts[0]?.value && form.contacts[1]?.value
+    && emailValid && phoneValid && !emailDup && !phoneDup;
   const step2Valid = true; // v3.0.12 仅保留 UPI 收款 + 流量来源选填，始终可以下一页
   const passChecks = {
     notEmpty: form.password.length > 0,
@@ -909,6 +925,7 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
                     else if (isPhone && v && !PHONE_RX.test(v)) err = '手机号码格式不正确(8-15 位数字)';
                     else if (isEmail && v && usedEmails.has(v.toLowerCase())) err = 'Email 已被使用';
                     else if (isPhone && v && usedPhones.has(v.toLowerCase())) err = '手机号码已被使用';
+
                     return (
                       <div key={idx}>
                         <div className="contact-row" style={{ display:'grid', gridTemplateColumns:'130px 1fr 32px', gap:10, alignItems:'center' }}>
@@ -1218,35 +1235,35 @@ function RegisterModal({ onClose, onSwitchLogin, prefill }) {
 })();
 const LANDING_I18N = {
   zh: {
-    nav: { fees:'费用', tools:'工具', dashboard:'仪表板', how:'如何运作', login:'登入', join:'成为合作伙伴' },
+    nav: { fees:'分润方案', tools:'工具', dashboard:'仪表板', how:'合作流程', contact:'联系我们', login:'登入', join:'成为合作伙伴' },
     hero: {
       eyebrow:'专业代理联盟计划',
-      title_a:'赢取现金', title_b:'一点也不', title_em:'麻烦', title_c:'哟',
-      sub_a:'与成功的博彩平台合作,获得高达公司净收入', sub_b:'的营收分享。一次推介,终身佣金。',
+      title_a:'每周最高赚取', title_b:'', title_em:'₹1,000,000+', title_c:'轻松到手',
+      sub_a:'推荐玩家即可获得长期收益。RevShare 最高', sub_b:',支援 UPI / 银行转账快速结算。',
       join:'成为合作伙伴', how:'如何运作?',
       stats:[
-        { v:'15', s:'年', l:'在市场上' },
-        { v:'300', s:'万+', l:'每日玩家' },
-        { v:'62', s:'个国家', l:'覆盖位置' },
-        { v:'40', s:'%', l:'营收分享上限' },
+        { v:'40', s:'%', l:'最高收益分成' },
+        { v:'1VS1', s:'', l:'专属客服' },
+        { v:'24H', s:'', l:'平均审核时间' },
+        { v:'UPI', s:'', l:'快速提款' },
       ],
       viz:{ c1:'本月佣金', c2:'推介玩家', c3:'营收分享 · 当前等级', c3hint:'距离 40% 上限还差 5%' },
     },
     benefits: {
-      eyebrow:'福利',
-      title:'在我们这里 · 一切都是快速、简单和透明',
-      sub:'从注册到首笔佣金提款,流程清晰、专属客户经理全程跟进。',
+      eyebrow:'核心优势',
+      title:'快速、透明、容易开始',
+      sub:'从申请、推广到第一次结算,所有流程清楚可追踪。',
       items:[
-        { ic:'zap', t:'快速注册', d:'我们尽可能简化注册和验证联盟账户的流程,立即获取你的第一个联盟链接。' },
-        { ic:'users', t:'指导与支持', d:'专属客户经理为你制定行销策略,解决你可能遇到的任何问题。' },
-        { ic:'image', t:'即用型素材', d:'广泛的高品质宣传材料,最大限度提高你的转化率。' },
-        { ic:'wallet', t:'付款快速便捷', d:'最低提款额仅 $30,200+ 种付款方式,等待时间缩到最低。' },
+        { ic:'zap', t:'快速注册', d:'简化申请流程,审核通过后即可开始推广。' },
+        { ic:'users', t:'指导与支持', d:'专属客户经理提供推广策略、素材与问题协助。' },
+        { ic:'image', t:'推广素材', d:'提供 Banner、短视频、社群文案与落地页。' },
+        { ic:'wallet', t:'快速付款', d:'支援 UPI、Bank Transfer、USDT 等方式。' },
         { ic:'shield', t:'透明数据', d:'实时统计 + 详细报告,所有数据公开可查,无任何隐藏条款。' },
       ],
     },
     fees: {
-      eyebrow:'费用', title:'顶级条款',
-      sub:'三种合作模式,适配不同推广策略 — 营收分享、单付费 CPA、或两者结合。',
+      eyebrow:'分润方案', title:'三种合作模式',
+      sub:'依照不同推广策略选择最适合的合作方案。',
       badge:'最受欢迎',
       cards:[
         { n:'CPA · 单付费分润', r:'$50', u:'起', h:'推介客户完成首存或达到指定条件时一次性获得佣金', f:['按用户行为结算,见效快','多档单价,达标自动结算','不依赖玩家长期表现'], cta:'联系我们' },
@@ -1276,7 +1293,7 @@ const LANDING_I18N = {
       kpis:{ commission:'本月佣金', cpa:'有效 CPA', players:'活跃玩家' },
     },
     how: {
-      eyebrow:'如何运作', title:'4 步骤 · 让你赚大钱',
+      eyebrow:'合作流程', title:'4 步骤 · 让你赚大钱',
       sub:'从申请到提款,整个流程不超过 7 天 — 高效、透明、稳定。',
       steps:[
         { ic:'userPlus', t:'注册', d:'快速注册,商户审核后即可激活账户' },
@@ -1290,38 +1307,49 @@ const LANDING_I18N = {
       sub:'现在就申请,享受业内顶级条款 · 全球已有 10 万 + 联盟代理与我们合作',
       btn:'成为合作伙伴',
     },
+    contact: {
+      eyebrow:'联系我们', title:'随时为你服务',
+      sub:'7×24 小时专属代理客服 · 申请、对账、提款任何问题都能快速响应。',
+      channels:[
+        { ic:'send',    t:'Telegram', d:'', note:'最快响应 · 平均 5 分钟', action:'contact', btn:'联系' },
+        { ic:'whatsapp',t:'WhatsApp', d:'', note:'+91 97300 44004', action:'whatsapp', btn:'联系' },
+        { ic:'mail',    t:'邮箱',     d:'partners@beans.gg', note:'对账 / 合约相关' },
+        { ic:'bell',    t:'在线客服', d:'', note:'7×24 在线', action:'livechat', btn:'联系' },
+      ],
+      btn:'成为合作伙伴',
+    },
     footer: { copy:'© 2026 Partners-MM · 专业代理后台 v3.0.0', links:['隐私权政策','条款与条件','联系我们'] },
   },
   en: {
-    nav: { fees:'Commissions', tools:'Tools', dashboard:'Dashboard', how:'How it Works', login:'Log In', join:'Become a Partner' },
+    nav: { fees:'Commission Plans', tools:'Tools', dashboard:'Dashboard', how:'How it Works', contact:'Contact Us', login:'Log In', join:'Become a Partner' },
     hero: {
       eyebrow:'Pro Affiliate Program',
-      title_a:'Earn Cash', title_b:'Without Any', title_em:'Hassle', title_c:'',
-      sub_a:'Partner with a winning iGaming platform and earn up to', sub_b:' of net company revenue. One referral, lifetime commission.',
+      title_a:'EARN UP TO', title_b:'', title_em:'₹1,000,000+', title_c:'EVERY WEEK',
+      sub_a:'Refer players and earn long-term revenue. Up to', sub_b:' RevShare, with fast UPI / bank-transfer settlement.',
       join:'Become a Partner', how:'How it works?',
       stats:[
-        { v:'15', s:'yrs', l:'In the market' },
-        { v:'3', s:'M+', l:'Daily players' },
-        { v:'62', s:'countries', l:'Locations covered' },
         { v:'40', s:'%', l:'Max revenue share' },
+        { v:'1VS1', s:'', l:'Dedicated support' },
+        { v:'24H', s:'', l:'Avg. review time' },
+        { v:'UPI', s:'', l:'Fast withdrawal' },
       ],
       viz:{ c1:'This Month', c2:'Referrals', c3:'RevShare · Current Tier', c3hint:'5% to reach 40% cap' },
     },
     benefits: {
-      eyebrow:'Benefits',
-      title:'With us · Everything is fast, simple and transparent',
-      sub:'From signup to your first payout — clear process with a dedicated manager.',
+      eyebrow:'Core Advantages',
+      title:'Fast, Transparent, Easy to Start',
+      sub:'From application and promotion to your first settlement — every step is clear and trackable.',
       items:[
-        { ic:'zap', t:'Quick Sign-Up', d:'We simplify registration and verification so you get your first link instantly.' },
-        { ic:'users', t:'Guidance & Support', d:'A dedicated manager builds your strategy and solves any issue you face.' },
-        { ic:'image', t:'Ready Creatives', d:'A wide library of high-quality promo materials to maximize conversion.' },
-        { ic:'wallet', t:'Fast & Easy Payouts', d:'Minimum payout from $30, 200+ payment methods, minimal wait time.' },
+        { ic:'zap', t:'Quick Sign-Up', d:'Streamlined application — start promoting as soon as you\u2019re approved.' },
+        { ic:'users', t:'Guidance & Support', d:'A dedicated manager provides promo strategy, creatives and issue support.' },
+        { ic:'image', t:'Promo Creatives', d:'Banners, short videos, social copy and landing pages provided.' },
+        { ic:'wallet', t:'Fast Payouts', d:'Supports UPI, Bank Transfer, USDT and more.' },
         { ic:'shield', t:'Transparent Data', d:'Real-time stats + detailed reports, all open and audit-ready.' },
       ],
     },
     fees: {
-      eyebrow:'Commissions', title:'Top-Tier Terms',
-      sub:'Three partnership models for any strategy — RevShare, CPA, or hybrid.',
+      eyebrow:'Commission Plans', title:'Three Partnership Models',
+      sub:'Choose the model that best fits your promotion strategy.',
       badge:'Most Popular',
       cards:[
         { n:'CPA · Per-Player', r:'$50', u:'+', h:'One-off commission when a referral makes their first deposit or hits a target.', f:['Per-action payout, fast results','Tiered rates, auto-settled','No long-term retention risk'], cta:'Contact Us' },
@@ -1365,17 +1393,76 @@ const LANDING_I18N = {
       sub:'Apply today and enjoy industry-leading terms · 100k+ affiliates already with us',
       btn:'Become a Partner',
     },
+    contact: {
+      eyebrow:'Contact Us', title:'We\u2019re Here to Help',
+      sub:'24/7 dedicated affiliate support \u00b7 fast answers on applications, reconciliation and payouts.',
+      channels:[
+        { ic:'send', t:'Telegram', d:'', note:'Fastest \u00b7 avg. 5 min reply', action:'contact', btn:'Contact' },
+        { ic:'whatsapp', t:'WhatsApp', d:'', note:'+91 97300 44004', action:'whatsapp', btn:'Contact' },
+        { ic:'mail', t:'Email',    d:'partners@beans.gg', note:'Reconciliation / contracts' },
+        { ic:'bell', t:'Live Chat', d:'', note:'24/7 online', action:'livechat', btn:'Contact' },
+      ],
+      btn:'Become a Partner',
+    },
     footer: { copy:'© 2026 Partners-MM · Affiliate Portal v3.0.0', links:['Privacy Policy','Terms & Conditions','Contact Us'] },
   },
+};
+
+// ============ v3.2.16 全局注册弹窗 store — 切换后台分页不关闭弹窗 ============
+if (!window.__APS_REG_STORE) {
+  window.__APS_REG_STORE = {
+    open: false,
+    prefill: null,
+    listeners: new Set(),
+  };
+  window.APS_openRegister = (prefill) => {
+    window.__APS_REG_STORE.open = true;
+    window.__APS_REG_STORE.prefill = prefill || null;
+    window.__APS_REG_STORE.listeners.forEach(fn => fn());
+  };
+  window.APS_closeRegister = () => {
+    window.__APS_REG_STORE.open = false;
+    window.__APS_REG_STORE.prefill = null;
+    window.__APS_REG_STORE.listeners.forEach(fn => fn());
+  };
+}
+
+window.RegisterModalHost = function RegisterModalHost() {
+  const [, force] = React.useReducer(x => x + 1, 0);
+  React.useEffect(() => {
+    window.__APS_REG_STORE.listeners.add(force);
+    return () => window.__APS_REG_STORE.listeners.delete(force);
+  }, []);
+  const s = window.__APS_REG_STORE;
+  if (!s.open) return null;
+  return <RegisterModal
+    onClose={() => window.APS_closeRegister()}
+    onSwitchLogin={() => {
+      // 如果在代理后台且有 setShowLogin 可用,调用它;否则仅关阅注册
+      window.APS_closeRegister();
+      if (window.APS_openLogin) window.APS_openLogin();
+    }}
+    prefill={s.prefill}
+  />;
 };
 
 // ============ 招募营销页主模块 ============
 window.AgentLoginModule = function ({ onLogin }) {
   const { Icon } = window.UI;
   const [showLogin, setShowLogin] = React.useState(false);
-  const [showRegister, setShowRegister] = React.useState(false);
+  // v3.2.16 注册弹窗改走全局 store(setShowRegister 作为兼容别名)
+  const setShowRegister = (open, prefill) => {
+    if (open) window.APS_openRegister(prefill);
+    else window.APS_closeRegister();
+  };
+  // 暴露登入弹窗 opener,供 RegisterModalHost 在其他分页点 「立即登陆」 调用
+  React.useEffect(() => {
+    window.APS_openLogin = () => setShowLogin(true);
+    return () => { delete window.APS_openLogin; };
+  }, []);
   const [registerPrefill, setRegisterPrefill] = React.useState(null); // v3.0.54 补件重提交预填数据
   const [mobileMenu, setMobileMenu] = React.useState(false);
+  const [showContact, setShowContact] = React.useState(false);
   const [lang, setLang] = window.useAgentLang();
   const t = LANDING_I18N[lang];
 
@@ -1401,6 +1488,7 @@ window.AgentLoginModule = function ({ onLogin }) {
             <span className="aglp-nav-link" onClick={() => scrollTo('tools')}>{t.nav.tools}</span>
             <span className="aglp-nav-link" onClick={() => scrollTo('dashboard')}>{t.nav.dashboard}</span>
             <span className="aglp-nav-link" onClick={() => scrollTo('how-it-works')}>{t.nav.how}</span>
+            <span className="aglp-nav-link" onClick={() => setShowContact(true)}>{t.nav.contact}</span>
           </nav>
           <div className="aglp-nav-actions">
             <window.AgentLangSwitch/>
@@ -1418,6 +1506,7 @@ window.AgentLoginModule = function ({ onLogin }) {
                 <div className="aglp-mobile-menu-item" onClick={() => scrollTo('tools')}>{t.nav.tools}</div>
                 <div className="aglp-mobile-menu-item" onClick={() => scrollTo('dashboard')}>{t.nav.dashboard}</div>
                 <div className="aglp-mobile-menu-item" onClick={() => scrollTo('how-it-works')}>{t.nav.how}</div>
+                <div className="aglp-mobile-menu-item" onClick={() => { setMobileMenu(false); setShowContact(true); }}>{t.nav.contact}</div>
                 <div className="aglp-mobile-menu-divider"/>
                 {/* v3.0.32 语言切换 (Log In / Become a Partner 已在顶栏可见,不再重复) */}
                 <div className="aglp-mobile-menu-lang" onClick={(e) => e.stopPropagation()}>
@@ -1439,7 +1528,8 @@ window.AgentLoginModule = function ({ onLogin }) {
             </div>
             <h1 className="aglp-hero-title">
               {t.hero.title_a}<br/>
-              {t.hero.title_b}<em>{t.hero.title_em}</em>{t.hero.title_c}
+              <em>{t.hero.title_em}</em>
+              {t.hero.title_c ? <React.Fragment><br/>{t.hero.title_c}</React.Fragment> : null}
             </h1>
             <p className="aglp-hero-sub">
               {t.hero.sub_a} <strong style={{ color:'#fef3c7' }}>40%</strong>{t.hero.sub_b}
@@ -1623,6 +1713,8 @@ window.AgentLoginModule = function ({ onLogin }) {
         </div>
       </section>
 
+      {/* 联系我们 v3.2.44 改为弹窗(ContactModal),不再占用页面区块 */}
+
       {/* CTA */}
       <section className="aglp-cta">
         <div className="aglp-wrap">
@@ -1645,7 +1737,7 @@ window.AgentLoginModule = function ({ onLogin }) {
       {showLogin && <LoginModal
         onClose={() => setShowLogin(false)}
         onLogin={onLogin}
-        onSwitchRegister={() => { setRegisterPrefill(null); setShowRegister(true); }}
+        onSwitchRegister={() => { setRegisterPrefill(null); window.APS_openRegister(null); }}
         onSupplement={(app) => {
           // v3.0.55 供 LoginModal 「立即补件」按钮调用:预填原注册表单(优先 _formSnapshot,缺失时根据 app 字段重建)
           const snap = app._formSnapshot || (() => {
@@ -1668,14 +1760,102 @@ window.AgentLoginModule = function ({ onLogin }) {
             };
           })();
           setRegisterPrefill({ appId: app.id, formSnapshot: snap });
-          setShowRegister(true);
+          window.APS_openRegister({ appId: app.id, formSnapshot: snap });
         }}
       />}
-      {showRegister && <RegisterModal
-        onClose={() => { setShowRegister(false); setRegisterPrefill(null); }}
-        onSwitchLogin={() => setShowLogin(true)}
-        prefill={registerPrefill}
-      />}
+      {/* v3.2.16 RegisterModal 现由 RegisterModalHost 全局渲染,不受本模块 unmount 影响 */}
+      {showContact && <ContactModal onClose={() => setShowContact(false)} onLiveChat={() => { setShowContact(false); window.APS_openLiveChat && window.APS_openLiveChat(); }}/>}
+      {window.AgentLiveChat && <window.AgentLiveChat/>}
     </div>
   );
 };
+
+// v3.2.44 联系我们 弹窗 — 由顶栏「聯絡我們」触发,纵向渠道列表
+// v3.2.46 自取 i18n + 导出 window.AgentContactModal,供着陆页与已登入后台共用
+function ContactModal({ onClose, onLiveChat }) {
+  const { Icon } = window.UI;
+  const [lang] = window.useAgentLang ? window.useAgentLang() : ['zh'];
+  const t = LANDING_I18N[lang] || LANDING_I18N.zh;
+  const doLiveChat = onLiveChat || (() => { onClose(); window.APS_openLiveChat && window.APS_openLiveChat(); });
+  // v3.2.51 订阅商户后台「客服管理」配置,实时同步
+  const [, force] = React.useReducer(x => x + 1, 0);
+  React.useEffect(() => {
+    if (window.APS_CS_STORE) return window.APS_CS_STORE.subscribe(force);
+  }, []);
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+  // v3.2.51 数据源 = 商户后台 客服管理(window.APS_CS_STORE),按 sort 升序
+  const CS_ICON = { 'Live Chat':'bell', 'Telegram':'send', 'WhatsApp':'whatsapp', 'Email':'mail' };
+  const cfg = (window.APS_CS_STORE && window.APS_CS_STORE.list) || [];
+  const rows = [...cfg].sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  const handle = (c) => {
+    if (c.type === 'Live Chat') doLiveChat();
+    else if (c.btnLink) window.open(c.btnLink, '_blank');
+  };
+  return (
+    <div style={{
+      position:'fixed', inset:0, zIndex:9500, display:'grid', placeItems:'center',
+      background:'rgba(15,23,42,.45)', backdropFilter:'blur(2px)', padding:20,
+    }} onClick={onClose}>
+      <div onClick={(e)=>e.stopPropagation()} style={{
+        width:520, maxWidth:'calc(100vw - 40px)', maxHeight:'calc(100vh - 80px)', overflowY:'auto',
+        background:'#fff', borderRadius:16, boxShadow:'0 24px 60px -12px rgba(15,23,42,.35)',
+        animation:'alcUp .2s ease',
+      }}>
+        {/* 头部 */}
+        <div style={{ padding:'26px 28px 18px', borderBottom:'1px solid #f1f5f9', position:'relative' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#3b82f6', letterSpacing:.5, marginBottom:8 }}>{t.contact.eyebrow}</div>
+          <h2 style={{ fontSize:26, fontWeight:800, color:'#0f172a', margin:0, lineHeight:1.2 }}>{t.contact.title}</h2>
+          <p style={{ fontSize:13.5, color:'#64748b', margin:'8px 0 0', lineHeight:1.6 }}>{t.contact.sub}</p>
+          <button onClick={onClose} aria-label="关闭" style={{
+            position:'absolute', top:22, right:22, width:34, height:34, borderRadius:8,
+            border:'none', background:'transparent', color:'#94a3b8', cursor:'pointer',
+            display:'grid', placeItems:'center',
+          }}
+          onMouseOver={(e)=>{e.currentTarget.style.background='#f1f5f9';e.currentTarget.style.color='#475569';}}
+          onMouseOut={(e)=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#94a3b8';}}>
+            <Icon name="x" size={18}/>
+          </button>
+        </div>
+        {/* 渠道列表 */}
+        <div style={{ padding:'18px 28px 28px', display:'flex', flexDirection:'column', gap:12 }}>
+          {rows.map((c, i) => {
+            const isMono = c.type === 'Email' || c.type === 'WhatsApp';
+            return (
+            <div key={c.id != null ? c.id : i} style={{
+              display:'flex', alignItems:'center', gap:16,
+              border:'1px solid #e5e7eb', borderRadius:12, padding:'16px 18px',
+            }}>
+              <div style={{
+                width:48, height:48, flex:'none', borderRadius:10, background:'#eff6ff',
+                color:'#3b82f6', display:'grid', placeItems:'center',
+              }}>
+                <Icon name={CS_ICON[c.type] || 'message'} size={22}/>
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:15.5, fontWeight:700, color:'#0f172a' }}>{c.title}</div>
+                <div style={{ fontSize:isMono?13:12.5, color:'#94a3b8', marginTop:3, wordBreak:'break-all', fontFamily: isMono ? 'JetBrains Mono, monospace' : 'inherit' }}>{c.subtitle}</div>
+              </div>
+              {c.hasBtn && c.btnText && (
+                <button onClick={() => handle(c)} style={{
+                  flex:'none', padding:'9px 24px', border:'none', borderRadius:8,
+                  background:'#3b82f6', color:'#fff', fontSize:13.5, fontWeight:600, cursor:'pointer',
+                  transition:'background .15s',
+                }}
+                onMouseOver={(e)=>e.currentTarget.style.background='#2563eb'}
+                onMouseOut={(e)=>e.currentTarget.style.background='#3b82f6'}>
+                  {c.btnText}
+                </button>
+              )}
+            </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+window.AgentContactModal = ContactModal;

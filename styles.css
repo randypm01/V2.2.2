@@ -52,6 +52,8 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   display: flex; align-items: stretch; gap: 0;
   background: var(--bg-1); border-bottom: 1px solid var(--line);
   padding: 0 18px;
+  /* v3.2.15 z-index > 弹窗 mask(1000/1100),保证注册/登录/停用弹窗的模糊背景不挡顶部 tab */
+  position: relative; z-index: 1200;
 }
 .backend-tab {
   display: flex; align-items: center; gap: 8px;
@@ -371,6 +373,9 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 .backend-row {
   display: flex; align-items: stretch;
   background: var(--bg-1);
+  /* v3.2.15 z-index > 弹窗 mask(1000/1100/1200),让顶部 backend tab 不被注册/登录/停用弹窗的模糊层遮挡 */
+  position: relative; z-index: 1300;
+}
   border-bottom: 1px solid var(--line);
   padding: 0 18px;
   height: 40px;
@@ -431,6 +436,27 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 .topbar-v2 .top-icon-btn { margin-left: 4px; align-self: center; }
 .topbar-v2 .top-user { margin-left: 8px; align-self: center; }
 .topbar-v2 .agent-user-wrap { margin-left: 8px; align-self: center; display: flex; align-items: center; }
+/* v3.2.47 顶栏语言框垂直居中,与「联系我们」对齐 */
+.topbar-v2 .aps-lang-wrap { align-self: center; }
+
+/* v3.2.45 代理后台顶栏「联系我们」按钮(头像左侧) */
+.topbar-v2 .agent-contact-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  align-self: center; margin-left: 8px;
+  padding: 6px 14px; border-radius: 99px;
+  background: #fff; border: 1px solid var(--line);
+  color: var(--text-1); font-size: 13px; font-weight: 600;
+  font-family: inherit; line-height: 1; cursor: pointer;
+  transition: .15s;
+}
+.topbar-v2 .agent-contact-btn:hover {
+  border-color: var(--brand); color: var(--brand); background: #f8fafc;
+}
+.topbar-v2 .agent-contact-btn > svg { display: block; flex-shrink: 0; }
+@media (max-width: 767px) {
+  .topbar-v2 .agent-contact-btn span { display: none; }
+  .topbar-v2 .agent-contact-btn { padding: 6px; }
+}
 
 /* ===== 内容区面包屑 ===== */
 .content-crumbs {

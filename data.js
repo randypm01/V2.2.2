@@ -13,9 +13,14 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function pickN(arr, n) { return [...arr].sort(() => Math.random()-.5).slice(0,n); }
 function id(prefix, n) { return prefix + String(n).padStart(6, '0'); }
 function money(n) {
-  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
-  return n.toFixed(0);
+  // v3.2.21 防御:undefined/null/NaN 一律按 0 处理,避免 .toFixed 抛错导致整页白屏
+  if (n == null || isNaN(n)) n = 0;
+  const neg = n < 0; const a = Math.abs(n);
+  let s;
+  if (a >= 1e6) s = (a/1e6).toFixed(2) + 'M';
+  else if (a >= 1e3) s = (a/1e3).toFixed(1) + 'K';
+  else s = a.toFixed(0);
+  return (neg ? '-' : '') + s;
 }
 function fmtNum(n) { return n == null ? '-' : new Intl.NumberFormat('en-US').format(Math.round(n)); }
 function fmtMoney(n, cur='$') { return cur + new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n); }

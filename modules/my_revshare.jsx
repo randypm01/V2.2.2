@@ -82,18 +82,38 @@ function buildPeriodPlayers(agentId, seed) {
 }
 
 // —— 期次列表(已结算) v3.1.46 按结算周期拆分为 周 / 月 两套
+// v3.2.26 weekly 扩充到 5 期,并为每期附「结算单」元数据(cpa/adj/提款状态),
+//         供「我的结算单」生成与本报表一一对应的结算单(同期号 / 同分润金额)
 function buildSettledPeriodList(cycleType) {
   if (cycleType === 'monthly') {
     return [
-      { week:'M2605', start:'2026/5/1 00:00:00', end:'2026/5/31 23:59:59', seed: 25 },
-      { week:'M2604', start:'2026/4/1 00:00:00', end:'2026/4/30 23:59:59', seed: 24 },
+      { week:'M2605', start:'2026/5/1 00:00:00',  end:'2026/5/31 23:59:59', seed: 25, cpa: 14000, adj: 0,    wdStatus:'withdrawable' },
+      { week:'M2604', start:'2026/4/1 00:00:00',  end:'2026/4/30 23:59:59', seed: 24, cpa: 12500, adj: -800, wdStatus:'paid' },
     ];
   }
   return [
-    { week:'W26054', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2 },
-    { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1 },
+    { week:'W26054', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2,  cpa: 3200, adj: 0,    wdStatus:'withdrawable' },
+    { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1,  cpa: 2800, adj: -150, wdStatus:'withdrawable' },
+    { week:'W26052', start:'2026/5/11 00:00:00', end:'2026/5/17 23:59:59', seed: 5,  cpa: 4100, adj: 200,  wdStatus:'reviewing' },
+    { week:'W26051', start:'2026/5/4 00:00:00',  end:'2026/5/10 23:59:59', seed: 8,  cpa: 3500, adj: 0,    wdStatus:'paid' },
+    { week:'W26050', start:'2026/4/27 00:00:00', end:'2026/5/3 23:59:59',  seed: 11, cpa: 0,    adj: 0,    wdStatus:'carried' },
   ];
 }
+
+// v3.2.26 共享:返回每个「已结算」期次 + 该期结算后的分润佣金合计 + 结算单元数据。
+//   「我的结算单」据此生成与本报表完全对应的结算单(同期号、RevShare = 本报表该期总佣金)。
+window.getSettledRevsharePeriods = function (agentId, cycleType = 'weekly') {
+  return buildSettledPeriodList(cycleType).map(p => {
+    const players = buildPeriodPlayers(agentId, p.seed);
+    const commission = players.reduce((a, pl) => a + (pl.commission || 0), 0);
+    return {
+      ...p,
+      commission,                 // 本报表该期「总佣金」(已结算分润)
+      playerCount: players.length,
+      endTs: new Date(String(p.end).replace(/-/g, '/')).getTime(),
+    };
+  });
+};
 // v3.1.92 隐藏日期后面的时间 — '2026/6/1 00:00:00' → '2026/6/1'
 const _stripTime = (s) => String(s || '').replace(/\s+\d{1,2}:\d{2}(:\d{2})?\s*$/, '');
 

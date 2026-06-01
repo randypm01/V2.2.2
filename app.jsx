@@ -26,6 +26,7 @@ function App() {
   // v2.3.28 专业代理后台登入态
   const [loggedInAgent, setLoggedInAgent] = useState(null);
   const [agentUserMenuOpen, setAgentUserMenuOpen] = useState(false);
+  const [agentContactOpen, setAgentContactOpen] = useState(false); // v3.2.46 代理后台「联系我们」弹窗
   // v3.2.4 暴露 代理后台「登出」函数 — 供 SuspendedAccountModal 等模块调用
   React.useEffect(() => {
     window.APS_AGENT_LOGOUT = () => {
@@ -92,12 +93,16 @@ function App() {
       { k:'revshare', l:'分润管理', icon:'pie', prd:'P0-7' },
       { k:'agent_levels', l:'代理等级管理', icon:'flag' },
       { k:'social_share', l:'社媒分享管理', icon:'globe' },
+      { k:'customer_service', l:'客服管理', icon:'message' },
     ]},
     { section: '报表', icon:'pie', items: [
       { k:'agent_revenue', l:'代理收益', icon:'wallet' },
       { k:'codes', l:'代理推广链接', icon:'link', prd:'P0-3' },
       { k:'players', l:'代理玩家损益', icon:'user', prd:'P0-4' },
       { k:'agent_revshare', l:'代理分润报表', icon:'pie', prd:'P0-7' },
+    ]},
+    { section: '财务', icon:'wallet', items: [
+      { k:'withdraw_review', l:'提款审核', icon:'wallet', prd:'P0-9' },
     ]},
   ];
 
@@ -111,6 +116,9 @@ function App() {
       { k:'my_codes', l: T('nav.item.my_codes', '邀请Code与链接'), icon:'link', prd:'P0-3' },
       { k:'my_players', l: T('nav.item.my_players', '玩家损益'), icon:'user', prd:'P0-4' },
       { k:'my_revshare', l: T('nav.item.my_revshare', '分润报表'), icon:'pie', prd:'P0-7' },
+    ]},
+    { section: T('nav.sec.finance', '财务'), icon:'wallet', items: [
+      { k:'my_settlement', l: T('nav.item.my_settlement', '佣金结算单'), icon:'wallet', prd:'P0-8' },
     ]},
   ];
 
@@ -313,6 +321,16 @@ function App() {
           <window.AgentLangSwitch variant="topbar"/>
         )}
         {backend === 'agent' && loggedInAgent && (
+          <button
+            className="agent-contact-btn"
+            onClick={() => setAgentContactOpen(true)}
+            title={T('nav.contact', '联系我们')}
+          >
+            <Icon name="message" size={14}/>
+            <span>{T('nav.contact', '联系我们')}</span>
+          </button>
+        )}
+        {backend === 'agent' && loggedInAgent && (
           <div className="agent-user-wrap" style={{position:'relative'}}>
             <div className="top-user agent-user-pill" onClick={()=>setAgentUserMenuOpen(v=>!v)} style={{cursor:'pointer'}}>
               {(() => {
@@ -467,6 +485,17 @@ function App() {
         </div>
       )}
 
+      {/* v3.2.42 代理后台已登入页 右下角 Live Chat 悬浮客服 */}
+      {backend === 'agent' && loggedInAgent && window.AgentLiveChat && <window.AgentLiveChat/>}
+
+      {/* v3.2.46 代理后台已登入页「联系我们」弹窗 */}
+      {backend === 'agent' && loggedInAgent && agentContactOpen && window.AgentContactModal && (
+        <window.AgentContactModal
+          onClose={() => setAgentContactOpen(false)}
+          onLiveChat={() => { setAgentContactOpen(false); window.APS_openLiveChat && window.APS_openLiveChat(); }}
+        />
+      )}
+
       {backend !== 'agent' && backend !== 'frontend' && (
       <div className="app-body">
         <aside className="sidebar">
@@ -610,6 +639,7 @@ function App() {
             {r.kind === 'mod' && r.k === 'agent_revshare' && <window.AgentRevshareModule/>}
             {r.kind === 'mod' && r.k === 'agent_levels' && <window.AgentLevelsModule/>}
             {r.kind === 'mod' && r.k === 'social_share' && <window.SocialShareModule/>}
+            {r.kind === 'mod' && r.k === 'customer_service' && <window.CustomerServiceModule/>}
             {r.kind === 'mod' && r.k === 'agent_revenue' && <window.AgentRevenueModule/>}
             {r.kind === 'mod' && r.k === 'subs' && <window.SubsModule/>}
             {r.kind === 'mod' && r.k === 'revshare_detail' && <window.RevShareDetailModule/>}
@@ -630,8 +660,9 @@ function App() {
             {r.kind === 'mod' && r.k === 'fraud_graph' && <window.FraudGraphModule/>}
             {r.kind === 'mod' && r.k === 'multi_currency' && <window.MultiCurrencyModule/>}
             {r.kind === 'mod' && r.k === 'ad_network' && <window.AdNetworkModule/>}
+            {r.kind === 'mod' && r.k === 'withdraw_review' && <window.WithdrawReviewModule/>}
             {r.kind === 'mod' && r.k === 'bi' && <window.BiModule/>}
-            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','social_share','agent_revenue','agent_revshare','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi'].includes(r.k) && (() => {
+            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','social_share','customer_service','agent_revenue','agent_revshare','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi','withdraw_review'].includes(r.k) && (() => {
               const sec = NAV.find(s => s.items.some(i => i.k === r.k));
               const it = sec?.items.find(i => i.k === r.k);
               if (!it) return null;
@@ -693,6 +724,12 @@ function App() {
               options={['#3b82f6','#06b6d4','#22c55e','#a855f7','#f59e0b','#ef4444']}/>
           </window.TweakSection>
         </window.TweaksPanel>
+      )}
+      {/* v3.2.18 注册弹窗 host 始终挂载(保持 form 内部 state),仅在 backend!=='agent' 时用 CSS 隐藏 */}
+      {window.RegisterModalHost && (
+        <div style={{ display: backend === 'agent' ? 'contents' : 'none' }}>
+          <window.RegisterModalHost/>
+        </div>
       )}
     </div>
   );
