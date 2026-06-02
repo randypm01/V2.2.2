@@ -14,6 +14,39 @@
 //   - 货币 ₹，盈利绿 / 亏损红
 const ARV_UI = window.UI;
 
+// v3.2.72 共享：「分潤方案」說明分頁內容(結算規則 + 變更規則)— 三處複用:
+//   商户代理分潤报表 / 代理分潤报表 / 代理 我的帐户→分潤模式
+window.buildRevsharePlanRules = function (EN) {
+  if (EN) {
+    return [
+      { heading: 'Settlement rules', desc: 'How the bound revenue-share plan drives estimated and settled commission.', items: [
+        { name: 'Current estimate', note: 'Estimated in real time using the agent’s CURRENTLY bound plan — its share rate & calculation method are applied to the running period.' },
+        { name: 'Settled periods', note: 'At each settlement the plan in effect is locked as a snapshot. Even if the plan is changed later, historical settled periods keep showing and using the plan that was used at settlement time.' },
+        { name: 'Settlement time', note: 'Weekly settles every Monday 00:00:00; monthly settles on the 1st 00:00:00 — each closes the previous full cycle.' },
+      ] },
+      { heading: 'Change rules', desc: 'What happens when the agent’s plan type is changed in 代理帐户管理 → 分润模式.', items: [
+        { name: 'Takes effect immediately', note: 'Once the plan is changed, the current-estimate commission instantly switches to the new plan.' },
+        { name: 'Settle by current config', note: 'A period is settled using whatever plan the agent has at the moment of settlement; mid-period changes follow the latest config at settlement time.' },
+        { name: 'No retroactive recalculation', note: 'Already-settled periods are never recalculated by a later plan change — the plan & amount from settlement time are preserved.' },
+        { name: 'Cycle switching', note: 'Switching weekly ⇄ monthly only takes effect from the 1st of next month; no overlapping periods.' },
+      ] },
+    ];
+  }
+  return [
+    { heading: '結算規則', desc: '代理綁定的分潤方案如何影響本期預估與已結算佣金。', items: [
+      { name: '本期預估分潤', note: '依「當前配置的分潤方案」即時試算。代理目前綁定哪個分潤方案,本期預估佣金就用該方案的分潤比例與計算口徑試算。' },
+      { name: '已結算分潤', note: '每期結算時會「鎖定」當期使用的分潤方案作為快照。日後即使更換方案,歷史已結算期仍顯示並沿用結算當時的方案,不受影響。' },
+      { name: '結算時點', note: '每周結算於每週一 00:00:00、每月結算於每月 1 號 00:00:00 觸發,對上一個完整週期結算。' },
+    ] },
+    { heading: '變更規則', desc: '在「代理帳戶管理 → 分潤模式」修改分潤方案類型時的生效邏輯。', items: [
+      { name: '立即生效', note: '修改分潤方案後立即生效,本期預估分潤即刻改用新方案試算。' },
+      { name: '結算以當期為準', note: '本期結算時,以「結算當下代理所配置的分潤方案」做結算;若本期中途更換方案,以結算時點的最新配置為準。' },
+      { name: '歷史不追溯', note: '已結算的歷史期不會因之後更換方案而被重算,永遠保留結算當時的方案與金額。' },
+      { name: '結算週期切換', note: '每周 ⇄ 每月 互切需到「下個月 1 號」才生效,不會出現重疊期。' },
+    ] },
+  ];
+};
+
 // —— 稳定哈希 + 种子函数（与 players.jsx 同款）
 function _ARV_hashSeed(str) {
   return String(str || 'x').split('').reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 7);
@@ -31,12 +64,15 @@ const ARV_CODE_POOL = ['RANDY01', 'RANDY02', 'JACK01', 'JACK02', 'LISA01', 'KEVI
 
 // —— 期号规则：每周 W + YY + MM + 周序（如 W26051 = 2026 年 5 月第 1 周）;每月 M + YY + MM（如 M2605 = 2026 年 5 月）
 const ARV_SETTLED_LIST_WEEKLY = [
-  { key: 'W26054', label: 'W26054', start: '2026/5/25 00:00:00', end: '2026/5/31 23:59:59', seed: 2 },
-  { key: 'W26053', label: 'W26053', start: '2026/5/18 00:00:00', end: '2026/5/24 23:59:59', seed: 1 },
+  { key: 'W26054', label: 'W26054', start: '2026/5/25 00:00:00', end: '2026/5/31 23:59:59', seed: 2,  planKey: 'revenue:RV-001' },
+  { key: 'W26053', label: 'W26053', start: '2026/5/18 00:00:00', end: '2026/5/24 23:59:59', seed: 1,  planKey: 'revenue:RV-002' },
+  { key: 'W26052', label: 'W26052', start: '2026/5/11 00:00:00', end: '2026/5/17 23:59:59', seed: 5,  planKey: 'revenue:RV-003' },
+  { key: 'W26051', label: 'W26051', start: '2026/5/4 00:00:00',  end: '2026/5/10 23:59:59', seed: 8,  planKey: 'revenue:RV-002' },
+  { key: 'W26050', label: 'W26050', start: '2026/4/27 00:00:00', end: '2026/5/3 23:59:59',  seed: 11, planKey: 'revenue:RV-001' },
 ];
 const ARV_SETTLED_LIST_MONTHLY = [
-  { key: 'M2605', label: 'M2605', start: '2026/5/1 00:00:00', end: '2026/5/31 23:59:59', seed: 5 },
-  { key: 'M2604', label: 'M2604', start: '2026/4/1 00:00:00', end: '2026/4/30 23:59:59', seed: 4 },
+  { key: 'M2605', label: 'M2605', start: '2026/5/1 00:00:00', end: '2026/5/31 23:59:59', seed: 25, planKey: 'revenue:RV-002' },
+  { key: 'M2604', label: 'M2604', start: '2026/4/1 00:00:00', end: '2026/4/30 23:59:59', seed: 24, planKey: 'revenue:RV-003' },
 ];
 // —— 预估期信息条 by 结算周期
 const ARV_ESTIMATE_INFO = {
@@ -132,6 +168,8 @@ function AgentRevshareModule() {
   const [helpOpen, setHelpOpen] = React.useState(false);
   // v3.1.57 已结算记录查询 弹窗
   const [historyRow, setHistoryRow] = React.useState(null);
+  // v3.2.66 「分潤方案」弹窗 — 展示该期适用的分润模式内容(只读)
+  const [planOpen, setPlanOpen] = React.useState(false);
 
   // 期次列表随结算周期切换
   const SETTLED_LIST = cycleType === 'weekly' ? ARV_SETTLED_LIST_WEEKLY : ARV_SETTLED_LIST_MONTHLY;
@@ -298,9 +336,10 @@ function AgentRevshareModule() {
     <div className="page">
       <ARV_UI.PageHead title="代理分润报表" subtitle="按代理 × 玩家维度查看本期预估分润与历史结算">
         <ARV_UI.FormulaHelp
-          title="代理分润报表 · 字段计算说明"
-          subtitle="搜索范围与上方总计各字段口径"
-          sections={[
+          title="代理分润报表说明"
+          subtitle="字段计算 · 分润方案结算与变更规则"
+          tabs={[
+            { key: 'fields', label: '字段计算', sections: [
             { heading: '搜索范围', desc: '本报表以「期 + 代理」为主维度。搜索「玩家UID / 邀请Code」只过滤下方列表,不影响上方总计 — 上方总计始终为该代理该期全量数据。', items: [
               { name: '代理选择器', note: '选择查询的代理ID / 代理名称;切换代理时上方总计与列表一起变化' },
               { name: '玩家UID / 邀请Code', note: '仅过滤下方列表,上方总计不受影响' },
@@ -319,6 +358,8 @@ function AgentRevshareModule() {
               { name: 'STEP 3', formula: '总结算佣金基数 > 0 → 佣金 = 总结算佣金基数 × 分润比例' },
               { name: 'STEP 4', note: '带入下期:总本期期末余额;总结算佣金基数(负值原样带入、正值带入 0)' },
             ] },
+            ] },
+            { key: 'plan', label: '分润方案', sections: window.buildRevsharePlanRules(false) },
           ]} />
       </ARV_UI.PageHead>
 
@@ -559,6 +600,11 @@ function AgentRevshareModule() {
                   placeholder="邀请Code / 玩家UID" width={260}/>
                 {/* v3.2.10 删除「全部用户状态」下拉——“用户状态”列已移除 */}
                 <span style={{ flex: 1 }}/>
+                {/* v3.2.66 分潤方案 — 点击查看该期适用的分润模式内容 */}
+                <button className="btn sm" onClick={() => setPlanOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="pie" size={13}/>分潤方案
+                </button>
               </div>
 
             {/* 表格 */}
@@ -613,6 +659,29 @@ function AgentRevshareModule() {
 
       {/* v3.1.44 说明弹窗 */}
       {helpOpen && <ARV_HelpModal onClose={() => setHelpOpen(false)}/>}
+
+      {/* v3.2.66 该期分潤方案(只读)—— 读选中代理 _comm，kind 随当前结算周期 */}
+      {(() => {
+        const selAgentObj = allMerchantAgents.find(a => (a._displayId || a.id) === agentF);
+        const baseComm = (selAgentObj && selAgentObj._comm) || { kind: 'weekly', weekday: 1, monthday: 1, plans: ['revenue:RV-001'], minCommission: 200, maxCommission: 100000 };
+        // 本期预估 → 用代理当前分潤方案(跟随商户修改实时更新);
+        // 已结算 → 用该期结算时的快照方案(planKey),历史期用哪个方案结算就显示哪个
+        const planComm = (tab === 'settled' && selectedPeriod.planKey)
+          ? { ...baseComm, kind: cycleType, plans: [selectedPeriod.planKey] }
+          : { ...baseComm, kind: cycleType };
+        const periodLabel = tab === 'estimate' ? ESTIMATE_INFO.week : selectedPeriod.label;
+        return (
+          <window.RevsharePlanModal
+            open={planOpen}
+            onClose={() => setPlanOpen(false)}
+            comm={planComm}
+            periodLabel={periodLabel}
+            cycleWeekly={cycleType === 'weekly'}
+            agentName={selAgentObj ? selAgentObj.name : ''}
+            EN={false}
+          />
+        );
+      })()}
 
       {/* v3.1.57 已结算记录查询 */}
       <SettlementHistoryModal
@@ -1002,3 +1071,123 @@ function SettlementHistoryModal({ open, onClose, agentId, agentName, code, uid }
 
 // 暴露到 window 供 my_revshare.jsx 复用
 window.SettlementHistoryModal = SettlementHistoryModal;
+
+// =============================================================
+// v3.2.68 该期分潤方案 只读弹窗(商户后台 / 专业代理后台 共用)
+// v3.2.69 内容改为「标签-值列表」样式(同 我的账户 → 分潤模式 tab)，不再用表单型只读输入框
+function RevsharePlanView({ comm, EN }) {
+  const D = window.RV_PLATFORM_DEFAULTS || { currency: 'INR', symbol: '₹', minSettleAmount: 200 };
+  const v = comm || { kind: 'weekly', plans: [], minCommission: 200, maxCommission: '' };
+  const planVal = (v.plans && v.plans[0]) || '';
+  const detail = planVal ? window.resolvePlan(planVal) : null;
+  const ratio = detail?.plan?.ratio;
+  const isPeriod = detail?.plan?.type === 'period';
+  // EN 只由 prop 控制(商户始终中文/代理跟随语言切换),不读全局语言;
+  // EN 时走 i18n key 出英文,非 EN 时直接用中文原值(不受全局语言影响)
+  const planLabel = detail
+    ? (EN && isPeriod ? window.t('rv.plan.period', detail.typeLabel || detail.modeLabel || '—') : (detail.typeLabel || detail.modeLabel || '—'))
+    : '—';
+  const formula = detail
+    ? (EN && isPeriod ? window.t('rv.formula.period', detail.formula || '') : (detail.formula || ''))
+    : '';
+  const cycleText = v.kind === 'weekly'
+    ? (EN ? 'Weekly · every Mon 00:00:00, settles last Mon 00:00:00 ~ Sun 23:59:59'
+          : '每周結算 · 每周一 00:00:00，結算上周一 00:00:00 ~ 周日 23:59:59')
+    : (EN ? 'Monthly · 1st 00:00:00, settles last month 1st 00:00:00 ~ month-end 23:59:59'
+          : '每月結算 · 每月1號 00:00:00，結算上月1號 00:00:00 ~ 月底 23:59:59');
+  const minComm = v.minCommission != null && v.minCommission !== '' ? v.minCommission : D.minSettleAmount;
+  const maxComm = v.maxCommission != null && v.maxCommission !== '' ? v.maxCommission : 1000000;
+  const fmtMoney = (n) => `${D.symbol}${Number(n).toLocaleString()}`;
+  const L = {
+    cycle:    EN ? 'Settlement Cycle'        : '結算周期',
+    currency: EN ? 'Settlement Currency'     : '結算幣種',
+    minAmt:   EN ? 'Min. Settlement Commission' : '最低結算佣金金額',
+    minHint:  EN ? '(below this carries to next period)' : '(低于该金额顺延至下期)',
+    maxAmt:   EN ? 'Max. Settlement Commission Cap' : '最高結算佣金上限',
+    plan:     EN ? 'RevShare Plan'           : '分潤方案',
+    ratio:    EN ? 'Share Rate'              : '分潤比例',
+    formula:  EN ? 'Calculation Process'     : '計算口徑流程',
+  };
+
+  const Row = ({ k, children }) => (
+    <div style={{ display: 'flex', alignItems: 'baseline', padding: '8px 0', fontSize: 13.5, lineHeight: 1.7 }}>
+      <div style={{ width: 180, flexShrink: 0, color: 'var(--text-2)' }}>{k}</div>
+      <div style={{ flex: 1, color: 'var(--text-0)' }}>{children}</div>
+    </div>
+  );
+
+  return (
+    <div>
+      <Row k={L.cycle}>{cycleText}</Row>
+      <Row k={L.currency}><b style={{ fontWeight: 500 }}>{D.currency} ({D.symbol})</b></Row>
+      <Row k={L.minAmt}><b style={{ fontWeight: 500 }}>{fmtMoney(minComm)}</b> <span style={{ color: 'var(--text-3)', fontSize: 12.5, marginLeft: 4 }}>{L.minHint}</span></Row>
+      <Row k={L.maxAmt}><b style={{ fontWeight: 500 }}>{fmtMoney(maxComm)}</b></Row>
+
+      <div style={{ height: 1, background: 'var(--line-soft)', margin: '14px 0' }}/>
+
+      <Row k={L.plan}><b style={{ fontWeight: 600 }}>{planLabel}</b></Row>
+      <Row k={L.ratio}>
+        <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 600, color: 'var(--brand)' }}>
+          {ratio != null ? `${(ratio * 100).toFixed(ratio * 100 % 1 === 0 ? 0 : 2)}%` : '—'}
+        </span>
+      </Row>
+
+      <div style={{ padding: '10px 0 4px', fontSize: 13.5, color: 'var(--text-2)' }}>{L.formula}</div>
+      {formula ? (
+        <pre style={{
+          margin: 0, padding: 0,
+          fontSize: 12.5, lineHeight: 1.85, color: 'var(--text-1)',
+          fontFamily: 'inherit', whiteSpace: 'pre-wrap',
+          background: 'transparent', border: 'none',
+        }}>{formula}</pre>
+      ) : (
+        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>—</div>
+      )}
+    </div>
+  );
+}
+window.RevsharePlanView = RevsharePlanView;
+
+function RevsharePlanModal({ open, onClose, comm, periodLabel, cycleWeekly, agentName, EN }) {
+  if (!open) return null;
+  const cycleLabel = cycleWeekly == null ? null : (cycleWeekly
+    ? (EN ? 'Weekly' : '每周结算')
+    : (EN ? 'Monthly' : '每月结算'));
+  return (
+    <div className="modal-mask" onClick={onClose} style={{ zIndex: 200 }}>
+      <div className="modal" style={{ width: 640, maxHeight: '88vh' }} onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-head">
+          <div>
+            <h3>{EN ? 'Period RevShare Plan' : '该期分潤方案'}</h3>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {agentName && <span>{agentName}</span>}
+              {periodLabel && (
+                <span className="text-mono" style={{ color: 'var(--text-1)', fontWeight: 600 }}>{periodLabel}</span>
+              )}
+              {cycleLabel && (
+                <span style={{
+                  padding: '1px 8px', borderRadius: 3, fontSize: 11,
+                  background: cycleWeekly ? '#eff6ff' : '#f0fdf4',
+                  color: cycleWeekly ? '#1d4ed8' : '#15803d',
+                  border: '1px solid ' + (cycleWeekly ? '#bfdbfe' : '#bbf7d0'),
+                  fontWeight: 500,
+                }}>{cycleLabel}</span>
+              )}
+              <span>{EN ? '· RevShare plan applied to this period (read-only)' : '· 该期适用的分潤模式内容(只读)'}</span>
+            </div>
+          </div>
+          <button className="close" onClick={onClose}><Icon name="x" size={14}/></button>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>
+          <window.RevsharePlanView comm={comm} EN={EN}/>
+        </div>
+
+        <div className="drawer-foot">
+          <button className="btn primary" onClick={onClose}>{EN ? 'Close' : '关闭'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+window.RevsharePlanModal = RevsharePlanModal;

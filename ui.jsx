@@ -427,36 +427,59 @@ function Field({ label, required, children, hint }) {
 // ============= FormulaHelp =============
 // 「说明」按钮 + 公式说明弹窗。替代原「导出」按钮。
 // props.sections: [{ heading, desc?, items: [{ name, formula?, note? }] }]
-function FormulaHelp({ sections = [], title = '字段计算说明', subtitle, buttonLabel = '说明' }) {
+// props.tabs(可选): [{ key, label, sections }] — 传入时弹窗顶部渲染分页切换,每页一组 sections
+function FormulaHelp({ sections = [], tabs, title = '字段计算说明', subtitle, buttonLabel = '说明' }) {
   const [open, setOpen] = React.useState(false);
+  const tabList = (tabs && tabs.length) ? tabs : null;
+  const [active, setActive] = React.useState(tabList ? tabList[0].key : null);
+
+  const renderSections = (secs) => secs.map((sec, si) => (
+    <div key={si} style={{ marginBottom: si === secs.length - 1 ? 0 : 22 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4 }}>{sec.heading}</div>
+      {sec.desc && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10, lineHeight: 1.6 }}>{sec.desc}</div>}
+      {!sec.desc && <div style={{ height: 8 }} />}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+        {sec.items.map((it, ii) => (
+          <div key={ii} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, padding: '9px 12px', background: ii % 2 ? 'var(--bg-1)' : 'var(--bg-2)', alignItems: 'baseline' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-0)' }}>{it.name}</div>
+            <div>
+              {it.formula && (
+                <div className="text-mono" style={{ fontSize: 11.5, color: 'var(--brand)', lineHeight: 1.6, wordBreak: 'break-word' }}>{it.formula}</div>
+              )}
+              {it.note && (
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: it.formula ? 3 : 0, lineHeight: 1.55 }}>{it.note}</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ));
+
+  const activeTab = tabList ? (tabList.find(t => t.key === active) || tabList[0]) : null;
+
   return (
     <React.Fragment>
       <button className="btn" onClick={() => setOpen(true)}>
         <Icon name="info" size={13} />{buttonLabel}
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title={title} subtitle={subtitle} width={600}>
-        {sections.map((sec, si) => (
-          <div key={si} style={{ marginBottom: si === sections.length - 1 ? 0 : 22 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4 }}>{sec.heading}</div>
-            {sec.desc && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10, lineHeight: 1.6 }}>{sec.desc}</div>}
-            {!sec.desc && <div style={{ height: 8 }} />}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-              {sec.items.map((it, ii) => (
-                <div key={ii} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, padding: '9px 12px', background: ii % 2 ? 'var(--bg-1)' : 'var(--bg-2)', alignItems: 'baseline' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-0)' }}>{it.name}</div>
-                  <div>
-                    {it.formula && (
-                      <div className="text-mono" style={{ fontSize: 11.5, color: 'var(--brand)', lineHeight: 1.6, wordBreak: 'break-word' }}>{it.formula}</div>
-                    )}
-                    {it.note && (
-                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: it.formula ? 3 : 0, lineHeight: 1.55 }}>{it.note}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+        {tabList && (
+          <div style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid var(--border)' }}>
+            {tabList.map(t => (
+              <button key={t.key} onClick={() => setActive(t.key)}
+                style={{
+                  padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                  background: 'transparent', border: 'none',
+                  borderBottom: '2px solid ' + (activeTab.key === t.key ? 'var(--brand)' : 'transparent'),
+                  color: activeTab.key === t.key ? 'var(--brand)' : 'var(--text-2)',
+                  fontWeight: activeTab.key === t.key ? 600 : 500,
+                  marginBottom: -1,
+                }}>{t.label}</button>
+            ))}
           </div>
-        ))}
+        )}
+        {renderSections(tabList ? activeTab.sections : sections)}
       </Modal>
     </React.Fragment>
   );

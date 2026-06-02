@@ -103,16 +103,16 @@ function aggregateCommission(players) {
 function buildSettledPeriodList(cycleType) {
   if (cycleType === 'monthly') {
     return [
-      { week:'M2605', start:'2026/5/1 00:00:00',  end:'2026/5/31 23:59:59', seed: 25, cpa: 14000, adj: 0,    wdStatus:'withdrawable' },
-      { week:'M2604', start:'2026/4/1 00:00:00',  end:'2026/4/30 23:59:59', seed: 24, cpa: 12500, adj: -800, wdStatus:'paid' },
+      { week:'M2605', start:'2026/5/1 00:00:00',  end:'2026/5/31 23:59:59', seed: 25, cpa: 14000, adj: 0,    wdStatus:'withdrawable', planKey:'revenue:RV-002' },
+      { week:'M2604', start:'2026/4/1 00:00:00',  end:'2026/4/30 23:59:59', seed: 24, cpa: 12500, adj: -800, wdStatus:'paid', planKey:'revenue:RV-003' },
     ];
   }
   return [
-    { week:'W26054', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2,  cpa: 3200, adj: 0,    wdStatus:'withdrawable' },
-    { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1,  cpa: 2800, adj: -150, wdStatus:'withdrawable' },
-    { week:'W26052', start:'2026/5/11 00:00:00', end:'2026/5/17 23:59:59', seed: 5,  cpa: 4100, adj: 200,  wdStatus:'reviewing' },
-    { week:'W26051', start:'2026/5/4 00:00:00',  end:'2026/5/10 23:59:59', seed: 8,  cpa: 3500, adj: 0,    wdStatus:'paid' },
-    { week:'W26050', start:'2026/4/27 00:00:00', end:'2026/5/3 23:59:59',  seed: 11, cpa: 0,    adj: 0,    wdStatus:'carried' },
+    { week:'W26054', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2,  cpa: 3200, adj: 0,    wdStatus:'withdrawable', planKey:'revenue:RV-001' },
+    { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1,  cpa: 2800, adj: -150, wdStatus:'withdrawable', planKey:'revenue:RV-002' },
+    { week:'W26052', start:'2026/5/11 00:00:00', end:'2026/5/17 23:59:59', seed: 5,  cpa: 4100, adj: 200,  wdStatus:'reviewing', planKey:'revenue:RV-003' },
+    { week:'W26051', start:'2026/5/4 00:00:00',  end:'2026/5/10 23:59:59', seed: 8,  cpa: 3500, adj: 0,    wdStatus:'paid', planKey:'revenue:RV-002' },
+    { week:'W26050', start:'2026/4/27 00:00:00', end:'2026/5/3 23:59:59',  seed: 11, cpa: 0,    adj: 0,    wdStatus:'carried', planKey:'revenue:RV-001' },
   ];
 }
 
@@ -154,6 +154,8 @@ function MyRevshareModule() {
   // 工具栏筛选(两期共用) — v3.2.8 移除「全部用户状态」筛选(用户状态列已删)
   const [q, setQ] = React.useState('');
   const [page, setPage] = React.useState(1);
+  // v3.2.66 「分润方案」弹窗 — 展示该期适用的分润模式内容(只读)
+  const [planOpen, setPlanOpen] = React.useState(false);
 
   // 已结算期 选中哪一期 — 随 cycleType 重算
   const settledList = React.useMemo(() => buildSettledPeriodList(cycleType), [cycleType]);
@@ -217,9 +219,10 @@ function MyRevshareModule() {
       >
         <MRUI.FormulaHelp
           buttonLabel={EN ? 'Help' : '说明'}
-          title={EN ? 'Revenue Share Report · Field Calculations' : '分润报表 · 字段计算说明'}
-          subtitle={EN ? 'Search scope & how each top-total field is computed' : '搜索范围与上方总计各字段口径'}
-          sections={EN ? [
+          title={EN ? 'Revenue Share Report' : '分润报表说明'}
+          subtitle={EN ? 'Field calc · plan settlement & change rules' : '字段计算 · 分润方案结算与变更规则'}
+          tabs={[
+            { key: 'fields', label: EN ? 'Fields' : '字段计算', sections: EN ? [
             { heading: 'Search scope', desc: 'Keyed by period + player. Searching "Player UID / Invite Code" only filters the list below — it does NOT affect the top totals, which always reflect the full current period.', items: [
               { name: 'Cycle / period', note: 'Weekly / monthly + period no.; switching period changes both totals and list' },
               { name: 'Player UID / Invite Code', note: 'Filters the list below only; top totals unaffected' },
@@ -257,6 +260,8 @@ function MyRevshareModule() {
               { name: 'STEP 3', formula: '总结算佣金基数 > 0 → 佣金 = 总结算佣金基数 × 分润比例' },
               { name: 'STEP 4', note: '带入下期:总本期期末余额;总结算佣金基数(负值原样带入、正值带入 0)' },
             ] },
+          ] },
+            { key: 'plan', label: EN ? 'Plan' : '分润方案', sections: window.buildRevsharePlanRules(EN) },
           ]} />
       </MRUI.PageHead>
 
@@ -419,6 +424,11 @@ function MyRevshareModule() {
             <div className="toolbar" style={{padding:'0 0 12px'}}>
               <MRUI.SearchInput value={q} onChange={(v)=>{setQ(v);setPage(1);}} placeholder={MR_T('mr.filter.search_ph','玩家UID / 邀请Code')} width={220}/>
               <span style={{flex:1}}/>
+              {/* v3.2.66 分潤方案 — 点击查看该期适用的分润模式内容 */}
+              <button className="btn sm" onClick={() => setPlanOpen(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="pie" size={13}/>{EN ? 'RevShare Plan' : '分潤方案'}
+              </button>
             </div>
 
             {/* 表格 7 列 — v3.2.8 删除 上期期末余额 / 上期佣金基数 / 佣金基数 / 分润比例 / [预估佣金|结算佣金] / 用户状态 / 结算记录 */}
@@ -470,6 +480,27 @@ function MyRevshareModule() {
       </div>
 
       {/* v3.2.8 已删除「结算记录」列 — SettlementHistoryModal 不再使用 */}
+
+      {/* v3.2.66 该期分潤方案(只读)—— 读当前代理 _comm，kind 随结算周期 */}
+      {(() => {
+        const baseComm = (me && me._comm) || { kind: 'weekly', weekday: 1, monthday: 1, plans: ['revenue:RV-001'], minCommission: 200, maxCommission: 100000 };
+        // 本期预估 → 用当前分潤方案(跟随商户修改实时更新);
+        // 已结算 → 用该期结算时的快照方案(planKey)
+        const planComm = (tab === 'settled' && selectedPeriod.planKey)
+          ? { ...baseComm, kind: cycleType, plans: [selectedPeriod.planKey] }
+          : { ...baseComm, kind: cycleType };
+        const periodLabel = tab === 'estimate' ? estimateInfo.week : selectedPeriod.week;
+        return (
+          <window.RevsharePlanModal
+            open={planOpen}
+            onClose={() => setPlanOpen(false)}
+            comm={planComm}
+            periodLabel={periodLabel}
+            cycleWeekly={cycleType === 'weekly'}
+            EN={EN}
+          />
+        );
+      })()}
     </div>
   );
 }

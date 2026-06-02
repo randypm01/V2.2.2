@@ -218,6 +218,14 @@ function AgentProfileModule() {
 
           return (
             <div className="mp-tab-body" style={{padding:'18px 22px'}}>
+              {/* v3.2.72 分潤方案 结算/变更规则说明弹窗 */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+                <PFUI.FormulaHelp
+                  buttonLabel={lang === 'en' ? 'Settlement & change rules' : '结算 / 变更规则'}
+                  title={lang === 'en' ? 'Revenue Share Plan' : '分润方案说明'}
+                  subtitle={lang === 'en' ? 'Plan settlement & change rules' : '分润方案结算与变更规则'}
+                  sections={window.buildRevsharePlanRules(lang === 'en')} />
+              </div>
               {/* —— 平台结算配置 —— */}
               <Row k={T('mp_prof.comm.cycle','結算周期')}>{cycleText}</Row>
               <Row k={T('mp_prof.comm.currency','結算幣種')}><b style={{fontWeight:500}}>{D.currency} ({D.symbol})</b></Row>

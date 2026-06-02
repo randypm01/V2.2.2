@@ -114,7 +114,9 @@ const REV_TYPES = [
 ];
 
 const SEED_REVENUE = [
-  { id: 'RV-001', type: 'period', name: '建議個人代理適用', ratio: 0.05, remark: '此方案為與 XXX 談過的合作內容,經上級批准配置的' },
+  { id: 'RV-001', type: 'period', name: '方案A', ratio: 0.05, remark: '此方案為與 XXX 談過的合作內容,經上級批准配置的' },
+  { id: 'RV-002', type: 'period', name: '方案B', ratio: 0.20, remark: '' },
+  { id: 'RV-003', type: 'period', name: '方案C', ratio: 0.30, remark: '' },
 ];
 
 // v3.1.85 — 模塊級持久化:把 rows 存到 window,切頁回來不丟新增資料

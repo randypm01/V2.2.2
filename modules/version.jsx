@@ -2,9 +2,83 @@
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
 const VERSIONS = [
   {
+    ver: 'v3.2.75',
+    date: '2026-06-02',
+    current: true,
+    changes: [
+      { type: 'fix', text: '「分潤方案」弹窗语言改为由 EN prop 显式控制,不再读全局 useAgentLang — 商户后台代理分潤报表弹窗始终中文(EN=false),不受专业代理后台中/EN 切换影响;仅专业代理后台分潤报表弹窗跟随语言切换。非 EN 时方案名/公式直接用中文原值不走 window.t' },
+    ],
+  },
+  {
+    ver: 'v3.2.74',
+    date: '2026-06-02',
+    current: false,
+    changes: [
+      { type: 'add', text: '「分潤方案」弹窗(RevsharePlanView / RevsharePlanModal)新增英文版 — 跨商户 代理分潤报表 与 代理 分潤报表 共用;组件自身订阅 useAgentLang,随全局中/EN 切换自动重渲。标签(結算周期/幣種/最低·最高佣金/分潤方案/分潤比例/計算口徑流程)、结算周期描述、弹窗标题/副标题/pill/关闭按钮 均双语' },
+      { type: 'modify', text: '分潤方案 EN 下「週期資產變動分潤」方案名与計算口徑流程走 i18n key(rv.plan.period / rv.formula.period)出英文;专业代理后台 分潤报表工具栏「分潤方案」按钮 EN 下显示 RevShare Plan' },
+      { type: 'modify', text: 'RevsharePlanModal cycleLabel prop 改为 cycleWeekly 布尔值(便于双语化 pill);两端调用同步更新' },
+    ],
+  },
+  {
+    ver: 'v3.2.73',
+    date: '2026-06-02',
+    current: false,
+    changes: [
+      { type: 'fix', text: '分潤方案说明 变更规则 第三项错字：「歷史不追港」→「歷史不追溯」(buildRevsharePlanRules 中文分支),三处说明弹窗同步修正' },
+    ],
+  },
+  {
+    ver: 'v3.2.72',
+    date: '2026-06-02',
+    current: false,
+    changes: [
+      { type: 'modify', text: '商户后台 代理分潤报表 说明弹窗：标题改为「代理分潤报表说明」;新增分页「字段计算 / 分潤方案」两 tab。分潤方案 tab 说明结算规则(本期预估用当前方案/已结算锁定快照)与变更规则(修改立即生效、结算以当期为准、历史不追港)' },
+      { type: 'modify', text: '专业代理后台 分潤报表 说明弹窗同样改为「字段计算 / 分潤方案」两 tab(中/EN 双语)' },
+      { type: 'add', text: '专业代理后台 我的账户 → 分潤模式 tab 右上角新增「结算 / 变更规则」说明按钮，弹出同一套分潤方案结算/变更规则(双语)' },
+      { type: 'add', text: 'ui.jsx FormulaHelp 组件新增可选 tabs prop:传入时弹窗顶部渲染分页切换(下划线 tab 栏);新增共享 window.buildRevsharePlanRules(EN) 提供分潤方案规则内容,三处复用' },
+    ],
+  },
+  {
+    ver: 'v3.2.71',
+    date: '2026-06-02',
+    current: false,
+    changes: [
+      { type: 'fix', text: '商户后台 代理分潤报表 已结算分潤 每周结算只有 2 期(W26054/W26053)，与专业代理后台的 5 期不一致 — 原因是两模块结算期列表各自硬编码且长度不同。现将商户 ARV_SETTLED_LIST_WEEKLY 对齐为 5 期(W26054~W26050)，期号/周期/seed/planKey 与 my_revshare buildSettledPeriodList 完全一致;每月结算 seed 也对齐(25/24)' },
+    ],
+  },
+  {
+    ver: 'v3.2.70',
+    date: '2026-06-02',
+    current: false,
+    changes: [
+      { type: 'modify', text: '商户后台 分潤管理 → 收益分潤 示例改为 3 条：週期資產變動分潤 · 方案A(5%) / 方案B(20%) / 方案C(30%)（SEED_REVENUE RV-001/002/003）' },
+      { type: 'modify', text: '分潤方案数据流打通：商户修改代理分潤方案类型后，专业代理后台 我的账户→分潤模式 / 两端分潤报表 本期预估的「分潤方案」实时跟随更新（读 live _comm，useCurrentAgent 合并商户 store）' },
+      { type: 'add', text: '已结算分潤：每期新增 planKey 快照（该期结算时用哪个方案就显示哪个）— 商户/代理两端「分潤方案」弹窗在已结算 tab 读该期历史方案而非当前方案' },
+    ],
+  },
+  {
+    ver: 'v3.2.69',
+    date: '2026-06-02',
+    current: false,
+    changes: [
+      { type: 'modify', text: '「分潤方案」弹窗内容改版(图2)：从表单型只读输入框(CommissionReadOnly)改为简洁的「标签-值列表」— 結算周期 / 結算幣種 / 最低·最高結算佣金 / 分潤方案(加粗) / 分潤比例(蓝色) / 計算口徑流程(純文本)，与「我的账户 → 分潤模式」同样式' },
+      { type: 'add', text: '新增共享组件 window.RevsharePlanView(agent_revshare.jsx)— 渲染该期分潤模式的标签-值只读视图，商户/代理两端弹窗共用' },
+    ],
+  },
+  {
+    ver: 'v3.2.68',
+    date: '2026-06-02',
+    current: false,
+    changes: [
+      { type: 'add', text: '商户后台 代理分潤报表(agent_revshare) 本期预估分潤 / 已结算分潤 工具栏右侧新增「分潤方案」按钮：点击弹出该期适用的分潤模式内容(只读)— 复用 window.CommissionReadOnly，读选中代理 _comm，结算周期随每周/每月 tab 同步;弹窗头部带代理名/期號/结算周期 pill' },
+      { type: 'add', text: '专业代理后台 分潤报表(my_revshare) 本期预估分潤 / 已结算分潤 工具栏右侧同步新增「分潤方案」按钮：点击弹出本人该期适用的分潤模式内容(只读，读 me._comm)' },
+      { type: 'add', text: '新增共享组件 window.RevsharePlanModal(agent_revshare.jsx)— 商户/代理两端分潤报表共用的「该期分潤方案」只读弹窗，内嵌 CommissionReadOnly' },
+    ],
+  },
+  {
     ver: 'v3.2.67',
     date: '2026-06-01',
-    current: true,
+    current: false,
     changes: [
       { type: 'add', text: '专业代理后台 邀请Code与链接(my_codes) / 玩家损益(my_players):「说明」按钮+公式弹窗改为双语 — 跟随顶部语言切换(中/EN)显示,含按钮文字/标题/副标题/搜索范围/上方总计各字段公式;通过 useAgentLang 订阅语言切换重渲' },
     ],
