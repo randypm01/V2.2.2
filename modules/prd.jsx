@@ -79,22 +79,24 @@ const PRD_FEATURES = {
       why:'CPA 之外的 RevShare / Hybrid 必须可配,代理在签约时就要确定',
       scope:['CPA / RevShare / Hybrid / 固定奖励 / 阶梯 / 下级抽成','分润周期 / 结算币种 / 最低结算金额','负盈利是否结转','代理分润方案(适用代理 / 层级 / 比例 / 封顶)'],
       deps:['P0-1'] },
-    { id:'P0-8', name:'结算单生成与审核', week:'W4-W5', dev:10, status:'done',
-      side:'代理后台',
+    { id:'P0-8', name:'佣金结算单生成与审核', week:'W4-W5', dev:10, status:'done',
+      side:'共用',
       mapping:[
-        { backend:'agent', mod:'my_settlement', path:'收益 → 结算单' }
+        { backend:'merchant', mod:'agent_settlement', path:'财务 → 代理佣金结算单' },
+        { backend:'agent', mod:'my_settlement', path:'财务 → 佣金结算单' }
       ],
-      why:'代理收益最终落地的环节 — 财务安全的核心',
-      scope:['结算单自动生成(按周期)','多级审核流(运营 → 财务 → 风控 → 商户确认)','佣金调整(增/减/补/冻/解冻)','结算单详情(CPA / RevShare / 下级 / 扣款明细)','拒绝结算 / 重新计算'],
+      why:'代理收益最终落地的环节 — 分润期号下按代理生成唯一佣金结算单(CS),作为对帐、转结、提款申请的依据',
+      scope:['按分润期号(W/M)生成佣金结算单 CSW…/CSM…','字段:本期佣金 / 上期转结佣金 / 本期总佣金 / 最低提款门槛 / 本期可提金额','状态机:待提款 / 已转结 / 审核中 / 已付款','未达门槛自动转结并入下期','商户端查看全代理 CS,代理端查看个人 CS'],
       deps:['P0-6','P0-7'] },
-    { id:'P0-9', name:'代理钱包与提款', week:'W5', dev:6, status:'done',
-      side:'代理后台',
+    { id:'P0-9', name:'提款申请与财务核算付款', week:'W5', dev:6, status:'done',
+      side:'共用',
       mapping:[
-        { backend:'agent', mod:'my_wallet', path:'收益 → 我的钱包 / 提款' }
+        { backend:'merchant', mod:'withdraw_review', path:'财务 → 提款审核' },
+        { backend:'agent', mod:'my_withdraw_progress', path:'财务 → 提款审核进度' }
       ],
-      why:'代理可见的资金账户 — 余额 / 流水 / 提款一体化',
-      scope:['可提款 / 待结算 / 冻结 / 提款中余额','钱包流水(入账 / 提款 / 调整 / 风控扣除)','提款申请(USDT / 银行 / PIX / UPI)','提款审核与付款执行','付款凭证留档'],
-      deps:['P0-8 结算管理'] },
+      why:'佣金结算单之后的完整请款链路 — 提款申请单(WR)→ 财务核算单(FS)→ 付款单(PO),覆盖商户审核、财务扣款核算与实际付款',
+      scope:['提款申请单 WR:代理打包 1~N 张 CS 发起,状态 审核中/已提款/已拒绝','财务核算单 FS:行政费/税金/违规扣款/风控扣款/人工调整/保留款/转结 → 本次应付金额','FS 状态机:待核算/核算中/付款中/付款失败/已付款/已驳回/已转结','付款单 PO:实际付款流水(付款方式/收款账号/第三方流水号)','代理端时间轴:提交 → 商户审核 → 财务核算 → 付款完成'],
+      deps:['P0-8 佣金结算单'] },
     { id:'P0-10', name:'风控玩家名单', week:'W5-W6', dev:8, status:'removed',
       side:'已移除',
       mapping:[],

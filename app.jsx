@@ -71,6 +71,8 @@ function App() {
   React.useEffect(() => { window.goRoute = setRoute; }, [backend]);
   // v3.0.70 暴露 setBackend 给 frontend.jsx 的「申请代理」按钮:点击直接跳到代理后台分页
   React.useEffect(() => { window.APS_SWITCH_BACKEND = setBackend; }, []);
+  // v3.5.6 暴露「联系我们」弹窗开关 — 供佣金结算单详情抽屉「联络线上客服」调用
+  React.useEffect(() => { window.APS_OPEN_CONTACT = () => setAgentContactOpen(true); }, []);
 
   const [openSections, setOpenSections] = useState({
     '运营': true, '收益': true, '报表': true,
@@ -102,7 +104,8 @@ function App() {
       { k:'agent_revshare', l:'代理分润报表', icon:'pie', prd:'P0-7' },
     ]},
     { section: '财务', icon:'wallet', items: [
-      { k:'withdraw_review', l:'提款审核', icon:'wallet', prd:'P0-9' },
+      { k:'agent_settlement', l:'代理佣金结算单', icon:'file', prd:'P0-8' },
+      { k:'withdraw_review', l:'代理提款审核', icon:'wallet', prd:'P0-9' },
     ]},
   ];
 
@@ -119,6 +122,7 @@ function App() {
     ]},
     { section: T('nav.sec.finance', '财务'), icon:'wallet', items: [
       { k:'my_settlement', l: T('nav.item.my_settlement', '佣金结算单'), icon:'wallet', prd:'P0-8' },
+      { k:'my_withdraw_progress', l: T('nav.item.my_withdraw_progress', '提款审核进度'), icon:'pulse', prd:'P0-9' },
     ]},
   ];
 
@@ -441,7 +445,8 @@ function App() {
               {r.kind === 'mod' && r.k === 'my_players' && <window.MyPlayersModule/>}
               {r.kind === 'mod' && r.k === 'my_cpa' && <window.MyCpaModule/>}
               {r.kind === 'mod' && r.k === 'my_revshare' && <window.MyRevshareModule/>}
-              {r.kind === 'mod' && r.k === 'my_settlement' && <window.MySettlementModule/>}
+              {r.kind === 'mod' && r.k === 'my_settlement' && <window.MySettlementModule onNav={setRoute}/>}
+              {r.kind === 'mod' && r.k === 'my_withdraw_progress' && <window.MyWithdrawProgressModule/>}
               {r.kind === 'mod' && r.k === 'my_wallet' && <window.MyWalletModule/>}
               {r.kind === 'mod' && r.k === 'my_traffic' && <window.MyTrafficModule/>}
               {r.kind === 'mod' && r.k === 'my_materials' && <window.MyMaterialsModule/>}
@@ -452,7 +457,7 @@ function App() {
               {r.kind === 'mod' && r.k === 'my_app' && <window.MyAppModule/>}
               {r.kind === 'mod' && r.k === 'my_currency' && <window.MyCurrencyModule/>}
               {r.kind === 'mod' && r.k === 'my_ad' && <window.MyAdNetworkModule/>}
-              {r.kind === 'mod' && !['my_profile','my_notify','my_codes','my_codes_mgmt','my_players','my_cpa','my_revshare','my_settlement','my_wallet','my_traffic','my_materials','my_campaigns','my_quality','my_api','my_subs','my_app','my_currency','my_ad'].includes(r.k) && (() => {
+              {r.kind === 'mod' && !['my_profile','my_notify','my_codes','my_codes_mgmt','my_players','my_cpa','my_revshare','my_settlement','my_withdraw_progress','my_wallet','my_traffic','my_materials','my_campaigns','my_quality','my_api','my_subs','my_app','my_currency','my_ad'].includes(r.k) && (() => {
                 const sec = AGENT_NAV.find(s => s.items.some(i => i.k === r.k));
                 const it = sec?.items.find(i => i.k === r.k);
                 if (!it) return null;
@@ -660,9 +665,10 @@ function App() {
             {r.kind === 'mod' && r.k === 'fraud_graph' && <window.FraudGraphModule/>}
             {r.kind === 'mod' && r.k === 'multi_currency' && <window.MultiCurrencyModule/>}
             {r.kind === 'mod' && r.k === 'ad_network' && <window.AdNetworkModule/>}
+            {r.kind === 'mod' && r.k === 'agent_settlement' && <window.AgentSettlementModule/>}
             {r.kind === 'mod' && r.k === 'withdraw_review' && <window.WithdrawReviewModule/>}
             {r.kind === 'mod' && r.k === 'bi' && <window.BiModule/>}
-            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','social_share','customer_service','agent_revenue','agent_revshare','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi','withdraw_review'].includes(r.k) && (() => {
+            {r.kind === 'mod' && !['dashboard','agents','codes','players','cpa','revshare','agent_levels','social_share','customer_service','agent_revenue','agent_revshare','settlement','wallet','logs','notifications','subs','revshare_detail','hybrid','subs_revshare','traffic','materials','campaigns','players_quality','api','risk_score','healthy_score','dynamic_cpa','auto_risk','roi_predict','sub_accounts','ai_score','fraud_graph','multi_currency','ad_network','bi','withdraw_review','agent_settlement'].includes(r.k) && (() => {
               const sec = NAV.find(s => s.items.some(i => i.k === r.k));
               const it = sec?.items.find(i => i.k === r.k);
               if (!it) return null;

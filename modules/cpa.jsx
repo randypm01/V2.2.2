@@ -14,7 +14,7 @@ function CpaModule() {
   const [selected, setSelected] = React.useState(new Set());
 
   const filtered = records.filter(r => filter === 'all' || r.status === filter);
-  const pageSize = 14;
+  const [pageSize, setPageSize] = React.useState(20);
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
   const counts = {
@@ -130,7 +130,7 @@ function CpaModule() {
                 </tbody>
               </table>
             </div>
-            <CUI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
+            <CUI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
           </>
         )}
 

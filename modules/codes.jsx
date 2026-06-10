@@ -72,7 +72,7 @@ function CodesModule() {
   });
   const [sort, setSort] = React.useState({ k: 'gap', dir: 'desc' });
   const [page, setPage] = React.useState(1);
-  const pageSize = 12;
+  const [pageSize, setPageSize] = React.useState(20);
 
   // —— 取 mixed AC + AG 前 3 个代理 × 1~2 个 Code,以全局 CD_GLOBAL_POOL 依序分配唯一 Code
   const rawList = _pickMixedAgents(
@@ -276,7 +276,7 @@ function CodesModule() {
             </tbody>
           </table>
         </div>
-        <CDUI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage} />
+        <CDUI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
       </div>
     </div>
   );

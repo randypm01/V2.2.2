@@ -59,9 +59,12 @@ window.CURRENT_AGENT_ID = 'AC100006';
   add('nav.item.my_players', '玩家损益', 'Player P&L');
   add('nav.item.my_revshare', '分润报表', 'RevShare Report');
   add('nav.item.my_cpa', 'CPA 报表', 'CPA Report');
-  add('nav.item.my_settlement', '结算单', 'Settlements');
+  add('nav.item.my_settlement', '佣金结算单', 'Commission Settlements');
+  add('nav.item.my_withdraw_progress', '提款审核进度', 'Withdrawal Progress');
   add('nav.item.my_wallet', '我的钱包', 'My Wallet');
   add('nav.item.my_notify', '通知中心', 'Notifications');
+  add('nav.sec.finance', '财务', 'Finance');
+  add('nav.contact', '联系我们', 'Contact Us');
   add('nav.prd_home', 'PRD首页', 'PRD Home');
 
   // Dashboard
@@ -581,6 +584,98 @@ window.AgentLangSwitch = function AgentLangSwitch({ variant }) {
           </div>
         </>
       )}
+    </div>
+  );
+};
+
+// ============================================================
+// v3.6.35 共享 表头排序 — useTableSort hook + SortTh 表头组件
+// 点击表头:升序 → 降序 → 取消(回到默认顺序)三态循环
+// ============================================================
+window.useTableSort = function (defaultCol = null) {
+  const [sort, setSort] = React.useState(defaultCol ? { col: defaultCol, dir: 'desc' } : null);
+  const toggle = (col) => setSort((prev) => {
+    if (!prev || prev.col !== col) return { col, dir: 'asc' };
+    if (prev.dir === 'asc') return { col, dir: 'desc' };
+    return null; // 第三次点击清除排序
+  });
+  // 按 keyFns[sort.col](row) 取值排序;返回排好序的新数组(无排序则原样返回)
+  const apply = (list, keyFns) => {
+    if (!sort || !keyFns[sort.col]) return list;
+    const kf = keyFns[sort.col];
+    return [...list].sort((a, b) => {
+      const av = kf(a), bv = kf(b);
+      if (av < bv) return sort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return sort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+  return { sort, toggle, apply };
+};
+
+// 可排序表头单元格:label + 上下箭头(激活方向高亮)
+window.SortTh = function SortTh({ col, label, sort, onToggle, align, style }) {
+  const active = sort && sort.col === col;
+  const dir = active ? sort.dir : null;
+  const on = 'var(--brand)', off = 'var(--text-3)';
+  return (
+    <th className={align === 'right' ? 'right' : ''} onClick={() => onToggle(col)}
+      style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', ...(style || {}) }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+        {label}
+        <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 0, gap: 1 }}>
+          <svg width="7" height="4" viewBox="0 0 7 4"><path d="M3.5 0L7 4H0z" fill={dir === 'asc' ? on : off}/></svg>
+          <svg width="7" height="4" viewBox="0 0 7 4"><path d="M3.5 4L0 0h7z" fill={dir === 'desc' ? on : off}/></svg>
+        </span>
+      </span>
+    </th>
+  );
+};
+
+// ============================================================
+// v3.6.36 共享 日期范围筛选 — useDateRange hook + DateRangeBar 组件
+// 近14日 / 近30日 / 近90日 快捷按钮 + 起止日期输入;match(ts) 判断是否落在范围内
+// ============================================================
+window.useDateRange = function (defaultQuick = '14') {
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const calc = (days) => { const to = new Date(); const from = new Date(); from.setDate(to.getDate() - (days - 1)); return { from: ymd(from), to: ymd(to) }; };
+  const init = defaultQuick === 'all' ? { from: '', to: '' } : calc(+defaultQuick || 14);
+  const [quick, setQuick] = React.useState(defaultQuick);
+  const [from, setFrom] = React.useState(init.from);
+  const [to, setTo] = React.useState(init.to);
+  const pickQuick = (q) => {
+    setQuick(q);
+    if (q === 'all') { setFrom(''); setTo(''); }
+    else { const r = calc(+q); setFrom(r.from); setTo(r.to); }
+  };
+  const setFromManual = (v) => { setFrom(v); setQuick('custom'); };
+  const setToManual = (v) => { setTo(v); setQuick('custom'); };
+  const match = (ts) => {
+    if (!from && !to) return true;
+    const d = new Date(ts); const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    if (from && day < new Date(from + 'T00:00:00').getTime()) return false;
+    if (to && day > new Date(to + 'T00:00:00').getTime()) return false;
+    return true;
+  };
+  return { quick, from, to, pickQuick, setFromManual, setToManual, match };
+};
+
+// 日期范围筛选条:标签 + 起止日期 + 近14/30/90日快捷钮
+window.DateRangeBar = function DateRangeBar({ label, dr, T }) {
+  const tr = T || ((zh) => zh);
+  const Btn = ({ q, children }) => (
+    <button className={'btn sm' + (dr.quick === q ? ' primary' : ' ghost')} onClick={() => dr.pickQuick(q)} style={{ flexShrink: 0 }}>{children}</button>
+  );
+  return (
+    <div className="agdr-bar" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <span className="text-mute" style={{ fontSize: 12, flexShrink: 0 }}>{label}</span>
+      <input type="date" className="select sm" value={dr.from} max={dr.to || undefined} onChange={(e) => dr.setFromManual(e.target.value)} style={{ fontSize: 12 }} />
+      <span className="text-mute" style={{ fontSize: 12 }}>~</span>
+      <input type="date" className="select sm" value={dr.to} min={dr.from || undefined} onChange={(e) => dr.setToManual(e.target.value)} style={{ fontSize: 12 }} />
+      <Btn q="14">{tr('近14日', 'Last 14d')}</Btn>
+      <Btn q="30">{tr('近30日', 'Last 30d')}</Btn>
+      <Btn q="90">{tr('近90日', 'Last 90d')}</Btn>
+      <Btn q="all">{tr('全部', 'All')}</Btn>
     </div>
   );
 };

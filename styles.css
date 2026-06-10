@@ -688,6 +688,9 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 .btn.ghost:hover { background: var(--bg-2); }
 .btn.sm { padding: 4px 8px; font-size: 11.5px; }
 .btn.icon-only { padding: 5px; }
+/* 表格操作蓝字链接 */
+.link-act { background: none; border: none; padding: 0; cursor: pointer; color: var(--brand); font-size: 12.5px; font-family: inherit; }
+.link-act:hover { text-decoration: underline; }
 
 /* ============ Cards ============ */
 .card {
@@ -732,6 +735,33 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
   font-family: var(--font-mono);
 }
 .tab.active .count { background: var(--brand-soft); color: var(--brand); }
+
+/* ============ 提款审核进度:分组状态筛选 ============ */
+.wp-filter {
+  display: flex; flex-wrap: nowrap; align-items: flex-start;
+  gap: 0; padding: 14px 16px; border-bottom: 1px solid var(--line);
+  overflow-x: auto; overflow-y: hidden;
+}
+.wp-fgroup { display: flex; flex-direction: column; gap: 9px; padding: 0 18px; flex-shrink: 0; }
+.wp-fgroup:first-child { padding-left: 0; }
+.wp-fgroup + .wp-fgroup { border-left: 1px solid var(--line); }
+.wp-flabel { font-size: 11px; color: var(--text-3); letter-spacing: .2px; min-height: 14px; line-height: 14px; white-space: nowrap; }
+.wp-ftabs { display: flex; gap: 4px; }
+.wp-ftab {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 4px 10px; border-radius: 6px; border: none; cursor: pointer;
+  background: transparent; color: var(--text-2);
+  font-size: 12.5px; font-weight: 400; font-family: inherit;
+  transition: background .12s, color .12s;
+}
+.wp-ftab:hover { background: var(--bg-2); color: var(--text-0); }
+.wp-ftab.on { color: var(--brand); font-weight: 600; }
+.wp-fcount {
+  font-size: 10.5px; font-family: var(--font-mono);
+  padding: 1px 6px; border-radius: 10px;
+  background: var(--bg-3); color: var(--text-3); line-height: 1.5;
+}
+.wp-ftab.on .wp-fcount { background: var(--brand); color: #fff; }
 
 /* ============ Toolbar ============ */
 .toolbar {
@@ -842,6 +872,9 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 .b-info    { background: rgba(6,182,212,.14);  color: #0e7490; }
 .b-neutral { background: var(--bg-3); color: var(--text-2); }
 .b-brand   { background: var(--brand-soft); color: #1d4ed8; }
+.b-magenta { background: rgba(217,70,160,.13); color: #b83280; }
+.b-purple  { background: rgba(139,92,246,.14); color: #7c3aed; }
+.b-orange  { background: rgba(249,115,22,.14); color: #c2410c; }
 
 .risk-low      { background: rgba(34,197,94,.12); color: #15803d; padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;}
 .risk-medium   { background: rgba(245,158,11,.14); color: #b45309; padding:2px 7px;border-radius:10px;font-size:11px;font-weight:500;}
@@ -927,6 +960,17 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
   border-bottom: 1px solid var(--line);
   margin-bottom: 6px;
 }
+/* 抽屉内更醒目的分区标题 */
+.drawer-sec {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--text-0);
+  margin: 22px 0 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.drawer-sec::before {
+  content: ''; width: 3px; height: 14px; border-radius: 2px; background: var(--brand);
+}
+.drawer-sec:first-child { margin-top: 0; }
 
 /* Switch */
 .switch {
@@ -968,6 +1012,15 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 }
 .pg-pages button:hover { border-color: var(--line-strong); color: var(--text-0); }
 .pg-pages button.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.pg-right { display: flex; align-items: center; gap: 10px; }
+.pg-size {
+  height: 26px; padding: 0 26px 0 10px;
+  background: var(--bg-2) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 8px center;
+  border: 1px solid var(--line); border-radius: 4px;
+  color: var(--text-1); font-size: 11.5px; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+}
+.pg-size:hover { border-color: var(--line-strong); color: var(--text-0); }
 
 /* ============ Drawer ============ */
 .drawer-mask {
@@ -1477,8 +1530,10 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
   .app[data-collapsed="true"] .sb-section { display: block; }
   .app[data-collapsed="true"] .sb-badge { display: inline-flex; }
 
-  /* main 占满,因为侧栏 fixed 不再占流 */
-  .app-body { display: block; }
+  /* main 占满,因为侧栏 fixed 不再占流;
+     v3.6.31 改回 flex(而非 block)— block 会让 .main 高度=内容高度,短页面(如我的账户 流量/安全 tab)下方露出 app 灰底 --bg-0;
+     侧栏在此断点是 position:fixed 抽屉、不占流,故 flex 下 .main(flex:1)安全撑满高度,.content 白底铺到底,不再有灰带 */
+  .app-body { display: flex; }
   .main { width: 100%; }
 }
 
@@ -1888,8 +1943,8 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
  * 仅 < 768px 收紧；桌面端样式不动
  * ============================================================ */
 @media (max-width: 767px) {
-  /* —— 我的帐户：tab 内容左右 padding 收紧 18/22 → 14/14 —— */
-  .mp-tab-body { padding: 14px 14px !important; }
+  /* —— 我的帐户：tab 内容左右 padding 收紧 18/22 → 14/14;底部保留 96 让最后内容/按钮能滑过客服悬浮图标 —— */
+  .mp-tab-body { padding: 14px 14px 96px !important; }
 
   /* —— 我的帐户 · 分润模式 Row：标签上 + 值下（默认 width:160 在 390 太占地）—— */
   .mp-comm-row {
@@ -2034,7 +2089,7 @@ html.embed-mobile .view-mode-toggle { display: none !important; }
 
 /* 超窄屏(<480px) — 进一步收紧 */
 @media (max-width: 479px) {
-  .mp-tab-body { padding: 12px 12px !important; }
+  .mp-tab-body { padding: 12px 12px 96px !important; }
   .mr-info-outer { padding: 8px 10px !important; }
   .mr-info-inner { padding: 10px 12px !important; }
   .mr-settled-bar { padding: 10px 12px !important; }

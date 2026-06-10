@@ -44,7 +44,7 @@ function AgentRevenueModule() {
   });
   const [sort, setSort] = React.useState({ k: 'gap', dir: 'desc' });
   const [page, setPage] = React.useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = React.useState(20);
 
   // —— 实时从 STORE 取代理列表(只保留前 12 条 — 报表演示数据,避免过多)
   const rawList = ((window.APS_MERCHANT_AGENTS_STORE
@@ -243,7 +243,7 @@ function AgentRevenueModule() {
 
           </table>
         </div>
-        <ARUI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage} />
+        <ARUI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
       </div>
     </div>
   );

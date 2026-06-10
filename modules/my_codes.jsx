@@ -354,7 +354,7 @@ function MyCodesModule() {
     if (q && !(c.code + c.desc).toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
-  const pageSize = 10;
+  const [pageSize, setPageSize] = React.useState(20);
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
   // 顶部 KPI 合计 — 与商户后台一致:上方总计 = 当前搜索+筛选命中的结果总计(搜索时随之变化)
@@ -518,7 +518,7 @@ function MyCodesModule() {
             </tbody>
           </table>
         </div>
-        <ACUI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
+        <ACUI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
       </div>
 
       {/* 创建 邀请 Code */}

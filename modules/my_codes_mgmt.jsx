@@ -103,7 +103,7 @@ function MyCodesMgmtModule() {
     if (statusF !== 'all' && c.status !== statusF) return false;
     return true;
   });
-  const pageSize = 10;
+  const [pageSize, setPageSize] = React.useState(20);
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
   const submitCreate = (form) => {
@@ -214,7 +214,7 @@ function MyCodesMgmtModule() {
             </tbody>
           </table>
         </div>
-        <MCM_UI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
+        <MCM_UI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
       </div>
 
       {/* v3.2.3 帐户已被冻结 弹窗 */}

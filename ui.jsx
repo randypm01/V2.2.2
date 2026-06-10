@@ -137,9 +137,9 @@ function PageHead({ title, subtitle, children }) {
 }
 
 // ============= Tabs =============
-function Tabs({ value, onChange, tabs }) {
+function Tabs({ value, onChange, tabs, scroll }) {
   return (
-    <div className="tabs">
+    <div className={'tabs' + (scroll ? ' tabs--scroll' : '')}>
       {tabs.map((t) =>
       <div key={t.key} className={'tab ' + (value === t.key ? 'active' : '')} onClick={() => onChange(t.key)}>
           {t.label}
@@ -212,7 +212,7 @@ function DateRange({ value, onChange }) {
 }
 
 // ============= Pagination =============
-function Pagination({ page, pageSize, total, onPage }) {
+function Pagination({ page, pageSize, total, onPage, onPageSize, pageSizeOptions }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const arr = [];
   const lo = Math.max(1, page - 2),hi = Math.min(totalPages, page + 2);
@@ -223,15 +223,23 @@ function Pagination({ page, pageSize, total, onPage }) {
   const summary = lang === 'en'
     ? (<><b style={{ color: 'var(--text-1)' }}>{totalStr}</b> total · Page {page} / {totalPages}</>)
     : (<>共 <b style={{ color: 'var(--text-1)' }}>{totalStr}</b> 条 · 第 {page} / {totalPages} 页</>);
+  const opts = pageSizeOptions || [20, 50, 100];
   return (
     <div className="pagination">
       <span>{summary}</span>
-      <div className="pg-pages">
-        <button disabled={page === 1} onClick={() => onPage(page - 1)}>‹</button>
-        {lo > 1 && <><button onClick={() => onPage(1)}>1</button>{lo > 2 && <span style={{ padding: '0 4px', color: 'var(--text-3)' }}>…</span>}</>}
-        {arr.map((p) => <button key={p} className={page === p ? 'active' : ''} onClick={() => onPage(p)}>{p}</button>)}
-        {hi < totalPages && <><span style={{ padding: '0 4px', color: 'var(--text-3)' }}>…</span><button onClick={() => onPage(totalPages)}>{totalPages}</button></>}
-        <button disabled={page === totalPages} onClick={() => onPage(page + 1)}>›</button>
+      <div className="pg-right">
+        <div className="pg-pages">
+          <button disabled={page === 1} onClick={() => onPage(page - 1)}>‹</button>
+          {lo > 1 && <><button onClick={() => onPage(1)}>1</button>{lo > 2 && <span style={{ padding: '0 4px', color: 'var(--text-3)' }}>…</span>}</>}
+          {arr.map((p) => <button key={p} className={page === p ? 'active' : ''} onClick={() => onPage(p)}>{p}</button>)}
+          {hi < totalPages && <><span style={{ padding: '0 4px', color: 'var(--text-3)' }}>…</span><button onClick={() => onPage(totalPages)}>{totalPages}</button></>}
+          <button disabled={page === totalPages} onClick={() => onPage(page + 1)}>›</button>
+        </div>
+        {onPageSize && (
+          <select className="pg-size" value={pageSize} onChange={(e) => onPageSize(Number(e.target.value))}>
+            {opts.map((n) => <option key={n} value={n}>{lang === 'en' ? n + ' / page' : n + ' 条/页'}</option>)}
+          </select>
+        )}
       </div>
     </div>);
 
@@ -251,12 +259,12 @@ function Avatar({ name, size = 24 }) {
 }
 
 // ============= Drawer =============
-function Drawer({ open, onClose, title, subtitle, children, footer, wide, hideHeader }) {
+function Drawer({ open, onClose, title, subtitle, children, footer, wide, hideHeader, width, elevated }) {
   if (!open) return null;
   return (
     <>
-      <div className="drawer-mask" onClick={onClose} />
-      <div className={'drawer ' + (wide ? 'wide' : '')}>
+      <div className="drawer-mask" onClick={onClose} style={elevated ? { zIndex: 110 } : undefined} />
+      <div className={'drawer ' + (wide ? 'wide' : '')} style={{ ...(width ? { width } : {}), ...(elevated ? { zIndex: 111 } : {}) }}>
         {!hideHeader &&
         <div className="drawer-head">
             <div>
@@ -428,6 +436,7 @@ function Field({ label, required, children, hint }) {
 // 「说明」按钮 + 公式说明弹窗。替代原「导出」按钮。
 // props.sections: [{ heading, desc?, items: [{ name, formula?, note? }] }]
 // props.tabs(可选): [{ key, label, sections }] — 传入时弹窗顶部渲染分页切换,每页一组 sections
+//   每个 tab 可改用 { key, label, node } 直接渲染自定义 JSX(优先于 sections),用于表格/色块等富排版
 function FormulaHelp({ sections = [], tabs, title = '字段计算说明', subtitle, buttonLabel = '说明' }) {
   const [open, setOpen] = React.useState(false);
   const tabList = (tabs && tabs.length) ? tabs : null;
@@ -479,7 +488,7 @@ function FormulaHelp({ sections = [], tabs, title = '字段计算说明', subtit
             ))}
           </div>
         )}
-        {renderSections(tabList ? activeTab.sections : sections)}
+        {tabList ? (activeTab.node ? activeTab.node : renderSections(activeTab.sections)) : renderSections(sections)}
       </Modal>
     </React.Fragment>
   );

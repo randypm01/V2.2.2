@@ -32,8 +32,11 @@ function seedRand() { _seed = (_seed * 9301 + 49297) % 233280; return _seed / 23
 function srand(min, max) { return Math.floor(seedRand() * (max - min + 1)) + min; }
 function spick(arr) { return arr[Math.floor(seedRand() * arr.length)]; }
 
+// v3.7.1 P0 收敛:范例代理总数 80 → 20(前 5 固定样板 + 15 背景占位);
+//        players/codes/cpa/settlements/risk/logs 所属代理引用统一绑 AGENT_COUNT,避免孤儿引用
+const AGENT_COUNT = 20;
 // ---------- Agents ----------
-function genAgents(n=80) {
+function genAgents(n=AGENT_COUNT) {
   const list = [];
   for (let i = 0; i < n; i++) {
     const created = Date.now() - srand(1, 720) * 86400000;
@@ -85,7 +88,7 @@ function genPlayers(n=200) {
     const ngr = wager * (0.03 + seedRand() * 0.07);
     list.push({
       id: id('P', 800000 + i),
-      agentId: id('AC', 100001 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
       codeId: id('C', 7000 + srand(0, 49)),
       country: spick(COUNTRIES),
       currency: spick(CURRENCIES),
@@ -119,7 +122,7 @@ function genCodes(n=50) {
       id: id('C', 7000 + i),
       code: 'PROMO' + String(srand(1000,9999)),
       name: spick(['Summer Push','LATAM Q3','Telegram VIP','TikTok Influence','BR World Cup','PIX Boost','VN Newbie','TH Masters','PH Streamer','Retargeting Burst']),
-      agent: id('AC', 100001 + srand(0, 79)),
+      agent: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
       channel: spick(CHANNELS),
       campaign: 'CMP-' + srand(1000, 9999),
       market: spick(MARKETS),
@@ -145,7 +148,7 @@ function genCpaRecords(n=120) {
     const status = spick(['approved','approved','approved','pending','pending','rejected','risk_hold']);
     list.push({
       id: id('CPA', 50000 + i),
-      agentId: id('AC', 100001 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
       playerId: id('P', 800000 + srand(0, 199)),
       ftdAmount: srand(20, 800),
       ftdAt: Date.now() - srand(1, 60) * 86400000,
@@ -174,7 +177,7 @@ function genSettlements(n=40) {
     const total = cpa + rev + sub + adj - risk;
     list.push({
       id: 'STM-2026-' + String(srand(10000, 99999)),
-      agentId: id('AC', 100001 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
       period: spick(['2026-W17','2026-W18','2026-W19','2026-04','2026-03']),
       cpa, rev, sub, adj, risk,
       tax: Math.floor(total * 0.05),
@@ -205,7 +208,7 @@ function genRiskPlayers(n=40) {
   for (let i = 0; i < n; i++) {
     list.push({
       id: id('P', 800000 + srand(0, 199)),
-      agentId: id('AC', 100001 + srand(0, 79)),
+      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
       codeId: id('C', 7000 + srand(0, 49)),
       reason: spick(reasons),
       level: spick(['low','medium','high','critical']),
@@ -222,14 +225,14 @@ function genRiskPlayers(n=40) {
 // ---------- Logs ----------
 function genLogs(n=50) {
   const actions = [
-    { t: 'create_agent', label: '创建代理', target: id('AC', 100001 + srand(0,79)) },
-    { t: 'modify_commission', label: '修改分润方案', target: id('AC', 100001 + srand(0,79)) },
+    { t: 'create_agent', label: '创建代理', target: id('AC', 100001 + srand(0, AGENT_COUNT - 1)) },
+    { t: 'modify_commission', label: '修改分润方案', target: id('AC', 100001 + srand(0, AGENT_COUNT - 1)) },
     { t: 'approve_cpa', label: '审核CPA', target: id('CPA', 50000 + srand(0,99)) },
     { t: 'approve_settlement', label: '审核结算单', target: 'STM-2026-' + srand(10000,99999) },
-    { t: 'freeze_commission', label: '冻结佣金', target: id('AC', 100001 + srand(0,79)) },
+    { t: 'freeze_commission', label: '冻结佣金', target: id('AC', 100001 + srand(0, AGENT_COUNT - 1)) },
     { t: 'approve_withdrawal', label: '审核提款', target: 'WD-' + srand(100000,999999) },
     { t: 'risk_action', label: '风控处理', target: id('P', 800000 + srand(0,199)) },
-    { t: 'modify_agent', label: '修改代理资料', target: id('AC', 100001 + srand(0,79)) },
+    { t: 'modify_agent', label: '修改代理资料', target: id('AC', 100001 + srand(0, AGENT_COUNT - 1)) },
   ];
   const operators = ['admin','finance.amy','risk.tom','ops.lily','superadmin','audit.chris'];
   const list = [];
@@ -253,9 +256,9 @@ function genLogs(n=50) {
 // ---------- Risk alerts (dashboard) ----------
 function genAlerts() {
   return [
-    { type: 'danger', title: '代理 AC100023 异常CPA率 92%', meta: '近24小时CPA拒绝率超过阈值 · 23 条待复核', icon: 'warn' },
+    { type: 'danger', title: '代理 AC100012 异常CPA率 92%', meta: '近24小时CPA拒绝率超过阈值 · 23 条待复核', icon: 'warn' },
     { type: 'warning', title: '同IP风险：12 名玩家共享同一IP段', meta: '关联代理 AC100007 · 涉及佣金 $4,820', icon: 'warn' },
-    { type: 'warning', title: '代理 AC100015 提款行为异常', meta: '7 名玩家FTD后24h内提款占比 86%', icon: 'warn' },
+    { type: 'warning', title: '代理 AC100009 提款行为异常', meta: '7 名玩家FTD后24h内提款占比 86%', icon: 'warn' },
     { type: 'info', title: '佣金待审核累计 $128,400', meta: '17 张结算单待财务审核', icon: 'info' },
     { type: 'danger', title: '套利团队疑似命中', meta: '5 名玩家投注模式高度相似 · 已暂扣佣金 $2,150', icon: 'warn' },
     { type: 'info', title: '风控规则触发：低质量流量比例 18.3%', meta: '建议复查 Telegram 渠道近7日数据', icon: 'info' },
@@ -274,7 +277,7 @@ function genTrend(days=30, base=10000, vol=0.3) {
 }
 
 window.APS_DATA = {
-  agents: genAgents(80),
+  agents: genAgents(AGENT_COUNT),
   players: genPlayers(200),
   codes: genCodes(50),
   cpaRecords: genCpaRecords(120),

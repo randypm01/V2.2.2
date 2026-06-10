@@ -1,133 +1,153 @@
-# 接续文档 — 新专案开始时贴这份给 Claude
+# 接续摘要 — 新 chat 开局先读这份(再读 CLAUDE.md)
 
-> **用法**:在新专案的 composer 中,把整份文档贴进去,或上传后说「先读 HANDOFF.md 再读 CLAUDE.md」。
+> 本文件是「当前真实快照」。CLAUDE.md 描述的是早期 P0 精简版,已与现状不符 —— 以本文件 + `ls modules/` + `index.html` 为准。
+
+## ⚡ 开局只做两件轻事,然后停下等任务(别全量预读)
+
+1. 读本文件 `HANDOFF.md`(规则 + 现状)
+2. `ls modules/` 核对真实文件
+3. **停**,等用户给具体任务 —— **不要**开局就全量读 `index.html` / `app.jsx` / `prd.jsx` / `version.jsx`,那是新 chat 慢几十秒的元凶。
+4. 拿到任务后**按需读**:改哪个模块 → `grep`/`read` 那一个模块 + 它在 `index.html` 的那行引用即可。
+5. CLAUDE.md 只取「规则/偏好」(第七章、七·A、八·A、八·B);它的文件清单已过时,忽略。
 
 ---
 
 ## 0. 一句话项目
 
-博彩平台「专业代理推广分润系统」P0 精简版高保真原型,**14 个 feat**,3 个后台视角(PRD 规划 / 商户后台 / 代理后台),纯前端 HTML + React + Babel,无构建。
+博彩平台「专业代理推广分润系统」高保真原型。纯前端 **HTML + React 18 + Babel standalone,无构建**。入口 `index.html`(按顺序引入 30 个 jsx/js)。
+
+⚠️ 项目早已超出 CLAUDE.md 写的「P0 14 feat 精简版」:现已有 **4 个顶部 tab**、社媒分享、客服管理、提款审核、网站前台等。不要再被 CLAUDE.md 的「不要扩展 / 只剩 P0」字样限制 —— 按用户当下要求做。
 
 ---
 
 ## 1. 当前版本
 
-- **最新版本**:`v3.1.2`(2026-05-20)
-- **版本号体系**:从 v3.1.0 重启的新小版本周期,原 v3.0.x 已封板
-- **版本历史完整保存在** `modules/version.jsx` — 最新一条 `current: true`,接续后改东西继续往上加 v3.1.3、v3.1.4…
+- **最新**:`v3.7.21`(2026-06-10)
+- 版本历史全保存在 `modules/version.jsx`(顶部最新一条 `current:true`)
+- 用户报需求时常带版本号简写(如 v222 = v2.2.2);**每次改代码都要往 version.jsx 顶部加一条新记录**(见第 4·A 节,强制,别等用户提醒)
 
 ---
 
-## 2. 接续必读顺序(新 chat 第一件事)
+## 2. 接续顺序(精简,别预读大文件)
 
-1. **先读 `CLAUDE.md`** — 项目记忆全文,含设计系统 / 用户偏好 / 强制规则
-2. **`ls modules/`** — 看真实文件清单(CLAUDE.md 第三章可能滞后)
-3. **读 `index.html` 的 `<script>` 段** — 核对所有 jsx 都被引用
-4. **读 `modules/version.jsx` 前 50 行** — 知道最近改了什么
-5. **读 `app.jsx` 顶部 NAV** + `modules/prd.jsx` PRD_FEATURES — 路由 & PRD 数据结构
-6. 改东西优先 `str_replace_edit`,大改才 `write_file`
+开局只:① 读本文件 ② `ls modules/` ③ 停,等任务。其余**全部按需**,拿到任务才读:
 
----
-
-## 3. 现状快照(导出时)
-
-### modules/ 实际清单(23 个文件)
-
-商户后台:`dashboard / agents / codes / cpa / players / revshare / agent_levels / agent_revenue / settlement(已删,见 v3.0.xx)/ wallet(已删)/ logs(已删)/ notifications(已删)/ risk(已删)`
-※ 实际现有:`dashboard.jsx / agents.jsx / codes.jsx / cpa.jsx / players.jsx / revshare.jsx / agent_levels.jsx / agent_revenue.jsx`
-
-代理后台:`agent_common / agent_dashboard / agent_login / agent_profile / agent_notify / my_codes / my_codes_mgmt / my_cpa / my_players / my_revshare / my_settlement / my_wallet / frontend`
-
-PRD / 版本:`prd.jsx / version.jsx`
-
-⚠️ **以 `ls modules/` 为准**,不要照念这份清单。
-
-### 三个后台 tab 顶部切换
-
-| Tab | logo + 标题 |
-|---|---|
-| PRD 规划 | folder + "PRD 规划 v1.0" |
-| 商户后台 | building + "商戶後台_專業代理 v1.0" |
-| 专业代理后台 | users + "專業代理後台 v1.0" |
-
-### 当前侧栏(P0 精简后)
-
-**商户后台**:运营(仪表盘 / 代理账户 / 分润管理 / 代理等级)/ 玩家(玩家管理 / CPA / 风控)/ 收益(分润 / 代理收益)/ 系统(日志 / 通知)
-
-**代理后台**:首页 / 我的账户 / 运营(我的账户 · Code 与链接管理)/ 报表(邀请Code与链接 · 玩家损益 · 分润报表)
+- 要核对引入顺序 → 读 `index.html` 的 `<script>` 段
+- 要知道最近改了什么 → 读 `modules/version.jsx` 前 ~30 行
+- 要动导航/路由 → 读 `app.jsx` 的 `NAV`/`AGENT_NAV`
+- 要动 PRD → 读 `modules/prd.jsx` 的 `PRD_FEATURES`
+- 改某模块 → 只读该模块 + 它那行 `<script>` 引用
+- 改东西优先 `str_replace_edit`;大改才 `write_file`
 
 ---
 
-## 4. 强制规则(摘自 CLAUDE.md,新 chat 易忽略)
+## 3. 现状快照
 
-### A. 版本记录(强制)
-每次代码更新 → 同步加 `modules/version.jsx` 一条,**不要等用户提醒**:
-- 新条目 `current: true`,旧的 `current: false`
-- ver 自增小数(看顶部最新一条 +0.0.1)
-- changes 用 `{ type: 'fix'|'add'|'modify'|'remove'|'feat', text: '...' }`
-- 小改动也要记(bug 修复 / 文案微调 / 样式调整都算)
+### 4 个顶部 tab(`backend` 状态:`prd | merchant | agent | frontend`)
+
+| tab | logo + 标题 | 渲染 |
+|---|---|---|
+| PRD 规划 | folder | 路线图 / 版本 |
+| 商户后台 | building「商戶後台_專業代理」 | 商户 NAV + 侧栏 |
+| 专业代理后台 | users「專業代理後台」 | AGENT_NAV(需登入,agent_login) |
+| 网站前台 | globe「网站前台」 | `<FrontendModule/>` 全宽,跳过侧栏 |
+
+每个 tab 各自独立路由 state(merchantRoute / agentRoute / prdRoute / frontendRoute)。
+
+### 当前侧栏(以 app.jsx 为准)
+
+**商户后台 NAV**
+- 运营:仪表盘 / 代理账户管理 / 分润管理 / 代理等级管理 / 社媒分享管理 / 客服管理
+- 报表:代理收益 / 代理推广链接 / 代理玩家损益 / 代理分润报表
+- 财务:代理佣金结算单 / 提款审核
+
+**专业代理后台 AGENT_NAV**(支持中英 i18n,`window.t`)
+- 运营:我的账户 / Code 与链接管理
+- 报表:邀请Code与链接 / 玩家损益 / 分润报表
+- 财务:佣金结算单 / 提款审核进度
+
+### modules/ 真实清单(30 个,2026-06-09)
+
+商户后台:`dashboard / agents / agent_levels / codes / players / cpa / revshare / agent_revenue / agent_revshare / agent_settlement / withdraw_review / social_share / customer_service`
+代理后台:`agent_common / agent_login / agent_dashboard / agent_profile / agent_notify / agent_live_chat / my_codes / my_codes_mgmt / my_players / my_cpa / my_revshare / my_settlement / my_withdraw_progress / my_wallet`
+前台:`frontend`
+PRD/版本:`prd / version`
+> 根目录还有:`app.jsx ui.jsx data.js data-billing.js styles.css styles-frontend.css tweaks-panel.jsx ios-frame.jsx`
+> ⚠️ 仍以 `ls modules/` 为准,别照念。
+
+---
+
+## 4. 强制规则(易忽略)
+
+### A. 版本记录(强制,别等提醒)
+每次改代码 → `modules/version.jsx` 顶部加一条:
+- 新条 `current:true`,把上一条改 `current:false`(永远只有一条 current)
+- `ver` 看顶部最新 +0.0.1
+- `changes:[{ type:'fix'|'add'|'modify'|'remove'|'feat', text:'...' }]`
+- 小改动(bug / 文案 / 样式)也要记,写清改了什么 + 为什么
 
 ### B. 导出代码(强制排除)
-1. `uploads/` — 原始 PRD 文档
-2. 任何 `舊備份*` / `old*` / `backup*` / `_bak*` 资料夹
-3. `screenshots/` — 截图
+排除 `uploads/`、任何 `舊備份*/old*/backup*/_bak*`、`screenshots/`。
+做法:`run_script` copy 需要的档案到临时 `_export/` → `present_fs_item_for_download` 打包 zip → 完成后删 `_export/`。**不要**直接打包整个根目录(会带出 uploads)。
 
-做法:`run_script` copy 到临时 `_export/` → `present_fs_item_for_download` 打包成 zip → 完成后删 `_export/`。
+### C. 不要改路由格式
+`home` / `section:<名>` / `mod:<navKey>` / `prd_overview` / `prd_home` / `version` / `phase:P0` / `feat:P0-1`。一改全断。parseRoute(app.jsx ~138 行)决定每个路由的 parent(返回按钮按层级回退)。
 
-### C. P0 精简版 — 不要扩展
-- 只保留 P0-1 ~ P0-14 共 14 个 feat
-- P1/P2/P3 已全部移除,**不要恢复**
-- 用户后续要做 P1+ → 建议「另开新专案」
+### D. 优先级 pill 三处渲染
+首页 hc-row / 大项页 fc-child / PRD 卡片 —— 改样式三处同步。
 
-### D. 不要改路由格式
-`home` / `section:运营` / `mod:agents` / `prd_overview` / `phase:P0` / `feat:P0-1` — 一改全断
-
-### E. 优先级 pill 三处渲染
-首页 hc-row / 大项页 fc-child / PRD 卡片 — 改样式记得三处同步
+### E. ⚠️ 各 jsx 模块「共享全局作用域」(易踩坑)
+所有 `<script type=text/babel>` 模块的**顶层声明会泄漏到全局**(Babel 把 `const`→`var`、`function` 挂 window),按 index.html 的 `<script>` 顺序**后载入覆盖先载入**(last-wins)。
+- 后果:两个文件若有同名顶层 helper(`WRCard`/`DocRow`/`T`/`fmtDT`...),后载入的会覆盖先载入的。
+- 现状:`modules/withdraw_review.jsx`(line 31,商户「代理提款审核」)是 `modules/my_withdraw_progress.jsx`(line 50,代理端,**更晚载入**)的副本。两边相同的 helper 没事;但 withdraw_review 里**任何被改动 / 与代理端分歧的顶层函数,必须改唯一名**,否则被代理端旧版覆盖、改动失效。
+- 已处理:withdraw_review.jsx 的 doc 卡片 helper 已改 `WRCard/FSCard/POCard/DocRow → WRV_WRCard/WRV_FSCard/WRV_POCard/WRV_DocRow`;翻译函数 `T → WRV_T`(且强制读中文字典,见下条)。后续再改直接编辑 `WRV_*`。
+- ⚠️ **语言泄漏**:withdraw_review 是商户后台,必须**永远中文**。它曾用 `const T = window.t` 跟随代理端 `useAgentLang`,代理后台切英文时商户这页也变英文。已修:`WRV_T` 强制读 `window.APS_I18N.zh`,并移除组件内 `useAgentLang()` 订阅。任何商户后台模块复制自代理端的,都要确认不跟随 useAgentLang。
+- 通则:复制别的模块来改时,**先把要改的顶层标识符加唯一前缀**再动手。
 
 ---
 
 ## 5. 用户偏好
 
-- PM 用户,非工程师 — 部署走 GitHub 网页上传 + Netlify
+- PM 用户、非工程师;部署走 GitHub 网页上传 + Netlify(publish dir = `/`,入口 index.html,无 package.json / 无 build)
 - **简体中文** UI(代码注释中文)
-- **白底** 浅色风格 + 蓝色主色 `--brand: #3b82f6`
+- 白底浅色 + 蓝色主色 `--brand:#3b82f6`;字体 Inter / Noto Sans SC / JetBrains Mono(等宽用于 ID/数字)
 - **不要装饰性图标 / emoji**,务实风
-- **回答尽量简短**,先给结果再给理由
-- **不要凭记忆答模块数 / 清单** — 永远先 `ls`
+- 回答尽量简短,先结果后理由
+- 不要凭记忆答模块数 / 清单 —— 永远先 `ls`
 
 ---
 
-## 6. 最近 3 个版本改了什么(快速跟进)
+## 6. 最近在做什么(v3.6.x 主线 = 提款 / 财务核算)
 
-### v3.1.2(2026-05-20)分润报表重构
-- 顶部加「分润期类型」segmented:**预估分润期(未结算)** ↔ **已结算分润期**
-- 两种期 KPI / 字段差异化,预估期无结算单号/付款字段;已结算期 10 列含付款状态
-- 点已结算期行 → Drawer 看完整付款信息
+最近十几个版本都围绕 **代理后台「提款审核进度」→ 单据明细弹窗** 在打磨:
+- 提款申请单弹窗、财务核算单(FS)、付款单(PO)三种单据弹窗的排版重构(对齐佣金结算单详情:标题 18/700、宽 400、蓝色竖条分区标题 `drawer-sec`、单列 label 左/值 右)
+- 订单状态文字化(审核中橙 / 已通过绿 / 已拒绝红;核算中 / 已驳回 / 已转结 / 核算完成)
+- 收款资料统一读代理 `_payment`;「提款申请来源」区块;底部「联络线上客服」(`window.APS_OPEN_CONTACT`)
+- 涉及文件:`modules/my_withdraw_progress.jsx`、`modules/withdraw_review.jsx`、`data-billing.js`
 
-### v3.1.1(2026-05-20)Code 创建上限
-- 代理后台 → 运营 → Code 与链接管理:**上限 20 条**
-- 达上限点「创建」→ 弹窗提示联系管理员,PageHead 加计数 N/20(红字)
-
-### v3.1.0(2026-05-20)版本号重启
-- 原 v3.0.x 系列封板,从 v3.1.0 开新小版本周期
-- CLAUDE.md 新增第八·A 节「导出代码规则」
+无已知待修 bug。
 
 ---
 
-## 7. 已知待办 / 用户最近聊到但未做完
+## 7. 几个有用的 window 全局钩子
 
-- 用户提到「分润结算页优化」给了截图,但截图没传上来(对话里只有文字)— 新 chat 可以问用户「你之前提到的分润结算页设计图能再传一次吗」
-- 没有待修 bug 记录
+- `window.goRoute(r)` 跳路由 · `window.APS_SWITCH_BACKEND(tab)` 切 tab
+- `window.APS_AGENT_LOGOUT()` 代理登出 · `window.CURRENT_AGENT_ID` 当前登入代理
+- `window.APS_OPEN_CONTACT()` 开「联系我们」弹窗
+- `window.t(k, fallback)` / `window.useAgentLang()` 代理后台 i18n
+- `window.useTweaks(defaults)` Tweaks(density / accent)
+- 各模块挂在 window 上(如 `window.FrontendModule`、`window.AgentDashboardModule`),app.jsx 用 `<window.XxxModule/>` 渲染
+
+### ⚡ 验证代理后台 — 最快登入(别手填账号!)
+登入弹窗有「快速选择已创建账户」列表,每条有「填入」按钮,点了自动填账号+密码。标准脚本:
+1. 切 tab:点顶部「专业代理后台」(或 `window.APS_SWITCH_BACKEND`)
+2. 点「登入」开弹窗
+3. 在快速选择列表找 **AC範例6**(`AC100006 · rajeshmedia / Test@1234`)→ 点它那条的「填入」按钮(账号+密码一次填好)— **不要手动 setVal 一个个填**
+4. 点弹窗内「登入」
+5. `window.CURRENT_AGENT_ID === 'AC100006'` 即成功 → `window.goRoute('mod:xxx')`
+- 一次脚本跑完(切 tab→填入→登入→跳页),别分多次 eval 试探。
+- 商户后台不用登入,直接 `goRoute('mod:xxx')` 更快。
 
 ---
 
-## 8. 部署
-
-- 不是 npm 项目,**无 package.json / 无 build**
-- 直接把所有档案上传 GitHub repo,Netlify 设 publish directory = `/`,入口 `index.html`
-- 字体走 Google Fonts CDN,所有 React / Babel 走 unpkg CDN
-
----
-
-**完。** 新 chat 读完这份 + CLAUDE.md 就能完整接续。
+**完。** 读完本文件 + CLAUDE.md(只取其规则/偏好,忽略其过时清单)即可完整接续。

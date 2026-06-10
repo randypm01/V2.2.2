@@ -35,7 +35,7 @@ function MyCpaModule() {
   };
   const statusKey = filter === 'held' ? 'risk_hold' : filter;
   const list = filter === 'all' ? my : my.filter(r=>r.status===statusKey);
-  const pageSize = 14;
+  const [pageSize, setPageSize] = React.useState(20);
   const paged = list.slice((page-1)*pageSize, page*pageSize);
 
   const approvedAmt = my.filter(r=>r.status==='approved').reduce((a,r)=>a+r.cpaAmount,0);
@@ -132,7 +132,7 @@ function MyCpaModule() {
                 </tbody>
               </table>
             </div>
-            <ACPUI.Pagination page={page} pageSize={pageSize} total={list.length} onPage={setPage}/>
+            <ACPUI.Pagination page={page} pageSize={pageSize} total={list.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
           </>
         )}
 

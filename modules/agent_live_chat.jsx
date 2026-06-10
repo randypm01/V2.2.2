@@ -3,13 +3,51 @@
 // 全局开关:window.APS_openLiveChat() / window.APS_closeLiveChat()
 
 (function () {
+  const POS_KEY = 'aps_livechat_pos';
+  const FAB = 56, MARGIN = 8;
+  function loadPos() {
+    try { const p = JSON.parse(localStorage.getItem(POS_KEY)); if (p && typeof p.right === 'number' && typeof p.bottom === 'number') return p; } catch (e) {}
+    return { right: 24, bottom: 24 };
+  }
   function AgentLiveChat() {
     const [open, setOpen] = React.useState(false);
     const [msg, setMsg] = React.useState('');
+    const [pos, setPos] = React.useState(loadPos);
+    const movedRef = React.useRef(false);
     const [thread, setThread] = React.useState([
       { from: 'cs', text: '您好!我是 Beans 专属代理客服,请问有什么可以帮您?' },
     ]);
     const bodyRef = React.useRef(null);
+
+    // 悬浮图标可拖动:拖动重新定位(localStorage 持久化),未拖动则视为点击开关
+    const onFabDown = (e) => {
+      e.preventDefault();
+      const startX = e.clientX, startY = e.clientY;
+      const start = { ...pos };
+      let cur = { ...start };
+      movedRef.current = false;
+      const onMove = (ev) => {
+        const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) movedRef.current = true;
+        let right = start.right - dx;
+        let bottom = start.bottom - dy;
+        right = Math.max(MARGIN, Math.min(window.innerWidth - FAB - MARGIN, right));
+        bottom = Math.max(MARGIN, Math.min(window.innerHeight - FAB - MARGIN, bottom));
+        cur = { right, bottom };
+        setPos(cur);
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        if (movedRef.current) {
+          try { localStorage.setItem(POS_KEY, JSON.stringify(cur)); } catch (e) {}
+        } else {
+          setOpen(o => !o);
+        }
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    };
 
     React.useEffect(() => {
       window.APS_openLiveChat = () => setOpen(true);
@@ -32,7 +70,7 @@
     };
 
     return (
-      <div className="alc-root">
+      <div className="alc-root" style={{ right: pos.right, bottom: pos.bottom }}>
         {open && (
           <div className="alc-panel">
             <div className="alc-head">
@@ -63,7 +101,7 @@
             </div>
           </div>
         )}
-        <button className={'alc-fab' + (open ? ' open' : '')} onClick={() => setOpen(o => !o)} aria-label="在线客服">
+        <button className={'alc-fab' + (open ? ' open' : '')} onPointerDown={onFabDown} aria-label="在线客服">
           <Icon name={open ? 'x' : 'message'} size={24}/>
         </button>
       </div>
@@ -74,7 +112,8 @@
   if (!document.getElementById('alc-styles')) {
     const css = `
 .alc-root { position:fixed; right:24px; bottom:24px; z-index:9000; display:flex; flex-direction:column; align-items:flex-end; gap:14px; font-family:inherit; }
-.alc-fab { width:56px; height:56px; border-radius:50%; border:none; background:#3b82f6; color:#fff; cursor:pointer; box-shadow:0 8px 24px rgba(59,130,246,.4); display:grid; place-items:center; transition:transform .15s, background .15s; }
+.alc-fab { width:56px; height:56px; border-radius:50%; border:none; background:#3b82f6; color:#fff; cursor:grab; touch-action:none; box-shadow:0 8px 24px rgba(59,130,246,.4); display:grid; place-items:center; transition:transform .15s, background .15s; }
+.alc-fab:active { cursor:grabbing; }
 .alc-fab:hover { background:#2563eb; transform:translateY(-2px); }
 .alc-fab.open { background:#64748b; }
 .alc-fab.open:hover { background:#475569; }

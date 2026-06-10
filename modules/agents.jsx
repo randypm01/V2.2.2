@@ -115,8 +115,8 @@ const SELF_APPLICATIONS_INITIAL = [
   { id:'AC100002', _channel:'agentportal', name:'AC範例2',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'sara_ig@gmail.com',   phone:'98213 22002',region:'India · Mumbai',     reason:'Instagram 投放主播,30k 粉丝',                                    channels:'Instagram · Stories',                   loginName:'saraig',     password:'Test@1234',  createdAt:'2026-05-13 09:15:30', updatedAt:'2026-05-14 10:00:00', state:'supplement',   failReason:'请补充身份证正反面 + 推广渠道近 30 天数据截图' },
   { id:'AC100003', _channel:'agentportal', name:'AC範例3',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'rohan@gmail.com',     phone:'99100 33003',region:'India · Delhi',      reason:'已有完整推广团队和工具栈',                                        channels:'YouTube · Telegram · Discord',          loginName:'rohan_tech', password:'Test@1234',  createdAt:'2026-05-13 11:20:00', updatedAt:'2026-05-15 14:30:00', state:'supplemented' },
   { id:'AC100004', _channel:'agentportal', name:'AC範例4',    tier:'general', userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'priya_media@gmail.com',phone:'97300 44004',region:'India · Pune',      reason:'团队 8 人,主投 Telegram + WhatsApp',                              channels:'Telegram 群 5,000+ · WhatsApp',         loginName:'priyamedia', password:'Test@1234',  createdAt:'2026-05-12 16:40:00', updatedAt:'2026-05-13 18:00:00', state:'failed',       failReason:'与现有代理 AG100023 渠道高度重叠,本次申请不通过' },
-  { id:'AC100005', _channel:'agentportal', name:'AC範例5',    tier:'super',   userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'arjun_aff@gmail.com',phone:'98800 55005', phone:'98800 55005',region:'India · Bangalore',  reason:'隔壁平台代理 2 年,月均流水 ₹300 万',                              channels:'Telegram · Affiliate 网络',             loginName:'arjunaff',   password:'Test@1234',  createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', state:'passed' },
-  { id:'AC100006', _channel:'agentportal', name:'AC範例6',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'rajesh_aff@gmail.com',phone:'90400 66006',phone:'90400 66006',region:'India · Hyderabad',  reason:'通过代理后台注册申请;主投 Telegram + YouTube',                    channels:'Telegram · YouTube',                    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', state:'passed' },
+  { id:'AC100005', _channel:'agentportal', name:'AC範例5_真實流轉範例',    tier:'super',   userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'arjun_aff@gmail.com',phone:'98800 55005', phone:'98800 55005',region:'India · Bangalore',  reason:'隔壁平台代理 2 年,月均流水 ₹300 万',                              channels:'Telegram · Affiliate 网络',             loginName:'arjunaff',   password:'Test@1234',  createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', state:'passed' },
+  { id:'AC100006', _channel:'agentportal', name:'AC範例6_全狀態範例',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'rajesh_aff@gmail.com',phone:'90400 66006',phone:'90400 66006',region:'India · Hyderabad',  reason:'通过代理后台注册申请;主投 Telegram + YouTube',                    channels:'Telegram · YouTube',                    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', state:'passed' },
   { id:'AC100007', _channel:'agentportal', name:'AC範例7',    tier:'general', userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'meena_promo@gmail.com',phone:'98300 77007',phone:'98300 77007',region:'India · Kolkata',   reason:'团队 6 人;近期投诉较多临时冻结',                                  channels:'Instagram · TikTok',                    loginName:'meena_promo', password:'Test@1234', createdAt:'2026-04-10 08:00:00', updatedAt:'2026-04-12 11:00:00', state:'passed' },
   { id:'AC100008', _channel:'agentportal', name:'AC範例8',    tier:'normal',  userId:'',          parentId:'AG000000', parentName:'本商户',   contact:'fakeaff@gmail.com',phone:'91000 88008',   phone:'91000 88008',region:'India · Jaipur',     reason:'已停用 — 违规推广手法',                                            channels:'Affiliate 网络',                        loginName:'fakeaff_x',   password:'Test@1234', createdAt:'2026-03-15 16:30:00', updatedAt:'2026-03-20 18:00:00', state:'passed' },
 ];
@@ -350,8 +350,8 @@ function ensureMerchantAgentsStore() {
   };
   // v3.0.75 → v3.0.78 已上移到函数顶部、每次都执行(原 onelane init 内的清理已废弃,改放函数 top)
   const ACSamples = [
-    { id:'AC100005', name:'AC範例5', tier:'super',   status:'pending',   loginName:'arjunaff',     password:'Test@1234', createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', activatedAt:null,                  region:'India · Bangalore', contact:'arjun_aff@gmail.com',  phone:'98800 55005', reason:'隔壁平台代理 2 年,月均流水 ₹300 万',  channels:'Telegram · Affiliate 网络',     players: 0,   commission: 0 },
-    { id:'AC100006', name:'AC範例6', tier:'normal',  status:'active',    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', activatedAt:'2026-04-23 09:30:00', region:'India · Hyderabad',  contact:'rajesh_aff@gmail.com', phone:'90400 66006', reason:'通过代理后台注册申请;主投 Telegram + YouTube',  channels:'Telegram · YouTube',     players: 142, commission: 18500 },
+    { id:'AC100005', name:'AC範例5_真實流轉範例', tier:'super',   status:'pending',   loginName:'arjunaff',     password:'Test@1234', createdAt:'2026-05-11 14:00:00', updatedAt:'2026-05-13 16:00:00', activatedAt:null,                  region:'India · Bangalore', contact:'arjun_aff@gmail.com',  phone:'98800 55005', reason:'隔壁平台代理 2 年,月均流水 ₹300 万',  channels:'Telegram · Affiliate 网络',     players: 0,   commission: 0 },
+    { id:'AC100006', name:'AC範例6_全狀態範例', tier:'normal',  status:'active',    loginName:'rajeshmedia', password:'Test@1234', createdAt:'2026-04-20 10:15:00', updatedAt:'2026-04-22 14:00:00', activatedAt:'2026-04-23 09:30:00', region:'India · Hyderabad',  contact:'rajesh_aff@gmail.com', phone:'90400 66006', reason:'通过代理后台注册申请;主投 Telegram + YouTube',  channels:'Telegram · YouTube',     players: 142, commission: 18500 },
     { id:'AC100007', name:'AC範例7', tier:'general', status:'frozen',    loginName:'meena_promo', password:'Test@1234', createdAt:'2026-04-10 08:00:00', updatedAt:'2026-04-12 11:00:00', activatedAt:'2026-04-13 09:00:00', region:'India · Kolkata',    contact:'meena_promo@gmail.com',phone:'98300 77007', reason:'团队 6 人;近期投诉较多临时冻结',                channels:'Instagram · TikTok',     players: 87,  commission: 12200, frozenReason:'近期玩家投诉率超阈值,临时冻结排查' },
     { id:'AC100008', name:'AC範例8', tier:'normal',  status:'suspended', loginName:'fakeaff_x',   password:'Test@1234', createdAt:'2026-03-15 16:30:00', updatedAt:'2026-03-20 18:00:00', activatedAt:'2026-03-21 10:00:00', region:'India · Jaipur',     contact:'fakeaff@gmail.com',    phone:'91000 88008', reason:'已停用 — 违规推广手法',                          channels:'Affiliate 网络',         players: 0,   commission: 0,     suspendReason:'查实存在虚假推广行为,终止合作' },
   ];
@@ -573,7 +573,7 @@ function AgentsModule({ initialDetail = null }) {
       return true;
     });
   }, [agents, tab, q, type, tier, createWay]);
-  const pageSize = 12;
+  const [pageSize, setPageSize] = React.useState(20);
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
   const counts = {
@@ -765,8 +765,6 @@ function AgentsModule({ initialDetail = null }) {
                 <th>代理ID</th>
                 <th>代理名称</th>
                 <th>上级代理ID-名称</th>
-                <th>代理等级</th>
-                <th className="right">玩家数</th>
                 <th>账户状态</th>
                 <th>更新时间</th>
                 <th>创建时间</th>
@@ -793,8 +791,6 @@ function AgentsModule({ initialDetail = null }) {
                     <td className="text-mono" style={{color:'var(--text-0)'}}>{displayId}</td>
                     <td onClick={()=>setDetail(a)} style={{cursor:'pointer',color:'var(--text-0)',fontWeight:500}}>{a.name}</td>
                     <td className="text-mono" style={{fontSize:12}}>{parentLabel}</td>
-                    <td className="text-mono center">LV-{a.level}</td>
-                    <td className="right">{F.fmtNum(a.players)}</td>
                     <td><span className={'status-pill ' + statusCls}>{statusLabel}</span></td>
                     <td className="text-mute" style={{fontSize:11,fontFamily:'JetBrains Mono'}}>{fmtDT(updated)}</td>
                     <td className="text-mute" style={{fontSize:11,fontFamily:'JetBrains Mono'}}>{fmtDT(new Date(a.created))}</td>
@@ -809,7 +805,7 @@ function AgentsModule({ initialDetail = null }) {
             </tbody>
           </table>
         </div>
-        <APG page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
+        <APG page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
       </div>
       )}
 

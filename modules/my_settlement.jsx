@@ -1,378 +1,522 @@
-// 代理后台 - 我的结算单 P0-8
+// 代理后台 - 佣金结算单(CS) P0-8 · A 版:总览 + 抽屉明细(中/英 i18n)
+// 读共享单据 store(window.APS_BILLING),与商户后台「代理佣金结算单」同源。
 const ASTUI = window.UI;
 
-function MySettlementModule() {
-  const D = window.APS_DATA;
+// ===== i18n 注册(中 / 英)=====
+(function () {
+  const I = window.APS_I18N = window.APS_I18N || {};
+  const ZH = I.zh = I.zh || {}, EN = I.en = I.en || {};
+  const a = (k, zh, en) => { ZH[k] = zh; EN[k] = en; };
+  // 页面
+  a('ms.page.title', '佣金结算单', 'Commission Settlements');
+  a('ms.page.sub', '查看所有已结算佣金订单流转状态及提款申请', 'View all settled commission orders, their status flow and withdrawal requests');
+  a('ms.btn.guide', '说明', 'Help');
+  a('ms.btn.apply', '申请提款', 'Apply Withdrawal');
+  a('ms.btn.noEligible', '当前没有待提款订单', 'No withdrawable settlements at the moment');
+  // KPI
+  a('ms.kpi.pending', '待申请提款总金额', 'Pending Withdrawal Amount');
+  a('ms.kpi.reviewCount', '审核中总订单数', 'Reviewing Orders');
+  a('ms.kpi.reviewAmt', '审核中总金额', 'Reviewing Amount');
+  a('ms.kpi.paidTotal', '累计已付款总金额', 'Total Paid');
+  a('ms.unit.orders', '张', '');
+  // 页签
+  a('ms.tab.all', '全部', 'All');
+  a('ms.tab.withdrawable', '待提款', 'Withdrawable');
+  a('ms.tab.reviewing', '审核中', 'Reviewing');
+  a('ms.tab.carried', '转结下期', 'Carried Forward');
+  a('ms.tab.rejected', '已拒绝', 'Rejected');
+  a('ms.tab.auditing', '核算中', 'Auditing');
+  a('ms.tab.auditRejected', '已驳回', 'Audit Rejected');
+  a('ms.tab.auditCarried', '财务转结', 'Audit Carried');
+  a('ms.tab.paying', '付款中', 'Paying');
+  a('ms.tab.payFailed', '付款失败', 'Pay Failed');
+  a('ms.tab.paid', '付款成功', 'Paid');
+  // 状态分组标题(对齐提款审核进度筛选条)
+  a('ms.grp.settle', '结算', 'Settlement');
+  a('ms.grp.apply', '提款申请', 'Application');
+  a('ms.grp.audit', '财务核算', 'Finance Audit');
+  a('ms.grp.pay', '付款', 'Payment');
+  // 表头
+  a('ms.col.period', '分润期号', 'Period');
+  a('ms.col.commission', '佣金', 'Commission');
+  a('ms.col.csno', '结算单号', 'Settlement No.');
+  a('ms.col.cycle', '结算周期', 'Settlement Cycle');
+  a('ms.col.time', '结算时间', 'Settlement Time');
+  a('ms.col.status', '订单状态', 'Order Status');
+  a('ms.col.updated', '状态更新时间', 'Status Updated');
+  a('ms.col.action', '操作', 'Action');
+  a('ms.act.view', '查看', 'View');
+  a('ms.empty', '该状态下暂无结算单', 'No settlements in this status');
+  // CS 状态
+  a('ms.st.withdrawable', '待提款', 'Withdrawable');
+  a('ms.st.carried', '转结下期', 'Carried Forward');
+  a('ms.st.reviewing', '审核中', 'Reviewing');
+  a('ms.st.auditing', '核算中', 'Auditing');
+  a('ms.st.auditCarried', '财务转结', 'Audit Carried');
+  a('ms.st.paying', '付款中', 'Paying');
+  a('ms.st.payFailed', '付款失败·待提款', 'Pay Failed · Withdrawable');
+  a('ms.st.paid', '付款成功', 'Paid');
+  a('ms.st.rejected', '已拒绝·待提款', 'Rejected · Withdrawable');
+  a('ms.st.auditRejected', '已驳回·待提款', 'Audit Rejected · Withdrawable');
+  // WR / FS / PO 状态(链路徽章)
+  a('ms.wrst.reviewing', '审核中', 'Reviewing'); a('ms.wrst.paid', '已提款', 'Withdrawn'); a('ms.wrst.rejected', '已拒绝', 'Rejected');
+  a('ms.fsst.pending', '待核算', 'Pending'); a('ms.fsst.auditing', '核算中', 'Auditing'); a('ms.fsst.rejected', '已驳回', 'Rejected');
+  a('ms.fsst.paying', '付款中', 'Paying'); a('ms.fsst.payFailed', '付款失败', 'Pay Failed'); a('ms.fsst.paid', '已付款', 'Paid'); a('ms.fsst.carried', '已转结', 'Carried Forward');
+  a('ms.post.success', '付款成功', 'Paid');
+  // 抽屉
+  a('ms.drawer.title', '佣金结算单', 'Commission Settlement');
+  a('ms.drawer.sub', '本期佣金结算明细与提款流转状态', 'Commission settlement details & withdrawal status');
+  a('ms.sec.status', '状态', 'Status');
+  a('ms.sec.basic', '基本资料', 'Basic Info');
+  a('ms.sec.source', '佣金来源', 'Commission Source');
+  a('ms.sec.linked', '关联提款申请单', 'Linked Withdrawal Request');
+  a('ms.f.orderStatus', '订单状态', 'Order Status');
+  a('ms.f.updateTime', '更新时间', 'Updated');
+  a('ms.f.agentName', '代理名称', 'Agent Name');
+  a('ms.f.agentId', '代理 ID', 'Agent ID');
+  a('ms.f.period', '分润期号', 'Period');
+  a('ms.f.csno', '结算单号', 'Settlement No.');
+  a('ms.f.settleTime', '结算时间', 'Settlement Time');
+  a('ms.f.cycle', '结算周期', 'Settlement Cycle');
+  a('ms.f.curCom', '本期佣金', 'Current Commission');
+  a('ms.f.carryCom', '往期转结佣金', 'Carried-in Commission');
+  a('ms.f.withdrawable', '可提款金额', 'Withdrawable Amount');
+  a('ms.f.carryAmt', '转结金额', 'Carried Amount');
+  a('ms.doc.wr', '提款申请单(WR)', 'Withdrawal Request (WR)');
+  a('ms.doc.fs', '财务核算单(FS)', 'Finance Settlement (FS)');
+  a('ms.doc.po', '付款单(PO)', 'Payment Order (PO)');
+  a('ms.reject.cs', '提款申请已被拒绝:', 'Withdrawal request rejected: ');
+  a('ms.payfail.cs', '本期付款失败。', 'Payment failed for this period. ');
+  a('ms.payfail.csTail', '本期佣金已退回「待提款」,可重新申请提款。', 'Commission returned to “Withdrawable”; you may re-apply.');
+  a('ms.reject.csTail', ' 本期佣金已退回「待提款」,可重新申请提款。', ' Commission returned to “Withdrawable”; you may re-apply.');
+  a('ms.timeline.hint', '完整流转时间轴可在「提款审核进度」查看。', 'See the full timeline in “Withdrawal Progress”.');
+  a('ms.foot.q', '有问题?', 'Need help?');
+  a('ms.foot.contact', '联络线上客服', 'Contact Live Support');
+  a('ms.toast.contacting', '正在为您接入在线客服…', 'Connecting you to live support…');
+  // 申请提款弹窗
+  a('ms.apply.title', '申请提款', 'Apply Withdrawal');
+  // v3.7.39 申请校验:有未结束提款审核时阻断
+  a('ms.block.title', '有未结束提款审核', 'Withdrawal Review In Progress');
+  a('ms.block.body', '必须等当前提款审核全部结束(付款成功 / 退回待提款)后,才能再次发起提款审核。', 'You must wait until the current withdrawal review is fully completed (paid / returned to withdrawable) before submitting another.');
+  a('ms.block.ok', '确认', 'OK');
+  a('ms.apply.sub', '申请提款所有待提款结算单', 'Apply to withdraw all withdrawable settlements');
+  a('ms.apply.payInfo', '收款资料', 'Payout Details');
+  a('ms.apply.editPay', '编辑收款方式', 'Edit payout method');
+  a('ms.apply.method', '收款方式', 'Method');
+  a('ms.apply.orders', '待提款结算订单', 'Withdrawable Settlements');
+  a('ms.apply.empty', '暂无可提款结算单', 'No withdrawable settlements');
+  a('ms.apply.rejTail', ' · 上次被拒,可重新申请', ' · previously rejected, re-applicable');
+  a('ms.apply.failTail', ' · 上次付款失败,可重新申请', ' · last payment failed, re-applicable');
+  a('ms.apply.audrejTail', ' · 核算驳回,可重新申请', ' · audit rejected, re-applicable');
+  a('ms.apply.count', '结算单数', 'Settlements');
+  a('ms.apply.amount', '佣金金额', 'Commission');
+  a('ms.apply.cancel', '取消', 'Cancel');
+  a('ms.apply.submit', '申请', 'Apply');
+  a('ms.apply.toast', '提款申请已提交', 'Withdrawal request submitted');
+  a('ms.apply.toastN', '张结算单', 'settlements');
+  a('ms.apply.toastTail', ',待商户审核', ', pending merchant review');
+  // 说明弹窗
+  a('ms.help.title', '单据流转说明', 'Document Flow Guide');
+  a('ms.help.sub', '佣金从结算到付款的 5 层单据链', 'The 5-layer document chain from settlement to payment');
+  a('ms.help.ok', '知道了', 'Got it');
+  a('ms.help.tabFlow', '单据流程', 'Document Flow');
+  a('ms.help.l1n', '分润期号(W/M)', 'Period (W/M)'); a('ms.help.l1d', '定义佣金计算周期 · 如 W26064', 'Defines the commission cycle · e.g. W26064');
+  a('ms.help.l2n', '佣金结算单(CS)', 'Commission Settlement (CS)'); a('ms.help.l2d', '计算代理本期佣金 · 本页所在 · 如 CSW26064000001', 'Your per-cycle commission bill · this page · e.g. CSW26064000001');
+  a('ms.help.l3n', '提款申请单(WR)', 'Withdrawal Request (WR)'); a('ms.help.l3d', '记录代理一次请款行为 · 可打包多张 CS', 'One withdrawal action · may bundle multiple CS');
+  a('ms.help.l4n', '财务核算单(FS)', 'Finance Settlement (FS)'); a('ms.help.l4d', '计算最终应付金额(扣行政费/税金/风控等)', 'Computes net payable (admin fee / tax / risk, etc.)');
+  a('ms.help.l5n', '付款单(PO)', 'Payment Order (PO)'); a('ms.help.l5d', '记录实际付款结果与支付凭证', 'Records the actual payment result & receipt');
+  a('ms.help.flow', '状态流转:待提款 → 审核中 → 核算中 → 付款中 → 付款成功;提款审核未过 → 已拒绝·待提款,可重新申请;财务核算未过 → 已驳回·待提款,可重新申请;核算应付≤0 → 财务转结(并入下期财务调整);付款失败 → 付款失败·待提款,可重新申请;本期佣金未达结算门槛 → 转结下期(并入下期佣金)。', 'Flow: Withdrawable → Reviewing → Auditing → Paying → Paid; withdrawal review failed → Rejected · Withdrawable (re-applicable); finance audit failed → Audit Rejected · Withdrawable (re-applicable); net payable ≤ 0 → Audit Carried (into next period’s finance adjustment); payment failed → Pay Failed · Withdrawable (re-applicable); commission below settlement threshold → Carried Forward (into next period’s commission).');
+})();
+
+function MySettlementModule({ onNav }) {
   const F = window.APS_FMT;
   const me = window.useCurrentAgent();
+  const B = window.useBilling();
+  const L = window.BILLING_LABELS.cs;
   const toast = ASTUI.useToast();
-  const [tab, setTab] = React.useState('list');
+  const CUR = B.CUR;
+  const [lang] = window.useAgentLang();
+  const T = (k, fb) => window.t(k, fb);
+  // 日期统一为 年/月/日 时:分:秒(中英一致)
+  const fmtDT = (ts) => {
+    const d = new Date(ts); const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  };
+
   const [filter, setFilter] = React.useState('all');
   const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
   const [detail, setDetail] = React.useState(null);
   const [showWithdraw, setShowWithdraw] = React.useState(false);
-  const [wdSelected, setWdSelected] = React.useState({});
-  const [wdMethod, setWdMethod] = React.useState('USDT-TRC20 · TXxxx...18jK9q (默认)');
+  const [showHelp, setShowHelp] = React.useState(false);
+  const [blockOpen, setBlockOpen] = React.useState(false);   // v3.7.39 有未结束提款审核 阻断弹窗
 
-  // v3.2.25 结算单提款生命周期状态机:
-  //   carried(转结下期·未达门槛) / withdrawable(待提款) / reviewing(提款审核中)
-  //   / paid(已提款) / rejected(已驳回·可重新申请)
-  // 链路:报表已结算→生成结算单→[达门槛=待提款 | 未达门槛=转结下期]
-  //       →勾选申请提款→提款审核中→商户通过(已提款)/驳回(已驳回→退回待提款)
-  const WD_THRESHOLD = 1000; // 提款门槛 ₹1000,低于此金额结转下期合并
-  const [override, setOverride] = React.useState({}); // id -> status,本地操作流转覆盖
+  // 收款资料 — 与「我的帐户 → 收款方式」同源(me._payment / _formSnapshot)
+  const snap = me._appData?._formSnapshot || {};
+  const payInfo = {
+    method:   me._payment?.method   || snap.payMethod || 'UPI',
+    ifsc:     me._payment?.ifsc     || snap.ifsc      || '',
+    account:  me._payment?.account  || snap.account   || '',
+    realName: me._payment?.realName || snap.realName  || snap.holder || me.name || '',
+    email:    me._payment?.email    || snap.payEmail  || '',
+  };
+  const gotoPayment = () => {
+    window.__AGENT_PROFILE_TAB = 'payment';
+    setShowWithdraw(false);
+    if (onNav) onNav('mod:my_profile');
+  };
 
-  // v3.2.26 结算单与「分润报表 → 已结算分润」一一对应:
-  //   同期号(W26054…)、RevShare 金额 = 该期报表「总佣金」、同币种(₹)。
-  //   数据源自 my_revshare.jsx 暴露的 getSettledRevsharePeriods(共享真源)。
-  const periods = (window.getSettledRevsharePeriods ? window.getSettledRevsharePeriods(me.id, 'weekly') : []);
-  const my = periods.map(p => {
-    const revShare = p.commission;          // = 分润报表该期「总佣金」
-    const cpa = p.cpa || 0;
-    const adjust = p.adj || 0;
-    const total = cpa + revShare + adjust;
-    const id = 'STM-' + p.week;
-    let status;
-    if (total < WD_THRESHOLD) status = 'carried';   // 未达门槛 → 转结下期
-    else status = p.wdStatus || 'withdrawable';     // 报表期次预设的提款状态
-    if (override[id]) status = override[id];         // 本地操作覆盖
-    return {
-      id,
-      period: p.week,
-      periodRange: String(p.start).replace(/\s.*$/, '') + ' ~ ' + String(p.end).replace(/\s.*$/, ''),
-      cpa, revShare, adjust, total,
-      status,
-      playerCount: p.playerCount,
-      generated: p.endTs,
-      paidAt: status === 'paid' ? p.endTs + 2 * 86400000 : null,
-      txid: status === 'paid' ? 'TX' + p.week : null,
-      payoutMethod: me.payoutMethod || 'USDT-TRC20',
-    };
-  });
+  const my = B.csOf(me.id);
   const counts = {
     all: my.length,
-    withdrawable: my.filter(s=>s.status==='withdrawable').length,
-    reviewing: my.filter(s=>s.status==='reviewing').length,
-    paid: my.filter(s=>s.status==='paid').length,
-    rejected: my.filter(s=>s.status==='rejected').length,
-    carried: my.filter(s=>s.status==='carried').length,
+    withdrawable: my.filter(s => s.status === 'withdrawable').length,
+    reviewing: my.filter(s => s.status === 'reviewing').length,
+    auditing: my.filter(s => s.status === 'auditing').length,
+    carried: my.filter(s => s.status === 'carried').length,
+    rejected: my.filter(s => s.status === 'rejected').length,
+    auditRejected: my.filter(s => s.status === 'auditRejected').length,
+    auditCarried: my.filter(s => s.status === 'auditCarried').length,
+    paying: my.filter(s => s.status === 'paying').length,
+    payFailed: my.filter(s => s.status === 'payFailed').length,
+    paid: my.filter(s => s.status === 'paid').length,
   };
-  const list = filter === 'all' ? my : my.filter(s=>s.status===filter);
-  const pageSize = 12;
-  const paged = list.slice((page-1)*pageSize, page*pageSize);
+  // 状态筛选 —— 分组胶囊式(对齐提款审核进度页 .wp-filter)
+  const ALL_TAB = { v: 'all', c: counts.all };
+  const TAB_GROUPS = [
+    { label: T('ms.grp.settle'), tabs: [
+      { v: 'withdrawable', c: counts.withdrawable },
+      { v: 'carried', c: counts.carried },
+    ] },
+    { label: T('ms.grp.apply'), tabs: [
+      { v: 'reviewing', c: counts.reviewing },
+      { v: 'rejected', c: counts.rejected },
+    ] },
+    { label: T('ms.grp.audit'), tabs: [
+      { v: 'auditing', c: counts.auditing },
+      { v: 'auditRejected', c: counts.auditRejected },
+      { v: 'auditCarried', c: counts.auditCarried },
+    ] },
+    { label: T('ms.grp.pay'), tabs: [
+      { v: 'paying', c: counts.paying },
+      { v: 'payFailed', c: counts.payFailed },
+      { v: 'paid', c: counts.paid },
+    ] },
+  ];
+  const list = filter === 'all' ? my : my.filter(s => s.status === filter);
+  // v3.6.35 表头排序:结算周期(periodRange 起始日)/ 结算时间(settledAt)
+  const sorter = window.useTableSort();
+  const sortKeys = {
+    cycle: (s) => { const m = /(\d{4})\/(\d{1,2})\/(\d{1,2})/.exec(s.periodRange || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : (s.settledAt || 0); },
+    time: (s) => s.settledAt || 0,
+  };
+  const sorted = sorter.apply(list, sortKeys);
+  const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
 
-  const totalPaid = my.filter(s=>s.status==='paid').reduce((a,s)=>a+s.total,0);
-  const reviewSum = my.filter(s=>s.status==='reviewing').reduce((a,s)=>a+s.total,0);
-  const carriedSum = my.filter(s=>s.status==='carried').reduce((a,s)=>a+s.total,0);
-  // 待提款 = 已结算达门槛、可发起提款的结算单
-  const withdrawable = my.filter(s=>s.status==='withdrawable');
-  const available = withdrawable.reduce((a,s)=>a+s.total,0);
-  const wdFee = 1;
+  // 可发起提款的 CS:待提款 + 已拒绝 + 付款失败(均可重新申请)
+  const eligible = my.filter(s => s.status === 'withdrawable' || s.status === 'rejected' || s.status === 'auditRejected' || s.status === 'payFailed');
+  const available = eligible.reduce((a, s) => a + s.totalCommission, 0);
+  const reviewSum = my.filter(s => s.status === 'reviewing').reduce((a, s) => a + s.totalCommission, 0);
+  const paidSum = my.filter(s => s.status === 'paid').reduce((a, s) => a + s.totalCommission, 0);
 
-  const openWithdraw = (preselectId) => {
-    const init = {};
-    withdrawable.forEach(s => { init[s.id] = preselectId ? (s.id === preselectId) : true; });
-    setWdSelected(init);
-    setWdMethod('USDT-TRC20 · TXxxx...18jK9q (默认)');
+  const openWithdraw = () => {
+    if (eligible.length === 0) { toast(T('ms.btn.noEligible')); return; }
     setShowWithdraw(true);
   };
-  const wdList = withdrawable.filter(s => wdSelected[s.id]);
-  const wdAmount = wdList.reduce((a,s)=>a+s.total,0);
-  const toggleWd = (id) => setWdSelected(m => ({ ...m, [id]: !m[id] }));
-  const allWdChecked = withdrawable.length > 0 && withdrawable.every(s => wdSelected[s.id]);
+  const wdAmount = available;
+
+  const submitWithdraw = () => {
+    if (eligible.length === 0) return;
+    // v3.7.39 校验:存在未结束的提款审核(在途状态 审核中/核算中/付款中)→ 阻断,不可再次发起
+    const hasUnfinished = my.some(s => s.status === 'reviewing' || s.status === 'auditing' || s.status === 'paying');
+    if (hasUnfinished) { setShowWithdraw(false); setBlockOpen(true); return; }
+    const wr = B.createWithdraw(me.id, eligible.map(s => s.id), payInfo.method, payInfo.account);
+    if (wr) toast(T('ms.apply.toast') + ' · ' + wr.id + ' · ' + wr.csCount + ' ' + T('ms.apply.toastN') + ' ' + CUR + F.fmtNum(wr.amount) + T('ms.apply.toastTail'));
+    setShowWithdraw(false);
+  };
+
+  const csLabel = (s) => T('ms.st.' + s, (L[s] || {}).label || s);
+  const csBadge = (s) => { const d = L[s] || {}; return <span className={'badge ' + (d.tone || 'b-neutral')}>{csLabel(s)}</span>; };
+  const docStatusText = (kind, status) => T('ms.' + kind + 'st.' + status, (window.BILLING_LABELS[kind][status] || {}).label || status);
+  const docTone = (kind, status) => (window.BILLING_LABELS[kind][status] || {}).tone || 'b-neutral';
+
+  // 该 CS 关联的提款链(WR/FS/PO)
+  const chainOf = (cs) => {
+    if (!cs || !cs.wrId) return {};
+    const wr = B.wrById(cs.wrId);
+    const fs = wr && wr.fsId ? B.fsById(wr.fsId) : null;
+    const po = fs && fs.poId ? B.poById(fs.poId) : null;
+    return { wr, fs, po };
+  };
 
   return (
     <div className="page">
-      <ASTUI.PageHead title="我的结算单" subtitle="按周生成 · 每期对应「分润报表 → 已结算分润」该期总佣金 + CPA + 调整项">
-        <button className="btn ghost"><Icon name="download" size={13}/>导出全部</button>
-        <button className="btn primary" disabled={withdrawable.length===0} onClick={()=>openWithdraw()}><Icon name="wallet" size={13}/>申请提款{withdrawable.length>0?' ('+withdrawable.length+')':''}</button>
+      <ASTUI.PageHead title={T('ms.page.title')} subtitle={T('ms.page.sub')}>
+        <button className="btn" onClick={() => setShowHelp(true)}><Icon name="info" size={13} />{T('ms.btn.guide')}</button>
+        <button className="btn primary" onClick={() => openWithdraw()}>
+          <Icon name="wallet" size={13} />{T('ms.btn.apply')}
+        </button>
       </ASTUI.PageHead>
 
-      <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
+      <div className="kpi-grid mb-4" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
         {[
-          ['待提款', '₹' + F.money(available), counts.withdrawable + ' 张可提 · 点右上申请', true],
-          ['提款审核中', '₹' + F.money(reviewSum), counts.reviewing + ' 张待商户审核', false],
-          ['累计已提', '₹' + F.money(totalPaid), counts.paid + ' 张已到账', false],
-          ['转结下期', '₹' + F.money(carriedSum), counts.carried + ' 张未达 ₹' + WD_THRESHOLD + ' 门槛', false],
-        ].map(([l,v,d,hl]) => (
+          [T('ms.kpi.pending'), CUR + F.fmtNum(available), true],
+          [T('ms.kpi.reviewCount'), String(counts.reviewing), false],
+          [T('ms.kpi.reviewAmt'), CUR + F.fmtNum(reviewSum), false],
+          [T('ms.kpi.paidTotal'), CUR + F.fmtNum(paidSum), false],
+        ].map(([l, v, hl]) => (
           <div key={l} className="kpi">
             <div className="label">{l}</div>
-            <div className="val" style={hl?{color:'var(--brand)'}:undefined}>{v}</div>
-            <div className="text-mute" style={{fontSize:11,marginTop:4}}>{d}</div>
+            <div className="val" style={hl ? { color: 'var(--brand)' } : undefined}>{v}</div>
           </div>
         ))}
       </div>
 
       <div className="card">
-        <ASTUI.Tabs value={tab} onChange={setTab} tabs={[
-          {key:'list', label:'结算单列表', count: counts.all},
-          {key:'cycle', label:'结算周期'},
-        ]}/>
-
-        {tab === 'list' && (
-          <>
-            <div className="toolbar">
-              <div className="seg">
-                {[
-                  {v:'all',l:'全部',c:counts.all},
-                  {v:'withdrawable',l:'待提款',c:counts.withdrawable},
-                  {v:'reviewing',l:'提款审核中',c:counts.reviewing},
-                  {v:'paid',l:'已提款',c:counts.paid},
-                  {v:'rejected',l:'已驳回',c:counts.rejected},
-                  {v:'carried',l:'转结下期',c:counts.carried},
-                ].map(s=>(
-                  <button key={s.v} className={filter===s.v?'active':''} onClick={()=>{setFilter(s.v);setPage(1);}}>
-                    {s.l}<span className="text-mono text-mute" style={{marginLeft:4}}>({s.c})</span>
+        <div className="wp-filter">
+          <div className="wp-fgroup">
+            <span className="wp-flabel">&nbsp;</span>
+            <div className="wp-ftabs">
+              <button className={'wp-ftab' + (filter === ALL_TAB.v ? ' on' : '')} onClick={() => { setFilter(ALL_TAB.v); setPage(1); }}>
+                {T('ms.tab.all')}<span className="wp-fcount">{ALL_TAB.c}</span>
+              </button>
+            </div>
+          </div>
+          {TAB_GROUPS.map(grp => (
+            <div key={grp.label} className="wp-fgroup">
+              <span className="wp-flabel">{grp.label}</span>
+              <div className="wp-ftabs">
+                {grp.tabs.map(t => (
+                  <button key={t.v} className={'wp-ftab' + (filter === t.v ? ' on' : '')} onClick={() => { setFilter(t.v); setPage(1); }}>
+                    {T('ms.tab.' + t.v)}<span className="wp-fcount">{t.c}</span>
                   </button>
                 ))}
               </div>
-              <ASTUI.DateRange value="90d" onChange={()=>{}}/>
             </div>
-            <div className="tbl-wrap">
-              <table className="tbl">
-                <thead><tr>
-                  <th>结算单号</th><th>周期</th>
-                  <th className="right">CPA</th><th className="right">RevShare</th>
-                  <th className="right">调整</th><th className="right">合计</th>
-                  <th>状态</th><th>到账时间</th><th style={{width:140}}>操作</th>
-                </tr></thead>
-                <tbody>
-                  {paged.map(s => (
-                    <tr key={s.id} onClick={()=>setDetail(s)} style={{cursor:'pointer'}}>
-                      <td className="id" style={{color:'var(--brand)',fontFamily:'var(--font-mono)',fontSize:11.5}}>{s.id}</td>
-                      <td className="text-mono" style={{fontSize:12}}>{s.period}</td>
-                      <td className="right text-mono">₹{F.money(s.cpa)}</td>
-                      <td className="right text-mono">₹{F.money(s.revShare)}</td>
-                      <td className="right text-mono" style={{color: s.adjust<0?'var(--danger)':'var(--text-1)'}}>
-                        {s.adjust>=0?'+':''}₹{F.money(s.adjust)}
-                      </td>
-                      <td className="right text-mono" style={{color:'var(--text-0)',fontWeight:600}}>₹{F.money(s.total)}</td>
-                      <td>
-                        {s.status === 'paid' && <span className="badge b-success"><span className="dot"/>已提款</span>}
-                        {s.status === 'withdrawable' && <span className="badge b-brand"><span className="dot"/>待提款</span>}
-                        {s.status === 'reviewing' && <span className="badge b-warning"><span className="dot"/>提款审核中</span>}
-                        {s.status === 'rejected' && <span className="badge b-danger"><span className="dot"/>已驳回</span>}
-                        {s.status === 'carried' && <span className="badge b-neutral"><span className="dot"/>转结下期</span>}
-                      </td>
-                      <td className="text-mute" style={{fontSize:11}}>{s.paidAt?new Date(s.paidAt).toLocaleDateString('zh-CN'):'-'}</td>
-                      <td onClick={e=>e.stopPropagation()}>
-                        <div style={{display:'flex',gap:4}}>
-                          {s.status === 'withdrawable'
-                            ? <button className="btn sm primary" title="申请提款" onClick={()=>openWithdraw(s.id)}><Icon name="wallet" size={12}/>申请提款</button>
-                            : s.status === 'rejected'
-                            ? <button className="btn sm" title="重新申请" onClick={()=>{setOverride(o=>({...o,[s.id]:'withdrawable'}));toast('已退回待提款,可重新申请');}}>重新申请</button>
-                            : <button className="btn sm ghost icon-only" title="查看详情" onClick={()=>setDetail(s)}><Icon name="eye" size={13}/></button>}
-                          <button className="btn sm ghost icon-only" title="下载发票"><Icon name="download" size={13}/></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <ASTUI.Pagination page={page} pageSize={pageSize} total={list.length} onPage={setPage}/>
-          </>
-        )}
-
-        {tab === 'cycle' && (
-          <div style={{padding:18}}>
-            <div className="card-inner" style={{maxWidth:680,margin:'0 auto'}}>
-              <div className="form-section-title" style={{marginTop:0}}>结算与提款流转</div>
-              <div style={{display:'grid',gap:14,marginBottom:18}}>
-                {[
-                  ['1 · 本期分润报表已结算', '周一 00:00 UTC 截算上一周期 CPA + RevShare', 'pie'],
-                  ['2 · 生成该期结算单', '系统自动出单,合计 = CPA + RevShare + 调整项', 'check'],
-                  ['3 · 判定提款资格', '达 ₹' + WD_THRESHOLD + ' 门槛 → 待提款;未达 → 转结下期合并', 'wallet'],
-                  ['4 · 代理申请提款', '在「申请提款」弹窗勾选待提款结算单提交', 'wallet'],
-                  ['5 · 商户审核', '商户后台「提款审核」通过 → 已提款;驳回 → 退回待提款', 'shield'],
-                  ['6 · 付款到账', '通过后 30 分钟内打款,到账提醒', 'check'],
-                ].map(([t, d, ic], i) => (
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:14,padding:'12px 16px',background:'var(--bg-2)',borderRadius:6}}>
-                    <div style={{width:36,height:36,borderRadius:6,background:'var(--brand-soft)',display:'grid',placeItems:'center'}}>
-                      <Icon name={ic} size={16} style={{color:'var(--brand)'}}/>
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12.5,fontWeight:600,color:'var(--text-0)'}}>{t}</div>
-                      <div className="text-mute" style={{fontSize:11.5,marginTop:2}}>{d}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{padding:14,background:'#fef3c7',borderRadius:6,fontSize:12,color:'#92400e',lineHeight:1.7}}>
-                <Icon name="alert" size={13} style={{marginRight:6,verticalAlign:'middle'}}/>
-                <strong>转结规则</strong>:单期结算金额低于 ₹{WD_THRESHOLD} 提款门槛时,自动结转并入下期结算单合并计算,直至达到门槛后方可申请提款。
-              </div>
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead><tr>
+              <th>{T('ms.col.period')}</th><th className="right">{T('ms.col.commission')}</th><th>{T('ms.col.csno')}</th>
+              <window.SortTh col="cycle" label={T('ms.col.cycle')} sort={sorter.sort} onToggle={sorter.toggle} />
+              <window.SortTh col="time" label={T('ms.col.time')} sort={sorter.sort} onToggle={sorter.toggle} />
+              <th>{T('ms.col.status')}</th><th>{T('ms.col.updated')}</th>
+              <th style={{ width: 110 }}>{T('ms.col.action')}</th>
+            </tr></thead>
+            <tbody>
+              {paged.length === 0 ? (
+                <tr><td colSpan="8" style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5 }}>{T('ms.empty')}</td></tr>
+              ) : paged.map(s => (
+                <tr key={s.id} onClick={() => setDetail(s)} style={{ cursor: 'pointer' }}>
+                  <td className="text-mono" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-0)' }}>{s.period}</td>
+                  <td className="right text-mono" style={{ color: 'var(--text-0)', fontWeight: 600 }}>{CUR}{F.fmtNum(s.totalCommission)}</td>
+                  <td className="id" style={{ color: 'var(--brand)', fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>{s.id}</td>
+                  <td className="text-mute" style={{ fontSize: 11 }}>{s.periodRange}</td>
+                  <td className="text-mute" style={{ fontSize: 11.5 }}>{fmtDT(s.settledAt)}</td>
+                  <td>{csBadge(s.status)}</td>
+                  <td className="text-mute" style={{ fontSize: 11.5 }}>{fmtDT(s.statusAt)}</td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <button className="link-act" title={T('ms.act.view')} onClick={() => setDetail(s)}>{T('ms.act.view')}</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <ASTUI.Pagination page={page} pageSize={pageSize} total={list.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
       </div>
 
-      {/* 结算单详情 Drawer */}
-      <ASTUI.Drawer open={!!detail} onClose={()=>setDetail(null)} title={detail?'结算单详情 · '+detail.id:''} width={620}>
-        {detail && (
-          <div style={{padding:'20px 24px'}}>
-            <div style={{padding:16,background:'linear-gradient(135deg,#3b82f612,transparent)',border:'1px solid var(--brand-line)',borderRadius:8,marginBottom:18}}>
-              <div className="text-mute" style={{fontSize:11,marginBottom:4}}>本期应付</div>
-              <div style={{fontSize:28,fontWeight:600,fontFamily:'var(--font-mono)',color:'var(--brand)'}}>
-                ₹{F.money(detail.total)} <span style={{fontSize:14,color:'var(--text-3)',fontWeight:400}}>INR</span>
-              </div>
-              <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap',alignItems:'center'}}>
-                {detail.status === 'paid' && <span className="badge b-success">已提款</span>}
-                {detail.status === 'withdrawable' && <span className="badge b-brand">待提款</span>}
-                {detail.status === 'reviewing' && <span className="badge b-warning">提款审核中</span>}
-                {detail.status === 'rejected' && <span className="badge b-danger">已驳回</span>}
-                {detail.status === 'carried' && <span className="badge b-neutral">转结下期</span>}
-                <span className="text-mute" style={{fontSize:11.5}}>· 期号 {detail.period} · {detail.periodRange}</span>
-              </div>
+      {/* 结算单详情 Drawer — 简洁版:状态 / 基本资料 / 佣金来源 / 客服 */}
+      <ASTUI.Drawer open={!!detail} onClose={() => setDetail(null)}
+        title={<span style={{ fontSize: 18, fontWeight: 700 }}>{T('ms.drawer.title')}</span>}
+        subtitle={T('ms.drawer.sub')} width={400}
+        footer={detail ? (
+          <div style={{ textAlign: 'left', width: '100%', fontSize: 12.5, color: 'var(--text-3)' }}>
+            {T('ms.foot.q')} <button className="link-act" onClick={() => { window.APS_OPEN_CONTACT ? window.APS_OPEN_CONTACT() : toast(T('ms.toast.contacting')); }}>{T('ms.foot.contact')}</button>
+          </div>
+        ) : null}>
+        {detail && (() => {
+          const { wr, fs, po } = chainOf(detail);
+          const carryAmt = detail.status === 'carried' ? detail.totalCommission : (detail.status === 'auditCarried' && fs ? fs.carryOut : 0);
+          const stColor = CS_TONE_COLOR[(L[detail.status] || {}).tone] || 'var(--text-1)';
+          return (
+          <div style={{ padding: '18px 24px 96px' }}>
+            {/* 状态 */}
+            <div className="drawer-sec">{T('ms.sec.status')}</div>
+            <DRow l={T('ms.f.orderStatus')} v={<span style={{ color: stColor, fontWeight: 600 }}>{csLabel(detail.status)}</span>} plain />
+            <DRow l={T('ms.f.updateTime')} v={fmtDT(detail.statusAt)} />
+
+            {/* 基本资料 */}
+            <div className="drawer-sec">{T('ms.sec.basic')}</div>
+            <DRow l={T('ms.f.agentName')} v={me.name} />
+            <DRow l={T('ms.f.agentId')} v={me.id} />
+            <DRow l={T('ms.f.period')} v={detail.period} />
+            <DRow l={T('ms.f.csno')} v={detail.id} />
+            <DRow l={T('ms.f.cycle')} v={detail.periodRange} />
+            <DRow l={T('ms.f.settleTime')} v={fmtDT(detail.settledAt)} />
+
+            {/* 佣金来源 — 按来源 CS 分组 */}
+            <div className="drawer-sec">{T('ms.sec.source')}</div>
+            {detail.curCommission > 0 && (
+              <SrcGroup src={detail.id} label={T('ms.f.curCom')} amount={CUR + F.fmtNum(detail.curCommission)} />
+            )}
+            {detail.carriedIn > 0 && (
+              <SrcGroup src={detail.carriedFromId || '—'} label={T('ms.f.carryCom')} amount={CUR + F.fmtNum(detail.carriedIn)} />
+            )}
+            <div style={{ borderTop: '1px solid var(--line)', marginTop: 12, paddingTop: 8 }}>
+              <DRow l={T('ms.f.withdrawable')} v={CUR + F.fmtNum(detail.withdrawable)} vColor="var(--brand)" bold />
+              <DRow l={T('ms.f.carryAmt')} v={CUR + F.fmtNum(carryAmt)} vColor="var(--danger)" bold />
             </div>
 
-            <div className="form-section-title" style={{marginTop:0}}>金额构成</div>
-            <table style={{width:'100%',fontSize:12.5}}>
-              <tbody>
-                <CalcRow2 l="CPA 收益" sub={(detail.cpa>0?Math.round(detail.cpa/800):0) + ' 个有效 CPA × ₹800'} v={'₹' + F.money(detail.cpa)}/>
-                <CalcRow2 l="RevShare 收益" sub="同「分润报表」该期总佣金" v={'₹' + F.money(detail.revShare)}/>
-                {detail.adjust !== 0 && (
-                  <CalcRow2 l="调整项" sub={detail.adjust < 0 ? '风控扣减 / 申诉补发等' : '上期补发'} v={(detail.adjust>0?'+':'') + '₹' + F.money(detail.adjust)}/>
+            {/* 关联提款申请单(已发起提款时显示) */}
+            {wr && (
+              <>
+                <div className="drawer-sec">{T('ms.sec.linked')}</div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <ChainRow icon="wallet" label={T('ms.doc.wr')} no={wr.id} statusText={docStatusText('wr', wr.status)} tone={docTone('wr', wr.status)} />
+                  {fs && <ChainRow icon="file" label={T('ms.doc.fs')} no={fs.id} statusText={docStatusText('fs', fs.status)} tone={docTone('fs', fs.status)} />}
+                  {po && <ChainRow icon="check" label={T('ms.doc.po')} no={po.id} statusText={docStatusText('po', po.status)} tone={docTone('po', po.status)} />}
+                </div>
+                {(detail.status === 'rejected' || detail.status === 'auditRejected') && (
+                  <div style={{ marginTop: 10, padding: 12, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, color: '#b91c1c', lineHeight: 1.7 }}>
+                    本次提款已结束。相关结算单已退回,可在「佣金结算单」重新申请提款。
+                  </div>
                 )}
-                <tr><td colSpan="2" style={{borderTop:'1px solid var(--line)',padding:0}}/></tr>
-                <tr>
-                  <td style={{padding:'12px 0',color:'var(--text-0)',fontWeight:600}}>合计</td>
-                  <td style={{padding:'12px 0',textAlign:'right',fontFamily:'var(--font-mono)',fontWeight:600,fontSize:16,color:'var(--brand)'}}>₹{F.money(detail.total)}</td>
-                </tr>
-              </tbody>
-            </table>
+                {detail.status === 'payFailed' && (
+                  <div style={{ marginTop: 10, padding: 12, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, color: '#b91c1c', lineHeight: 1.7 }}>
+                    本次提款已结束。相关结算单已退回,可在「佣金结算单」重新申请提款。
+                  </div>
+                )}
+                {detail.status === 'auditCarried' && (
+                  <div style={{ marginTop: 10, padding: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6, fontSize: 12, color: '#c2410c', lineHeight: 1.7 }}>
+                    本次提款已结束。本次财务核算金额已转结到下期财务调整。
+                  </div>
+                )}
+                <div className="text-mute" style={{ fontSize: 11, marginTop: 8 }}>{T('ms.timeline.hint')}</div>
+              </>
+            )}
+          </div>
+          );
+        })()}
+      </ASTUI.Drawer>
 
-            <div className="form-section-title mt-3">付款信息</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 16px',fontSize:12.5}}>
-              <KV2 l="付款方式" v={detail.payoutMethod || 'USDT-TRC20'}/>
-              <KV2 l="收款账户" v="TXxxx...18jK9q"/>
-              <KV2 l="付款时间" v={detail.paidAt?new Date(detail.paidAt).toLocaleString('zh-CN'):'待付款'}/>
-              <KV2 l="付款编号" v={detail.txid || (detail.status==='paid'?'TX'+detail.id.slice(-6):'-')}/>
+      {/* 说明 Modal:5 层单据流转 */}
+      <ASTUI.Modal open={showHelp} onClose={() => setShowHelp(false)} title={T('ms.help.title')}
+        subtitle={T('ms.help.sub')}
+        footer={<button className="btn primary" onClick={() => setShowHelp(false)}>{T('ms.help.ok')}</button>}>
+        <window.BillingRulesHelp flowHi="CS" />
+      </ASTUI.Modal>
+
+      {/* 申请提款 Modal */}
+      <ASTUI.Modal open={showWithdraw} onClose={() => setShowWithdraw(false)} title={T('ms.apply.title')}
+        subtitle={T('ms.apply.sub')}
+        footer={<>
+          <button className="btn ghost" onClick={() => setShowWithdraw(false)}>{T('ms.apply.cancel')}</button>
+          <button className="btn primary" disabled={eligible.length === 0} onClick={submitWithdraw}>{T('ms.apply.submit')}</button>
+        </>}>
+        <div className="form-grid">
+          {/* 收款资料 */}
+          <div className="full">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label className="text-soft" style={{ fontSize: 12 }}>{T('ms.apply.payInfo')}<span style={{ color: 'var(--danger)', marginLeft: 2 }}>*</span></label>
+              <button className="link-act" onClick={gotoPayment} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="settings" size={12} />{T('ms.apply.editPay')}</button>
             </div>
-
-            <div className="form-section-title mt-3">结算单流水</div>
-            <div style={{display:'grid',gap:6}}>
+            <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '14px 16px', display: 'grid', gap: 10 }}>
               {[
-                ['本期分润报表已结算', new Date(detail.generated - 2*86400000).toLocaleDateString('zh-CN'), true],
-                ['生成本期结算单', new Date(detail.generated).toLocaleDateString('zh-CN')+' 09:12', true],
-                [detail.status==='carried' ? '金额未达门槛 · 转结下期合并' : '达提款门槛 · 待提款',
-                  detail.status==='carried' ? '₹'+F.money(detail.total)+' < ₹'+WD_THRESHOLD+' 门槛' : '可发起提款申请', true],
-                ['提交提款申请', ['reviewing','paid','rejected'].includes(detail.status)?'已提交':'-', ['reviewing','paid','rejected'].includes(detail.status)],
-                ['商户审核', detail.status==='paid'?'已通过':detail.status==='rejected'?'已驳回':detail.status==='reviewing'?'审核中…':'-', ['paid','rejected'].includes(detail.status)],
-                ['付款到账', detail.status==='paid'?new Date(detail.paidAt).toLocaleDateString('zh-CN'):'待付款', detail.status==='paid'],
-              ].map(([l, t, done], i) => (
-                <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',fontSize:12,borderRadius:4,background: done?'transparent':'var(--bg-2)'}}>
-                  {done
-                    ? <span style={{width:18,height:18,borderRadius:'50%',background:'var(--success)',display:'grid',placeItems:'center'}}><Icon name="check" size={11} style={{color:'#fff'}}/></span>
-                    : <span style={{width:18,height:18,borderRadius:'50%',border:'2px dashed var(--text-3)'}}/>}
-                  <span style={{flex:1,color: done?'var(--text-1)':'var(--text-3)'}}>{l}</span>
-                  <span className="text-mono text-mute" style={{fontSize:11}}>{t}</span>
+                [T('ms.apply.method'), payInfo.method || '—'],
+                ['IFSC', payInfo.ifsc || '—'],
+                ['Account', payInfo.account || '—'],
+                ['Real Name', payInfo.realName || '—'],
+                ['Email', payInfo.email || '—'],
+              ].map(([k, v], i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
+                  <span className="text-mute" style={{ fontSize: 12.5 }}>{k}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-0)', fontFamily: i === 0 ? 'inherit' : 'var(--font-mono)', textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
                 </div>
               ))}
             </div>
-
-            <div style={{display:'flex',gap:8,marginTop:18}}>
-              {detail.status === 'withdrawable' && <button className="btn primary" onClick={()=>{const id=detail.id;setDetail(null);openWithdraw(id);}}><Icon name="wallet" size={13}/>申请提款</button>}
-              {detail.status === 'rejected' && <button className="btn primary" onClick={()=>{setOverride(o=>({...o,[detail.id]:'withdrawable'}));setDetail(d=>({...d,status:'withdrawable'}));toast('已退回待提款,可重新申请');}}><Icon name="wallet" size={13}/>重新申请提款</button>}
-              {detail.status === 'reviewing' && <button className="btn ghost" disabled>提款审核中…</button>}
-              <button className="btn"><Icon name="download" size={13}/>下载发票 PDF</button>
-              <button className="btn ghost"><Icon name="copy" size={13}/>复制单号</button>
-            </div>
           </div>
-        )}
-      </ASTUI.Drawer>
 
-      {/* 申请提款 Modal — 勾选待提款结算单发起提款 */}
-      <ASTUI.Modal open={showWithdraw} onClose={()=>setShowWithdraw(false)} title="申请提款"
-        subtitle={'勾选「待提款」结算单 · 共 ' + withdrawable.length + ' 张可提 ₹' + F.money(available)}
-        footer={<>
-          <button className="btn ghost" onClick={()=>setShowWithdraw(false)}>取消</button>
-          <button className="btn primary" disabled={wdList.length===0}
-            onClick={()=>{const ov={...override};wdList.forEach(s=>ov[s.id]='reviewing');setOverride(ov);toast('提款申请已提交 · ' + wdList.length + ' 张结算单 ₹' + F.money(wdAmount) + ',待商户审核');setShowWithdraw(false);}}>
-            <Icon name="check" size={13}/>提交申请{wdList.length>0?' ('+wdList.length+')':''}
-          </button>
-        </>}>
-        <div className="form-grid">
+          {/* 待提款结算订单 — 自动关联全部 */}
           <div className="full">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-              <label className="text-soft" style={{fontSize:12}}>选择待提款结算单</label>
-              {withdrawable.length>0 && (
-                <button className="btn sm ghost" onClick={()=>{const v=!allWdChecked;const m={};withdrawable.forEach(s=>m[s.id]=v);setWdSelected(m);}}>
-                  {allWdChecked?'取消全选':'全选'}
-                </button>
-              )}
-            </div>
-            {withdrawable.length === 0 ? (
-              <div style={{padding:'28px 16px',textAlign:'center',background:'var(--bg-2)',borderRadius:6,color:'var(--text-3)',fontSize:12.5}}>
-                暂无「待提款」结算单 — 结算单需先通过商户审核才可申请提款
+            <label className="text-soft" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>{T('ms.apply.orders')}<span style={{ color: 'var(--danger)', marginLeft: 2 }}>*</span></label>
+            {eligible.length === 0 ? (
+              <div style={{ padding: '28px 16px', textAlign: 'center', background: 'var(--bg-2)', borderRadius: 6, color: 'var(--text-3)', fontSize: 12.5 }}>
+                {T('ms.apply.empty')}
               </div>
             ) : (
-              <div style={{border:'1px solid var(--line)',borderRadius:6,overflow:'hidden',maxHeight:230,overflowY:'auto'}}>
-                {withdrawable.map((s,i) => {
-                  const on = !!wdSelected[s.id];
-                  return (
-                    <label key={s.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',cursor:'pointer',
-                      borderTop: i>0?'1px solid var(--line-soft)':'none', background: on?'var(--brand-soft)':'transparent'}}>
-                      <input type="checkbox" checked={on} onChange={()=>toggleWd(s.id)} style={{width:15,height:15,accentColor:'var(--brand)'}}/>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--brand)'}}>{s.id}</div>
-                        <div className="text-mute" style={{fontSize:11,marginTop:1}}>周期 {s.period} · CPA ₹{F.money(s.cpa)} + RevShare ₹{F.money(s.revShare)}</div>
-                      </div>
-                      <div className="text-mono" style={{fontSize:13,fontWeight:600,color:'var(--text-0)'}}>₹{F.money(s.total)}</div>
-                    </label>
-                  );
-                })}
+              <div style={{ border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden', maxHeight: 200, overflowY: 'auto' }}>
+                {eligible.map((s, i) => (
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: i > 0 ? '1px solid var(--line-soft)' : 'none' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', color: 'var(--brand)' }}>{s.period} · {s.id}</div>
+                      <div className="text-mute" style={{ fontSize: 11.5, marginTop: 2 }}>{s.periodRange}{s.status === 'rejected' ? T('ms.apply.rejTail') : s.status === 'auditRejected' ? T('ms.apply.audrejTail') : s.status === 'payFailed' ? T('ms.apply.failTail') : ''}</div>
+                    </div>
+                    <div className="text-mono" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-0)' }}>{CUR}{F.fmtNum(s.totalCommission)}</div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          <div className="full">
-            <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>收款方式</label>
-            <select className="select" value={wdMethod} onChange={e=>setWdMethod(e.target.value)}>
-              <option>USDT-TRC20 · TXxxx...18jK9q (默认)</option>
-              <option>PIX · ***.456.789-01</option>
-              <option>银行电汇 · Itaú ****1234</option>
-            </select>
-          </div>
-
-          <div className="full" style={{padding:12,background:'var(--bg-2)',borderRadius:6,fontSize:12}}>
-            <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0'}}>
-              <span className="text-mute">已选 {wdList.length} 张结算单</span><span className="text-mono">₹{F.money(wdAmount)}</span>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0'}}>
-              <span className="text-mute">手续费</span><span className="text-mono">-₹{F.money(wdList.length>0?wdFee:0)}</span>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0 4px',borderTop:'1px solid var(--line)',marginTop:4}}>
-              <span style={{color:'var(--text-0)',fontWeight:600}}>实际到账</span>
-              <span className="text-mono" style={{color:'var(--brand)',fontWeight:600,fontSize:14}}>₹{F.money(Math.max(0, wdAmount - (wdList.length>0?wdFee:0)))}</span>
-            </div>
-            <div className="text-mute" style={{fontSize:11,marginTop:8}}>预计到账:商户审核通过后 30 分钟内 · 区块确认 ≥ 19</div>
-          </div>
-
-          <div className="full">
-            <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>2FA 验证码</label>
-            <input className="input" placeholder="请输入 Google Authenticator 6 位验证码" maxLength="6"/>
+          {/* 汇总 — 右对齐 */}
+          <div className="full" style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, alignItems: 'baseline', paddingTop: 2 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{T('ms.apply.count')} <strong style={{ color: 'var(--brand)', fontFamily: 'var(--font-mono)' }}>{eligible.length}</strong></span>
+            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{T('ms.apply.amount')} <strong className="text-mono" style={{ color: 'var(--brand)', fontSize: 15 }}>{CUR}{F.fmtNum(wdAmount)}</strong></span>
           </div>
         </div>
+      </ASTUI.Modal>
+
+      {/* v3.7.39 有未结束提款审核 阻断弹窗 */}
+      <ASTUI.Modal open={blockOpen} onClose={() => setBlockOpen(false)} title={T('ms.block.title')} width={360}
+        footer={<button className="btn primary" onClick={() => setBlockOpen(false)}>{T('ms.block.ok')}</button>}>
+        <div style={{ textAlign: 'center', padding: '10px 6px', fontSize: 13.5, lineHeight: 1.85, color: 'var(--text-1)' }}>{T('ms.block.body')}</div>
       </ASTUI.Modal>
     </div>
   );
 }
 
-function CalcRow2({l, sub, v}) {
+function ChainRow({ icon, label, no, statusText, tone }) {
   return (
-    <tr>
-      <td style={{padding:'10px 0',borderBottom:'1px solid var(--line-soft)'}}>
-        <div style={{color:'var(--text-1)'}}>{l}</div>
-        {sub && <div className="text-mute" style={{fontSize:11,marginTop:2}}>{sub}</div>}
-      </td>
-      <td style={{padding:'10px 0',textAlign:'right',fontFamily:'var(--font-mono)',color:'var(--text-0)',borderBottom:'1px solid var(--line-soft)',verticalAlign:'top'}}>{v}</td>
-    </tr>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 6 }}>
+      <div style={{ width: 30, height: 30, borderRadius: 6, background: 'var(--brand-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+        <Icon name={icon} size={14} style={{ color: 'var(--brand)' }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="text-mute" style={{ fontSize: 10.5 }}>{label}</div>
+        <div className="text-mono" style={{ fontSize: 12, color: 'var(--text-0)' }}>{no}</div>
+      </div>
+      {statusText && <span className={'badge ' + (tone || 'b-neutral')}>{statusText}</span>}
+    </div>
   );
 }
 
-function KV2({l, v}) {
-  return <div><div className="text-mute" style={{fontSize:11}}>{l}</div><div style={{color:'var(--text-0)',marginTop:2,fontFamily:'var(--font-mono)',fontSize:12}}>{v}</div></div>;
+const CS_TONE_COLOR = {
+  'b-brand': '#1d4ed8', 'b-neutral': '#64748b', 'b-warning': '#b45309',
+  'b-success': '#15803d', 'b-danger': '#b91c1c', 'b-magenta': '#b83280', 'b-info': '#0e7490', 'b-purple': '#7c3aed', 'b-orange': '#c2410c',
+};
+
+// 抽屉内 label-left / value-right 行
+function DRow({ l, v, vColor, bold, plain }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, padding: '7px 0', borderBottom: '1px solid var(--line-soft)' }}>
+      <span className="text-mute" style={{ fontSize: 12.5, flexShrink: 0 }}>{l}</span>
+      <span style={{ fontSize: 12.5, color: vColor || 'var(--text-0)', fontWeight: bold ? 600 : 400, fontFamily: plain ? 'inherit' : 'var(--font-mono)', textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
+    </div>
+  );
+}
+
+// 佣金来源:来源 CS 单号(灰)作小标题 + 金额行
+function SrcGroup({ src, label, amount }) {
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="text-mono" style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 2 }}>{src}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
+        <span style={{ fontSize: 12.5, color: 'var(--text-1)' }}>{label}</span>
+        <span className="text-mono" style={{ fontSize: 13, color: 'var(--text-0)' }}>{amount}</span>
+      </div>
+    </div>
+  );
 }
 
 window.MySettlementModule = MySettlementModule;

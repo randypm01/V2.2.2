@@ -50,7 +50,7 @@ function MyPlayersModule() {
     if (q && !(p.id + p.code).toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
-  const pageSize = 14;
+  const [pageSize, setPageSize] = React.useState(20);
   const paged = filtered.slice((page-1)*pageSize, page*pageSize);
 
   // KPI 合计 — 与商户后台一致:上方总计 = 当前搜索+筛选命中的结果总计(搜索时随之变化)
@@ -166,7 +166,7 @@ function MyPlayersModule() {
             </tbody>
           </table>
         </div>
-        <APUI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage}/>
+        <APUI.Pagination page={page} pageSize={pageSize} total={filtered.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
       </div>
     </div>
   );

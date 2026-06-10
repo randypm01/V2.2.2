@@ -358,6 +358,19 @@ function ensureLandingStyle() {
   .aglp-section { padding:56px 0; }
   .aglp-section-title { font-size:28px; }
 }
+/* v3.6.27 联系我们弹窗 渠道行 手机适配:窄屏改纵向 — 图标+标题/副标题一组,按钮整宽另起一行 */
+@media (max-width:560px) {
+  .csm-row {
+    display:grid !important;
+    grid-template-columns:auto 1fr;
+    grid-template-areas:"ic body" "btn btn";
+    align-items:center;
+    gap:6px 14px !important;
+  }
+  .csm-row .csm-ic { grid-area:ic; }
+  .csm-row .csm-body { grid-area:body; min-width:0; }
+  .csm-row .csm-btn { grid-area:btn; width:100%; margin-top:6px; }
+}
 `;
   document.head.appendChild(s);
 }
@@ -1825,22 +1838,22 @@ function ContactModal({ onClose, onLiveChat }) {
           {rows.map((c, i) => {
             const isMono = c.type === 'Email' || c.type === 'WhatsApp';
             return (
-            <div key={c.id != null ? c.id : i} style={{
+            <div key={c.id != null ? c.id : i} className="csm-row" style={{
               display:'flex', alignItems:'center', gap:16,
               border:'1px solid #e5e7eb', borderRadius:12, padding:'16px 18px',
             }}>
-              <div style={{
+              <div className="csm-ic" style={{
                 width:48, height:48, flex:'none', borderRadius:10, background:'#eff6ff',
                 color:'#3b82f6', display:'grid', placeItems:'center',
               }}>
                 <Icon name={CS_ICON[c.type] || 'message'} size={22}/>
               </div>
-              <div style={{ flex:1, minWidth:0 }}>
+              <div className="csm-body" style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:15.5, fontWeight:700, color:'#0f172a' }}>{c.title}</div>
                 <div style={{ fontSize:isMono?13:12.5, color:'#94a3b8', marginTop:3, wordBreak:'break-all', fontFamily: isMono ? 'JetBrains Mono, monospace' : 'inherit' }}>{c.subtitle}</div>
               </div>
               {c.hasBtn && c.btnText && (
-                <button onClick={() => handle(c)} style={{
+                <button onClick={() => handle(c)} className="csm-btn" style={{
                   flex:'none', padding:'9px 24px', border:'none', borderRadius:8,
                   background:'#3b82f6', color:'#fff', fontSize:13.5, fontWeight:600, cursor:'pointer',
                   transition:'background .15s',

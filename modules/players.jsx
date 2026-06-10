@@ -75,7 +75,7 @@ function PlayersModule() {
   });
   const [sort, setSort] = React.useState({ k: 'gap', dir: 'desc' });
   const [page, setPage] = React.useState(1);
-  const pageSize = 12;
+  const [pageSize, setPageSize] = React.useState(20);
 
   // —— 取代理（与 codes.jsx 同源），前 2 个代理 × 2 个 Code = 约 4 行（贴近截图）
   const agentSource = (window.APS_MERCHANT_AGENTS_STORE
@@ -273,7 +273,7 @@ function PlayersModule() {
             </tbody>
           </table>
         </div>
-        <PUI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage}/>
+        <PUI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
       </div>
     </div>
   );

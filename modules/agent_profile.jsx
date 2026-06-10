@@ -8,7 +8,12 @@ function AgentProfileModule() {
   const me = window.useCurrentAgent();
   const [lang] = window.useAgentLang();
   const T = (k, fb) => window.t(k, fb);
-  const [tab, setTab] = React.useState('basic');
+  const [tab, setTab] = React.useState(() => {
+    // v3.4.2 支持外部跳转预设初始 tab(如申请提款弹窗「编辑收款方式」跳来 → payment)
+    const want = window.__AGENT_PROFILE_TAB;
+    if (want) { window.__AGENT_PROFILE_TAB = null; return want; }
+    return 'basic';
+  });
   const [showPwd, setShowPwd] = React.useState(false);
   // v3.2.3 帐户被冻结时,「收款方式 → 编辑」和「安全设置 → 修改密码」改弹「帐户已被冻结」提示
   const [showFrozen, setShowFrozen] = React.useState(false);
@@ -134,7 +139,7 @@ function AgentProfileModule() {
           const filledContacts = contacts.filter(c => c.value);
 
           return (
-            <div className="mp-tab-body" style={{padding:'18px 22px'}}>
+            <div className="mp-tab-body" style={{padding:'18px 22px 96px'}}>
               {/* 基本资料 — 与商户后台「查看&审核」弹窗布局一致(每行一列字段,左标签 右值) */}
               <div className="ad-section-title">{T('mp_prof.basic.title','基本资料')}</div>
               <div className="ad-info-card">
@@ -217,7 +222,7 @@ function AgentProfileModule() {
           );
 
           return (
-            <div className="mp-tab-body" style={{padding:'18px 22px'}}>
+            <div className="mp-tab-body" style={{padding:'18px 22px 96px'}}>
               {/* v3.2.72 分潤方案 结算/变更规则说明弹窗 */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
                 <PFUI.FormulaHelp
@@ -259,7 +264,7 @@ function AgentProfileModule() {
         })()}
 
         {tab === 'perms' && (
-          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px 96px'}}>
             <div className="ad-section-title">{T('mp_prof.perms.title','權限範圍')}</div>
             <div style={{border:'1px solid var(--line)',borderRadius:8,padding:'18px 22px',background:'#fff'}}>
               {/* 运营 section */}
@@ -289,7 +294,7 @@ function AgentProfileModule() {
         )}
 
         {tab === 'traffic' && (
-          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px 96px'}}>
             <div className="ad-section-title">{T('mp_prof.traffic.title','流量来源链接')}</div>
             <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:12}}>{T('mp_prof.traffic.sub','您推广所使用的频道、平台账号或落地页(Youtube / Tiktok / Telegram / Facebook ...)')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
@@ -308,7 +313,7 @@ function AgentProfileModule() {
         )}
 
         {tab === 'payment' && (
-          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px 96px'}}>
             <window.PaymentInfoView
               editing={payEditing}
               value={payEditing ? payDraft : payment}
@@ -331,7 +336,7 @@ function AgentProfileModule() {
         )}
 
         {tab === 'security' && (
-          <div className="mp-tab-body" style={{padding:'18px 22px'}}>
+          <div className="mp-tab-body" style={{padding:'18px 22px 96px'}}>
             <div className="ad-section-title">{T('mp_prof.security.title','登入安全')}</div>
             <SecurityRow icon="shield" title={T('mp_prof.security.pwd','登入密码')}
               desc={T('mp_prof.security.last','上次修改时间:') + new Date(Date.now()-30*86400000).toISOString().slice(0,10) + ' ' + new Date().toTimeString().slice(0,8)}

@@ -63,21 +63,27 @@ function _ARV_seedInt(seed, offset, lo, hi) {
 const ARV_CODE_POOL = ['RANDY01', 'RANDY02', 'JACK01', 'JACK02', 'LISA01', 'KEVIN01'];
 
 // —— 期号规则：每周 W + YY + MM + 周序（如 W26051 = 2026 年 5 月第 1 周）;每月 M + YY + MM（如 M2605 = 2026 年 5 月）
+// v3.7.35 已结算期与代理后台 my_revshare 完全对齐(12 期),两端分润报表数据同步
 const ARV_SETTLED_LIST_WEEKLY = [
+  { key: 'W26064', label: 'W26064', start: '2026/6/22 00:00:00', end: '2026/6/28 23:59:59', seed: 31, planKey: 'revenue:RV-001' },
+  { key: 'W26063', label: 'W26063', start: '2026/6/15 00:00:00', end: '2026/6/21 23:59:59', seed: 30, planKey: 'revenue:RV-001' },
+  { key: 'W26062', label: 'W26062', start: '2026/6/8 00:00:00',  end: '2026/6/14 23:59:59', seed: 29, planKey: 'revenue:RV-002' },
+  { key: 'W26061', label: 'W26061', start: '2026/6/1 00:00:00',  end: '2026/6/7 23:59:59',  seed: 28, planKey: 'revenue:RV-002' },
   { key: 'W26054', label: 'W26054', start: '2026/5/25 00:00:00', end: '2026/5/31 23:59:59', seed: 2,  planKey: 'revenue:RV-001' },
   { key: 'W26053', label: 'W26053', start: '2026/5/18 00:00:00', end: '2026/5/24 23:59:59', seed: 1,  planKey: 'revenue:RV-002' },
   { key: 'W26052', label: 'W26052', start: '2026/5/11 00:00:00', end: '2026/5/17 23:59:59', seed: 5,  planKey: 'revenue:RV-003' },
   { key: 'W26051', label: 'W26051', start: '2026/5/4 00:00:00',  end: '2026/5/10 23:59:59', seed: 8,  planKey: 'revenue:RV-002' },
-  { key: 'W26050', label: 'W26050', start: '2026/4/27 00:00:00', end: '2026/5/3 23:59:59',  seed: 11, planKey: 'revenue:RV-001' },
+  { key: 'W26044', label: 'W26044', start: '2026/4/27 00:00:00', end: '2026/5/3 23:59:59',  seed: 11, planKey: 'revenue:RV-001' },
+  { key: 'W26043', label: 'W26043', start: '2026/4/20 00:00:00', end: '2026/4/26 23:59:59', seed: 7,  planKey: 'revenue:RV-002' },
+  { key: 'W26042', label: 'W26042', start: '2026/4/13 00:00:00', end: '2026/4/19 23:59:59', seed: 6,  planKey: 'revenue:RV-002' },
+  { key: 'W26041', label: 'W26041', start: '2026/4/6 00:00:00',  end: '2026/4/12 23:59:59', seed: 4,  planKey: 'revenue:RV-003' },
 ];
-const ARV_SETTLED_LIST_MONTHLY = [
-  { key: 'M2605', label: 'M2605', start: '2026/5/1 00:00:00', end: '2026/5/31 23:59:59', seed: 25, planKey: 'revenue:RV-002' },
-  { key: 'M2604', label: 'M2604', start: '2026/4/1 00:00:00', end: '2026/4/30 23:59:59', seed: 24, planKey: 'revenue:RV-003' },
-];
-// —— 预估期信息条 by 结算周期
+// v3.7.36 每月结算已无数据(所有代理均每周)— 每月已结算期清空,选「每月结算」时不再出现任何 M 期号
+const ARV_SETTLED_LIST_MONTHLY = [];
+// —— 预估期信息条 by 结算周期(monthly 为 null — 无每月预估期)
 const ARV_ESTIMATE_INFO = {
-  weekly:  { week: 'W26061', period: '2026/6/1 00:00:00 - 2026/6/7 23:59:59',  seed: 3 },
-  monthly: { week: 'M2606',  period: '2026/6/1 00:00:00 - 2026/6/30 23:59:59', seed: 6 },
+  weekly:  { week: 'W26071', period: '2026/6/29 00:00:00 - 2026/7/5 23:59:59',  seed: 3 },
+  monthly: null,
 };
 
 // —— 单玩家分润行（与 my_revshare 计算口径对齐）
@@ -135,16 +141,44 @@ function _ARV_aggCommission(rows) {
   return { rate, changeBase, settleBase, commission };
 }
 
+// v3.7.37 目标佣金行:复用 _ARV_makeRow 的稳定 uid/注册时间,再用反推财务覆盖金额字段
+function _ARV_makeTargetRow(agent, code, periodSeed, i, f) {
+  const row = _ARV_makeRow(agent, code, periodSeed, i + 1);
+  const rate = row.rate;
+  const dep = f.dep, wd = f.wd, balance = f.bal;
+  const ggr = (f.wager - f.payout) * (f.isLoss ? -1 : 1);
+  const baseRaw = 0 + 0 + (dep - wd - balance);
+  const base = Math.max(0, baseRaw);
+  return {
+    ...row,
+    deposit: dep, withdraw: wd, wager: f.wager, payout: f.payout, ggr, balance,
+    prevUnsettled: 0, prevBase: 0,
+    base, estCom: Math.max(0, dep - wd - balance),
+    settledCom: Math.round(base * rate / 100),
+    isLoss: f.isLoss, gap: dep - wd,
+  };
+}
+
 // —— 构造一期所有行（传入代理子集）
 function _ARV_buildPeriodRows(agentList, periodSeed) {
   const out = [];
   let poolIdx = 0;
+  // v3.7.37 该期若对应结算单(有目标佣金)→ 按目标反推 5 笔玩家,聚合佣金 = 结算单佣金
+  const target = (window.REVSHARE_PERIOD_TARGET || {})[periodSeed];
   (agentList || []).forEach(a => {
-    // v3.1.56 每个代理展示 5 个玩家示例（之前是 2）
-    for (let i = 0; i < 5; i++) {
-      if (poolIdx >= ARV_CODE_POOL.length) break;
-      const code = ARV_CODE_POOL[poolIdx++];
-      out.push(_ARV_makeRow(a, code, periodSeed, poolIdx));
+    if (target != null && window.buildTargetFinancials) {
+      const fin = window.buildTargetFinancials(target);
+      fin.forEach((f, i) => {
+        const code = ARV_CODE_POOL[i % ARV_CODE_POOL.length];
+        out.push(_ARV_makeTargetRow(a, code, periodSeed, i, f));
+      });
+    } else {
+      // v3.1.56 每个代理展示 5 个玩家示例（之前是 2）
+      for (let i = 0; i < 5; i++) {
+        if (poolIdx >= ARV_CODE_POOL.length) break;
+        const code = ARV_CODE_POOL[poolIdx++];
+        out.push(_ARV_makeRow(a, code, periodSeed, poolIdx));
+      }
     }
   });
   return out;
@@ -163,9 +197,7 @@ function AgentRevshareModule() {
   const [statusF, setStatusF] = React.useState('all');
   const [sort, setSort] = React.useState({ k: 'estCom', dir: 'desc' });
   const [page, setPage] = React.useState(1);
-  const pageSize = 12;
-  // v3.1.44 说明弹窗
-  const [helpOpen, setHelpOpen] = React.useState(false);
+  const [pageSize, setPageSize] = React.useState(20);
   // v3.1.57 已结算记录查询 弹窗
   const [historyRow, setHistoryRow] = React.useState(null);
   // v3.2.66 「分潤方案」弹窗 — 展示该期适用的分润模式内容(只读)
@@ -192,16 +224,12 @@ function AgentRevshareModule() {
     }
   }, []);
   const allMerchantAgents = (window.APS_MERCHANT_AGENTS_STORE && window.APS_MERCHANT_AGENTS_STORE.list) || [];
-  // v3.1.41 每个代理「当前结算周期 + 可选切换时间」—— 切换下个月 1 号才生效，不会出现重叠期
-  //   AC100005 — 一直每周 → 所有 weekly 期出现
-  //   AC100006 — 一直每月 → 所有 monthly 期出现
-  //   AC100007 — 5/1 起切到每月 （之前是每周）→ monthly 出现在 M2605/M2606；weekly 不出现 在 W26053/W26054（5 月已是月结算）
-  //   AC100008 — 6/1 起切到每周 （之前是每月）→ weekly W26061 (6/1起) 出现；monthly M2604/M2605 出现（6 月之前仍是月结算）
+  // v3.7.34 每月分润已下线 — 所有代理统一「每周结算」,不再有切换 / 重叠期
   const AGENT_CYCLE_META = [
     { current: 'weekly',  switchAt: null },
-    { current: 'monthly', switchAt: null },
-    { current: 'monthly', switchAt: new Date('2026-05-01T00:00:00').getTime() },
-    { current: 'weekly',  switchAt: new Date('2026-06-01T00:00:00').getTime() },
+    { current: 'weekly',  switchAt: null },
+    { current: 'weekly',  switchAt: null },
+    { current: 'weekly',  switchAt: null },
   ];
   const _agentInPeriod = (i, cycle, periodEndStr) => {
     const meta = AGENT_CYCLE_META[i];
@@ -234,13 +262,13 @@ function AgentRevshareModule() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentOptions.length]);
 
-  // 已结算期选中哪一期
-  const [selectedWeek, setSelectedWeek] = React.useState(SETTLED_LIST[0].key);
+  // 已结算期选中哪一期(每月已无期 → 可能为空)
+  const [selectedWeek, setSelectedWeek] = React.useState(SETTLED_LIST[0]?.key ?? null);
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  const selectedPeriod = SETTLED_LIST.find(p => p.key === selectedWeek) || SETTLED_LIST[0];
+  const selectedPeriod = SETTLED_LIST.find(p => p.key === selectedWeek) || SETTLED_LIST[0] || null;
   // 切换 周/月 时重置选中期为列表首项
   React.useEffect(() => {
-    setSelectedWeek(SETTLED_LIST[0].key);
+    setSelectedWeek(SETTLED_LIST[0]?.key ?? null);
     setPage(1);
   }, [cycleType]);
 
@@ -257,13 +285,14 @@ function AgentRevshareModule() {
   const _buildAgentSubset = (periodEnd) => allMerchantAgents.filter((_, i) => _agentInPeriod(i, cycleType, periodEnd))
     .filter(a => agentF === 'all' || (a._displayId || a.id) === agentF);
   const estimateRows = React.useMemo(() => {
+    if (!ESTIMATE_INFO) return [];
     const periodEnd = ESTIMATE_INFO.period.split(' - ')[1];
     return _ARV_buildPeriodRows(_buildAgentSubset(periodEnd), ESTIMATE_INFO.seed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cycleType, agentF, ESTIMATE_INFO.seed, allMerchantAgents.length]);
-  const settledRows  = React.useMemo(() => _ARV_buildPeriodRows(_buildAgentSubset(selectedPeriod.end), selectedPeriod.seed),
+  }, [cycleType, agentF, ESTIMATE_INFO, allMerchantAgents.length]);
+  const settledRows  = React.useMemo(() => selectedPeriod ? _ARV_buildPeriodRows(_buildAgentSubset(selectedPeriod.end), selectedPeriod.seed) : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cycleType, agentF, selectedPeriod.seed, selectedPeriod.end, allMerchantAgents.length]);
+    [cycleType, agentF, selectedPeriod, allMerchantAgents.length]);
   const rows = tab === 'estimate' ? estimateRows : settledRows;
 
   // 搜索 + 状态筛选 + 代理筛选
@@ -360,6 +389,7 @@ function AgentRevshareModule() {
             ] },
             ] },
             { key: 'plan', label: '分润方案', sections: window.buildRevsharePlanRules(false) },
+            ...ARV_CYCLE_TABS,
           ]} />
       </ARV_UI.PageHead>
 
@@ -443,7 +473,7 @@ function AgentRevshareModule() {
         )}
       </div>
 
-      {/* —— 结算周期分页 segmented（代理选择器下方） + 右侧说明按钮 —— */}
+      {/* —— 结算周期分页 segmented（代理选择器下方） —— */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14, gap: 12 }}>
         <div style={{ display: 'flex', gap: 0, border: '1px solid var(--line)', borderRadius: 8, padding: 4, background: 'var(--bg-2)' }}>
           {[
@@ -466,11 +496,6 @@ function AgentRevshareModule() {
           ))}
         </div>
         <span style={{ flex: 1 }}/>
-        {/* v3.1.44 说明按钮 — 结算周期/期编号/切换规则 */}
-        <button className="btn sm ghost" onClick={() => setHelpOpen(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="info" size={13}/>结算周期说明
-        </button>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'visible' }}>
@@ -481,6 +506,7 @@ function AgentRevshareModule() {
 
         {/* —— 信息条（v3.1.88 改两行布局 + 隐藏时间部分） —— */}
         {tab === 'estimate' && (
+          ESTIMATE_INFO ? (
           <div style={{
             padding: '14px 18px',
             background: 'var(--bg-2)',
@@ -501,9 +527,16 @@ function AgentRevshareModule() {
               <ARV_InfoCell l="週期" v={<span className="text-mono">{_arvStripTime(ESTIMATE_INFO.period)}</span>}/>
             </div>
           </div>
+          ) : (
+            <ARV_EmptyCycle text="每月结算暂无预估分润数据"/>
+          )
         )}
 
-        {tab === 'settled' && (
+        {tab === 'settled' && !selectedPeriod && (
+          <ARV_EmptyCycle text="每月结算暂无已结算分润数据"/>
+        )}
+
+        {tab === 'settled' && selectedPeriod && (
           <div style={{
             padding: '14px 18px',
             background: 'var(--bg-2)',
@@ -541,7 +574,7 @@ function AgentRevshareModule() {
                 position: 'absolute', left: 18, right: 18, top: 'calc(100% - 2px)',
                 background: '#fff', border: '1px solid var(--line)', borderRadius: 8,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.10)', zIndex: 20,
-                marginTop: 4, overflow: 'hidden',
+                marginTop: 4, maxHeight: 320, overflowX: 'hidden', overflowY: 'auto',
               }}>
                 {SETTLED_LIST.map(p => (
                   <div key={p.key}
@@ -649,7 +682,7 @@ function AgentRevshareModule() {
                 </tbody>
               </table>
             </div>
-            <ARV_UI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage}/>
+            <ARV_UI.Pagination page={safePage} pageSize={pageSize} total={sorted.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }}/>
             </div>
           </div>
         )}
@@ -657,8 +690,7 @@ function AgentRevshareModule() {
         {/* v3.1.86 删除「分润规则」tab — 实际规则在「运营 → 分润管理」配置 */}
       </div>
 
-      {/* v3.1.44 说明弹窗 */}
-      {helpOpen && <ARV_HelpModal onClose={() => setHelpOpen(false)}/>}
+      {/* v3.7.31 结算周期/期编号/切换规则 已并入「代理分润报表说明」分页弹窗 */}
 
       {/* v3.2.66 该期分潤方案(只读)—— 读选中代理 _comm，kind 随当前结算周期 */}
       {(() => {
@@ -666,10 +698,10 @@ function AgentRevshareModule() {
         const baseComm = (selAgentObj && selAgentObj._comm) || { kind: 'weekly', weekday: 1, monthday: 1, plans: ['revenue:RV-001'], minCommission: 200, maxCommission: 100000 };
         // 本期预估 → 用代理当前分潤方案(跟随商户修改实时更新);
         // 已结算 → 用该期结算时的快照方案(planKey),历史期用哪个方案结算就显示哪个
-        const planComm = (tab === 'settled' && selectedPeriod.planKey)
+        const planComm = (tab === 'settled' && selectedPeriod?.planKey)
           ? { ...baseComm, kind: cycleType, plans: [selectedPeriod.planKey] }
           : { ...baseComm, kind: cycleType };
-        const periodLabel = tab === 'estimate' ? ESTIMATE_INFO.week : selectedPeriod.label;
+        const periodLabel = tab === 'estimate' ? (ESTIMATE_INFO?.week || '') : (selectedPeriod?.label || '');
         return (
           <window.RevsharePlanModal
             open={planOpen}
@@ -725,6 +757,21 @@ function ARV_InfoCell({ l, v }) {
   );
 }
 
+// v3.7.36 结算周期无数据时的空状态(每月结算已无数据)
+function ARV_EmptyCycle({ text }) {
+  return (
+    <div style={{
+      padding: '14px 18px', background: 'var(--bg-2)',
+      borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)',
+    }}>
+      <div style={{
+        padding: '22px 18px', background: '#fff', border: '1px dashed var(--line)',
+        borderRadius: 8, textAlign: 'center', color: 'var(--text-3)', fontSize: 13,
+      }}>{text}</div>
+    </div>
+  );
+}
+
 function ARV_RuleRow({ l, v }) {
   return (
     <tr>
@@ -749,142 +796,104 @@ const ARV_RULE_BOX = {
 const ARV_RULE_TITLE = { fontWeight: 500, color: 'var(--text-0)', fontSize: 13, marginBottom: 8 };
 const ARV_RULE_TEXT  = { fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 };
 
-function ARV_HelpSection({ title, children }) {
-  return (
-    <div style={{ marginBottom: 22 }}>
-      <div style={{
-        fontSize: 14, fontWeight: 600, color: 'var(--text-0)',
-        marginBottom: 10, paddingBottom: 6, borderBottom: '2px solid var(--brand)',
-        display: 'inline-block',
-      }}>{title}</div>
-      {children}
+// v3.7.31 「暂不开放」徽章 —— 每月结算相关项标注
+const ARV_NA = (
+  <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 3, fontSize: 10.5, background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0', fontWeight: 500, verticalAlign: 'middle' }}>暂不开放</span>
+);
+
+// v3.7.31 结算周期 / 期编号 / 切换规则 —— 并入「代理分润报表说明」分页弹窗(原独立「结算周期说明」弹窗已撤)
+const ARV_CYCLE_TABS = [
+  { key: 'cycle', label: '结算周期', node: (
+    <div>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-0)', marginBottom: 10 }}>结算周期 / 结算时间</div>
+      <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--line)' }}>
+            <th style={{ ...ARV_THSTY, width: 130 }}>结算周期</th>
+            <th style={ARV_THSTY}>结算时间</th>
+            <th style={{ ...ARV_THSTY, width: 210 }}>结算的周期范围</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style={{ borderBottom: '1px dashed var(--line-soft)' }}>
+            <td style={ARV_TDSTY}><span style={ARV_PILL('#eff6ff', '#1d4ed8', '#bfdbfe')}>每周结算</span></td>
+            <td style={ARV_TDSTY}>每週一 00:00:00</td>
+            <td style={ARV_TDSTY}>上週一 00:00:00 ~ 週日 23:59:59</td>
+          </tr>
+          <tr style={{ opacity: 0.6 }}>
+            <td style={ARV_TDSTY}><span style={ARV_PILL('#f0fdf4', '#15803d', '#bbf7d0')}>每月结算</span>{ARV_NA}</td>
+            <td style={ARV_TDSTY}>每月 1 號 00:00:00</td>
+            <td style={ARV_TDSTY}>上月 1 號 00:00:00 ~ 月底 23:59:59</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  );
-}
-
-function ARV_HelpModal({ onClose }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)',
-        zIndex: 200, display: 'grid', placeItems: 'center', padding: 24,
-      }}>
-      <div onClick={e => e.stopPropagation()}
-        style={{
-          background: '#fff', borderRadius: 12, width: 'min(720px, 100%)',
-          maxHeight: '85vh', overflow: 'auto', boxShadow: '0 20px 50px rgba(0,0,0,0.18)',
-        }}>
-        <div style={{
-          padding: '16px 22px', borderBottom: '1px solid var(--line)',
-          display: 'flex', alignItems: 'center', gap: 10,
-          position: 'sticky', top: 0, background: '#fff', zIndex: 1,
-        }}>
-          <Icon name="info" size={16} style={{ color: 'var(--brand)' }}/>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-0)', margin: 0, flex: 1 }}>代理分润报表 · 说明</h3>
-          <button className="btn sm ghost icon-only" onClick={onClose}><Icon name="x" size={14}/></button>
+  ) },
+  { key: 'periodno', label: '期编号', node: (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, color: 'var(--text-0)', marginBottom: 6 }}>每周结算 — W + YY + MM + 周序</div>
+        <div style={{ padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 6, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+          W26051 = 2026 年 5 月 第 1 周
         </div>
-
-        <div style={{ padding: '18px 22px', fontSize: 13.5, lineHeight: 1.85, color: 'var(--text-1)' }}>
-
-          <ARV_HelpSection title="一、结算周期 / 结算时间">
-            <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                  <th style={{ ...ARV_THSTY, width: 110 }}>结算周期</th>
-                  <th style={ARV_THSTY}>结算时间</th>
-                  <th style={{ ...ARV_THSTY, width: 240 }}>结算的周期范围</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: '1px dashed var(--line-soft)' }}>
-                  <td style={ARV_TDSTY}><span style={ARV_PILL('#eff6ff', '#1d4ed8', '#bfdbfe')}>每周结算</span></td>
-                  <td style={ARV_TDSTY}>每週一 00:00:00</td>
-                  <td style={ARV_TDSTY}>上週一 00:00:00 ~ 週日 23:59:59</td>
-                </tr>
-                <tr>
-                  <td style={ARV_TDSTY}><span style={ARV_PILL('#f0fdf4', '#15803d', '#bbf7d0')}>每月结算</span></td>
-                  <td style={ARV_TDSTY}>每月 1 號 00:00:00</td>
-                  <td style={ARV_TDSTY}>上月 1 號 00:00:00 ~ 月底 23:59:59</td>
-                </tr>
-              </tbody>
-            </table>
-          </ARV_HelpSection>
-
-          <ARV_HelpSection title="二、期编号规则">
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontWeight: 500, color: 'var(--text-0)', marginBottom: 6 }}>每周结算 — W + YY + MM + 周序</div>
-              <div style={{ padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 6, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
-                W26051 = 2026 年 5 月 第 1 周
-              </div>
-              <ul style={{ margin: '8px 0 0 18px', color: 'var(--text-2)', fontSize: 12.5, lineHeight: 1.7 }}>
-                <li><b style={{ color: 'var(--text-1)' }}>26</b> — 2026 年</li>
-                <li><b style={{ color: 'var(--text-1)' }}>05</b> — 5 月</li>
-                <li><b style={{ color: 'var(--text-1)' }}>1</b>  — 当月第 1 周</li>
-              </ul>
-            </div>
-            <div>
-              <div style={{ fontWeight: 500, color: 'var(--text-0)', marginBottom: 6 }}>每月结算 — M + YY + MM</div>
-              <div style={{ padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 6, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
-                M2605 = 2026 年 5 月
-              </div>
-              <ul style={{ margin: '8px 0 0 18px', color: 'var(--text-2)', fontSize: 12.5, lineHeight: 1.7 }}>
-                <li><b style={{ color: 'var(--text-1)' }}>26</b> — 2026 年</li>
-                <li><b style={{ color: 'var(--text-1)' }}>05</b> — 5 月</li>
-              </ul>
-            </div>
-          </ARV_HelpSection>
-
-          <ARV_HelpSection title="三、结算周期切换规则">
-            <div style={{
-              padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a',
-              borderRadius: 6, marginBottom: 12, fontSize: 13, lineHeight: 1.75, color: 'var(--text-0)',
-            }}>
-              <b style={{ color: '#92400e' }}>代理结算周期从 每周 ⇄ 每月 互切时，到「下个月 1 号」才生效。</b>
-              <div style={{ marginTop: 6, color: 'var(--text-2)' }}>
-                不会出现重叠期 — 同一代理某历史期只属于一种结算方式。
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={ARV_RULE_BOX}>
-                <div style={ARV_RULE_TITLE}>
-                  <span style={ARV_PILL('#eff6ff', '#1d4ed8', '#bfdbfe')}>每周</span>
-                  {' → '}
-                  <span style={ARV_PILL('#f0fdf4', '#15803d', '#bbf7d0')}>每月</span>
-                </div>
-                <div style={ARV_RULE_TEXT}>于当月内提交切换 → 仍按每周结算本月，下月 1 号起按每月结算。</div>
-              </div>
-              <div style={ARV_RULE_BOX}>
-                <div style={ARV_RULE_TITLE}>
-                  <span style={ARV_PILL('#f0fdf4', '#15803d', '#bbf7d0')}>每月</span>
-                  {' → '}
-                  <span style={ARV_PILL('#eff6ff', '#1d4ed8', '#bfdbfe')}>每周</span>
-                </div>
-                <div style={ARV_RULE_TEXT}>于当月内提交切换 → 仍按每月结算本月，下月 1 号起按每周结算。</div>
-              </div>
-            </div>
-            <div style={{ marginTop: 14, fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.75 }}>
-              <b style={{ color: 'var(--text-1)' }}>例子：</b>AC100007 原为「每周结算」，在 4 月中申请改为「每月结算」：
-              <ul style={{ margin: '6px 0 0 18px' }}>
-                <li>4 月：仍出现在每周结算报表 (W2604x)</li>
-                <li>5 月起：出现在每月结算报表 (M2605)，不再出现在每周报表</li>
-              </ul>
-            </div>
-          </ARV_HelpSection>
-
+        <ul style={{ margin: '8px 0 0 18px', color: 'var(--text-2)', fontSize: 12.5, lineHeight: 1.7 }}>
+          <li><b style={{ color: 'var(--text-1)' }}>26</b> — 2026 年</li>
+          <li><b style={{ color: 'var(--text-1)' }}>05</b> — 5 月</li>
+          <li><b style={{ color: 'var(--text-1)' }}>1</b> — 当月第 1 周</li>
+        </ul>
+      </div>
+      <div style={{ opacity: 0.6 }}>
+        <div style={{ fontWeight: 600, color: 'var(--text-0)', marginBottom: 6 }}>每月结算 — M + YY + MM{ARV_NA}</div>
+        <div style={{ padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 6, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+          M2605 = 2026 年 5 月
         </div>
-
+        <ul style={{ margin: '8px 0 0 18px', color: 'var(--text-2)', fontSize: 12.5, lineHeight: 1.7 }}>
+          <li><b style={{ color: 'var(--text-1)' }}>26</b> — 2026 年</li>
+          <li><b style={{ color: 'var(--text-1)' }}>05</b> — 5 月</li>
+        </ul>
+      </div>
+    </div>
+  ) },
+  { key: 'switch', label: '切换规则', node: (
+    <div>
+      <div style={{ padding: '10px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 14, fontSize: 12.5, lineHeight: 1.7, color: '#64748b' }}>
+        <b style={{ color: '#475569' }}>每月结算暂不开放</b>,故每周 ⇄ 每月 的结算周期切换暂不开放,以下规则待开放后生效。
+      </div>
+      <div style={{ opacity: 0.6 }}>
         <div style={{
-          padding: '12px 22px', borderTop: '1px solid var(--line)',
-          display: 'flex', justifyContent: 'flex-end',
-          position: 'sticky', bottom: 0, background: '#fff',
+          padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a',
+          borderRadius: 6, marginBottom: 12, fontSize: 13, lineHeight: 1.75, color: 'var(--text-0)',
         }}>
-          <button className="btn primary" onClick={onClose}>我知道了</button>
+          <b style={{ color: '#92400e' }}>代理结算周期从 每周 ⇄ 每月 互切时,到「下个月 1 号」才生效。</b>
+          <div style={{ marginTop: 6, color: 'var(--text-2)' }}>
+            不会出现重叠期 — 同一代理某历史期只属于一种结算方式。
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={ARV_RULE_BOX}>
+            <div style={ARV_RULE_TITLE}>
+              <span style={ARV_PILL('#eff6ff', '#1d4ed8', '#bfdbfe')}>每周</span>{' → '}<span style={ARV_PILL('#f0fdf4', '#15803d', '#bbf7d0')}>每月</span>
+            </div>
+            <div style={ARV_RULE_TEXT}>于当月内提交切换 → 仍按每周结算本月,下月 1 号起按每月结算。</div>
+          </div>
+          <div style={ARV_RULE_BOX}>
+            <div style={ARV_RULE_TITLE}>
+              <span style={ARV_PILL('#f0fdf4', '#15803d', '#bbf7d0')}>每月</span>{' → '}<span style={ARV_PILL('#eff6ff', '#1d4ed8', '#bfdbfe')}>每周</span>
+            </div>
+            <div style={ARV_RULE_TEXT}>于当月内提交切换 → 仍按每月结算本月,下月 1 号起按每周结算。</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 14, fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.75 }}>
+          <b style={{ color: 'var(--text-1)' }}>例子:</b>AC100007 原为「每周结算」,在 4 月中申请改为「每月结算」:
+          <ul style={{ margin: '6px 0 0 18px' }}>
+            <li>4 月:仍出现在每周结算报表 (W2604x)</li>
+            <li>5 月起:出现在每月结算报表 (M2605),不再出现在每周报表</li>
+          </ul>
         </div>
       </div>
     </div>
-  );
-}
+  ) },
+];
 
 // =============================================================
 // v3.1.57 已结算记录查询弹窗(商户后台 / 专业代理后台 共用)
@@ -1181,10 +1190,6 @@ function RevsharePlanModal({ open, onClose, comm, periodLabel, cycleWeekly, agen
 
         <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>
           <window.RevsharePlanView comm={comm} EN={EN}/>
-        </div>
-
-        <div className="drawer-foot">
-          <button className="btn primary" onClick={onClose}>{EN ? 'Close' : '关闭'}</button>
         </div>
       </div>
     </div>

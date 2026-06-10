@@ -12,12 +12,33 @@
 const MRUI = window.UI;
 const MR_T = (k, fb) => window.t(k, fb);
 
-// —— 构造一期玩家数据 v3.1.56 改为 5 笔示例,精心设计覆盖 5 种结算场景
-// 公式口径:
-//   预估佣金 = max(0, 本期充值 - 本期提现 - 本期期末余额)
-//   本期佣金基数(已结算) = (上期期末余额 + 上期佣金基数) + (本期充值 - 本期提现 - 本期期末余额)
-//   本期佣金 = max(0, 本期佣金基数) × 分润比例
-// 约束:上期期末余额 ≥ 0,上期佣金基数 ≤ 0
+// —— v3.7.37 已结算分润「總佣金」与「佣金结算单」逐期对齐 ——
+//   每个已结算期号 → 该期结算单的佣金(settlement total)。
+//   报表佣金 = round(settleBase × 5%),故 settleBase 须 = 目标佣金 × 20。
+//   下表按「seed」映射(seed 即该期在 RICH_PERIODS / 列表里的标识),与商户/代理两端报表共用。
+window.REVSHARE_PERIOD_TARGET = {
+  31: 4880, 30: 680, 29: 5400, 28: 3100,   // W26064 / W26063 / W26062 / W26061
+  2: 7250,  1: 2900, 5: 4600,  8: 8100,    // W26054 / W26053 / W26052 / W26051
+  11: 3700, 7: 5950, 6: 4350,  4: 6800,    // W26044 / W26043 / W26042 / W26041
+};
+// 给定目标佣金 T,生成 5 笔玩家财务,聚合 settleBase 精确 = T×20(prevU/prevB 取 0)
+window.buildTargetFinancials = function (T) {
+  const S = T * 20;
+  const weights = [0.34, 0.26, 0.20, 0.12, 0.08];
+  let acc = 0;
+  return weights.map((w, i) => {
+    const net = (i === weights.length - 1) ? (S - acc) : Math.round(S * w);
+    acc += net;
+    const bal = Math.max(0, Math.round(net * 0.30));
+    const wd  = Math.max(0, Math.round(net * 0.65));
+    const dep = net + wd + bal;                 // dep - wd - bal = net
+    const wager  = dep * 3;
+    const payout = Math.round(wager * 0.9);
+    return { dep, wd, bal, wager, payout, isLoss: net <= 0, prevU: 0, prevB: 0 };
+  });
+};
+
+// —— 构造一期玩家数据 v3.1.56 改为 5 笔示例;v3.7.37 有目标期则按目标佣金反推
 function buildPeriodPlayers(agentId, seed) {
   const fixedReg = [
     '2026/5/12 10:24:31',
@@ -26,57 +47,45 @@ function buildPeriodPlayers(agentId, seed) {
     '2026/5/14 09:15:42',
     '2026/4/28 13:07:18',
   ];
-  // 五笔预设范例 — 每笔的 dep/wd/balance/wager/payout/prevUnsettled/prevBase 已手算好,
-  // 落入 base 公式后正好覆盖:大盈利 / 小盈利 / 大亏损 / 小亏损 / 持平 5 种状态
-  // seed 仅用于轻微缩放(±15%),且 prev* 与 dep/wd/balance 同步缩放 — 保证缩放后等式依然成立
-  const k = 0.85 + (((Math.abs(seed) * 37) % 31) / 100); // 0.85 ~ 1.15
-  const r = (n) => Math.round(n * k);
+  const codes = ['RANDY01', 'RANDY02', 'RANDY03', 'RANDY04', 'RANDY05'];
+  const ids   = ['P12354531', 'P12354532', 'P12354533', 'P12354534', 'P12354535'];
   const rate = 5;
+  const target = (window.REVSHARE_PERIOD_TARGET || {})[seed];
 
-  // 模板数据(k=1 时):
-  //   #1 大盈利:dep 12000 - wd 4000 - bal 1500 = +6500 当期亏损;prev 500 + (-300) = +200 → base 6700
-  //   #2 小盈利:dep 8000 - wd 3000 - bal 3500 = +1500;prev 200 + 0 = +200          → base 1700
-  //   #3 大亏损:dep 5000 - wd 7000 - bal 3000 = -5000;prev 0 + (-500) = -500        → base -5500(不计)
-  //   #4 小亏损:dep 6000 - wd 6000 - bal 800  = -800; prev 600 + (-200) = +400       → base -400(不计)
-  //   #5 持  平:dep 4000 - wd 4000 - bal 0    = 0;    prev 0 + 0 = 0                → base 0(不计)
-  const tpl = [
-    { id:'P12354531', code:'RANDY01', vip:1, dep:12000, wd:4000, bal:1500, wager:35000, payout:28500, isLoss:false, prevU:500, prevB:-300 },
-    { id:'P12354532', code:'RANDY02', vip:1, dep:8000,  wd:3000, bal:3500, wager:10000, payout:8500,  isLoss:false, prevU:200, prevB:0    },
-    { id:'P12354533', code:'RANDY03', vip:1, dep:5000,  wd:7000, bal:3000, wager:15000, payout:20000, isLoss:true,  prevU:0,   prevB:-500 },
-    { id:'P12354534', code:'RANDY04', vip:1, dep:6000,  wd:6000, bal:800,  wager:8000,  payout:8800,  isLoss:true,  prevU:600, prevB:-200 },
-    { id:'P12354535', code:'RANDY05', vip:1, dep:4000,  wd:4000, bal:0,    wager:5000,  payout:5000,  isLoss:false, prevU:0,   prevB:0    },
-  ];
+  let fin;
+  if (target != null) {
+    // 有结算单对应期 → 反推玩家财务,聚合佣金 = 该期结算单佣金
+    fin = window.buildTargetFinancials(target);
+  } else {
+    // 无对应期(如本期预估)→ 沿用 5 笔模板 + seed 轻微缩放
+    const k = 0.85 + (((Math.abs(seed) * 37) % 31) / 100);
+    const r = (n) => Math.round(n * k);
+    const tpl = [
+      { dep:12000, wd:4000, bal:1500, wager:35000, payout:28500, isLoss:false, prevU:500, prevB:-300 },
+      { dep:8000,  wd:3000, bal:3500, wager:10000, payout:8500,  isLoss:false, prevU:200, prevB:0    },
+      { dep:5000,  wd:7000, bal:3000, wager:15000, payout:20000, isLoss:true,  prevU:0,   prevB:-500 },
+      { dep:6000,  wd:6000, bal:800,  wager:8000,  payout:8800,  isLoss:true,  prevU:600, prevB:-200 },
+      { dep:4000,  wd:4000, bal:0,    wager:5000,  payout:5000,  isLoss:false, prevU:0,   prevB:0    },
+    ];
+    fin = tpl.map(t => ({ dep:r(t.dep), wd:r(t.wd), bal:r(t.bal), wager:r(t.wager), payout:r(t.payout), isLoss:t.isLoss, prevU:r(t.prevU), prevB:r(t.prevB) }));
+  }
 
-  return tpl.map((t, i) => {
-    const deposit  = r(t.dep);
-    const withdraw = r(t.wd);
-    const balanceV = r(t.bal);
-    const wagerV   = r(t.wager);
-    const payout   = r(t.payout);
-    const ggrSign  = t.isLoss ? -1 : 1;
-    const ggr      = (wagerV - payout) * ggrSign;
-    const prevUnsettled = r(t.prevU);
-    const prevBase      = r(t.prevB);
-    // 公式严格按 CLAUDE.md 规则 — 缩放后整数化可能引入 ±1 误差,这不影响示例展示
-    const baseRaw   = prevUnsettled + prevBase + (deposit - withdraw - balanceV);
-    const base      = Math.max(0, baseRaw);
-    const estComRaw = deposit - withdraw - balanceV;
-    const estCom    = Math.max(0, estComRaw);
+  return fin.map((f, i) => {
+    const deposit = f.dep, withdraw = f.wd, balanceV = f.bal, wagerV = f.wager, payout = f.payout;
+    const ggr = (wagerV - payout) * (f.isLoss ? -1 : 1);
+    const prevUnsettled = f.prevU || 0;
+    const prevBase = f.prevB || 0;
+    const baseRaw = prevUnsettled + prevBase + (deposit - withdraw - balanceV);
+    const base = Math.max(0, baseRaw);
+    const estCom = Math.max(0, deposit - withdraw - balanceV);
     const settledCom = Math.round(base * rate / 100);
     return {
-      id: t.id, agentId, code: t.code, vip: t.vip,
+      id: ids[i], agentId, code: codes[i], vip: 1,
       registered: fixedReg[i] || fixedReg[0],
       deposit, withdraw, wager: wagerV, payout, ggr,
-      balance: balanceV,
-      rate,
-      estCom,
-      base,
-      baseRaw,
-      prevUnsettled,
-      prevBase,
-      settledCom,
-      commission: settledCom,
-      isLoss: t.isLoss,
+      balance: balanceV, rate, estCom, base, baseRaw,
+      prevUnsettled, prevBase, settledCom, commission: settledCom,
+      isLoss: f.isLoss,
     };
   });
 }
@@ -107,12 +116,20 @@ function buildSettledPeriodList(cycleType) {
       { week:'M2604', start:'2026/4/1 00:00:00',  end:'2026/4/30 23:59:59', seed: 24, cpa: 12500, adj: -800, wdStatus:'paid', planKey:'revenue:RV-003' },
     ];
   }
+  // v3.7.33 已结算分润 期数与「佣金结算单」(data-billing.js RICH_PERIODS)完全对齐 — 同 12 期、同期号、同周期、同提款状态
   return [
-    { week:'W26054', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2,  cpa: 3200, adj: 0,    wdStatus:'withdrawable', planKey:'revenue:RV-001' },
-    { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1,  cpa: 2800, adj: -150, wdStatus:'withdrawable', planKey:'revenue:RV-002' },
-    { week:'W26052', start:'2026/5/11 00:00:00', end:'2026/5/17 23:59:59', seed: 5,  cpa: 4100, adj: 200,  wdStatus:'reviewing', planKey:'revenue:RV-003' },
-    { week:'W26051', start:'2026/5/4 00:00:00',  end:'2026/5/10 23:59:59', seed: 8,  cpa: 3500, adj: 0,    wdStatus:'paid', planKey:'revenue:RV-002' },
-    { week:'W26050', start:'2026/4/27 00:00:00', end:'2026/5/3 23:59:59',  seed: 11, cpa: 0,    adj: 0,    wdStatus:'carried', planKey:'revenue:RV-001' },
+    { week:'W26064', start:'2026/6/22 00:00:00', end:'2026/6/28 23:59:59', seed: 31, cpa: 2100, adj: 0,    wdStatus:'withdrawable', planKey:'revenue:RV-001' },
+    { week:'W26063', start:'2026/6/15 00:00:00', end:'2026/6/21 23:59:59', seed: 30, cpa: 0,    adj: 0,    wdStatus:'carried',      planKey:'revenue:RV-001' },
+    { week:'W26062', start:'2026/6/8 00:00:00',  end:'2026/6/14 23:59:59', seed: 29, cpa: 2700, adj: 0,    wdStatus:'reviewing',    planKey:'revenue:RV-002' },
+    { week:'W26061', start:'2026/6/1 00:00:00',  end:'2026/6/7 23:59:59',  seed: 28, cpa: 1550, adj: 0,    wdStatus:'rejected',     planKey:'revenue:RV-002' },
+    { week:'W26054', start:'2026/5/25 00:00:00', end:'2026/5/31 23:59:59', seed: 2,  cpa: 3600, adj: 0,    wdStatus:'auditing',     planKey:'revenue:RV-001' },
+    { week:'W26053', start:'2026/5/18 00:00:00', end:'2026/5/24 23:59:59', seed: 1,  cpa: 1450, adj: -150, wdStatus:'fsRejected',   planKey:'revenue:RV-002' },
+    { week:'W26052', start:'2026/5/11 00:00:00', end:'2026/5/17 23:59:59', seed: 5,  cpa: 2300, adj: 200,  wdStatus:'fsCarried',    planKey:'revenue:RV-003' },
+    { week:'W26051', start:'2026/5/4 00:00:00',  end:'2026/5/10 23:59:59', seed: 8,  cpa: 4050, adj: 0,    wdStatus:'paying',       planKey:'revenue:RV-002' },
+    { week:'W26044', start:'2026/4/27 00:00:00', end:'2026/5/3 23:59:59',  seed: 11, cpa: 1850, adj: 0,    wdStatus:'payFailed',    planKey:'revenue:RV-001' },
+    { week:'W26043', start:'2026/4/20 00:00:00', end:'2026/4/26 23:59:59', seed: 7,  cpa: 2975, adj: 0,    wdStatus:'paid',         planKey:'revenue:RV-002' },
+    { week:'W26042', start:'2026/4/13 00:00:00', end:'2026/4/19 23:59:59', seed: 6,  cpa: 2175, adj: 0,    wdStatus:'paid',         planKey:'revenue:RV-002' },
+    { week:'W26041', start:'2026/4/6 00:00:00',  end:'2026/4/12 23:59:59', seed: 4,  cpa: 3400, adj: 0,    wdStatus:'paid',         planKey:'revenue:RV-003' },
   ];
 }
 
@@ -135,7 +152,7 @@ window.getSettledRevsharePeriods = function (agentId, cycleType = 'weekly') {
 const _stripTime = (s) => String(s || '').replace(/\s+\d{1,2}:\d{2}(:\d{2})?\s*$/, '');
 
 const MR_ESTIMATE_INFO = {
-  weekly:  { week: 'W26061', period: '2026/6/1 00:00:00 - 2026/6/7 23:59:59',  seed: 3  },
+  weekly:  { week: 'W26071', period: '2026/6/29 00:00:00 - 2026/7/5 23:59:59',  seed: 3  },
   monthly: { week: 'M2606',  period: '2026/6/1 00:00:00 - 2026/6/30 23:59:59', seed: 26 },
 };
 
@@ -154,6 +171,7 @@ function MyRevshareModule() {
   // 工具栏筛选(两期共用) — v3.2.8 移除「全部用户状态」筛选(用户状态列已删)
   const [q, setQ] = React.useState('');
   const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
   // v3.2.66 「分润方案」弹窗 — 展示该期适用的分润模式内容(只读)
   const [planOpen, setPlanOpen] = React.useState(false);
 
@@ -190,6 +208,10 @@ function MyRevshareModule() {
     if (q && !(p.id + p.code).toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
+  // v3.6.3 真分页:切片当前页 + 页码越界自动回退(修正原「第 1/1 页」写死)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   // KPI 合计(按当前期所有玩家算)
   const sum = (arr, k) => arr.reduce((a,p)=>a+(p[k]||0),0);
@@ -363,7 +385,7 @@ function MyRevshareModule() {
                 position:'absolute', left:18, right:18, top:'calc(100% - 2px)',
                 background:'#fff', border:'1px solid var(--line)', borderRadius:8,
                 boxShadow:'0 8px 24px rgba(0,0,0,0.10)', zIndex:20,
-                marginTop:4, overflow:'hidden'
+                marginTop:4, maxHeight:320, overflowX:'hidden', overflowY:'auto'
               }}>
                 {settledList.map(p => (
                   <div
@@ -448,7 +470,7 @@ function MyRevshareModule() {
                   </th>
                 </tr></thead>
                 <tbody>
-                  {filtered.map(p => {
+                  {paged.map(p => {
                     const gap = (p.deposit||0) - (p.withdraw||0);
                     return (
                       <tr key={p.id}>
@@ -469,9 +491,8 @@ function MyRevshareModule() {
               </table>
             </div>
 
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12,fontSize:12,color:'var(--text-3)'}}>
-              <span>{(window.t('pg.summary','共 {total} 条 · 第 {page} / {totalPages} 页') || '').replace('{total}', filtered.length).replace('{page}', 1).replace('{totalPages}', 1)}</span>
-            </div>
+            <MRUI.Pagination page={safePage} pageSize={pageSize} total={filtered.length}
+              onPage={setPage} onPageSize={(n)=>{setPageSize(n);setPage(1);}}/>
             </div>
           </div>
         )}
