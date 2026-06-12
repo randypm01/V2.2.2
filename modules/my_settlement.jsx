@@ -68,7 +68,7 @@ const ASTUI = window.UI;
   a('ms.drawer.sub', '本期佣金结算明细与提款流转状态', 'Commission settlement details & withdrawal status');
   a('ms.sec.status', '状态', 'Status');
   a('ms.sec.basic', '基本资料', 'Basic Info');
-  a('ms.sec.source', '佣金来源', 'Commission Source');
+  a('ms.sec.source', '结算金额', 'Settlement Amount');
   a('ms.sec.linked', '关联提款申请单', 'Linked Withdrawal Request');
   a('ms.f.orderStatus', '订单状态', 'Order Status');
   a('ms.f.updateTime', '更新时间', 'Updated');
@@ -119,6 +119,13 @@ const ASTUI = window.UI;
   a('ms.apply.toast', '提款申请已提交', 'Withdrawal request submitted');
   a('ms.apply.toastN', '张结算单', 'settlements');
   a('ms.apply.toastTail', ',待商户审核', ', pending merchant review');
+  a('ms.apply.okTitle', '提款申请成功', 'Withdrawal Request Submitted');
+  a('ms.apply.okWr', '提款申请单', 'Withdrawal Request');
+  a('ms.apply.okCount', '佣金结算单', 'Commission Settlements');
+  a('ms.apply.okAmount', '申请提款金额', 'Withdrawal Amount');
+  a('ms.apply.okHint', '已提交,待商户审核', 'Submitted, pending merchant review');
+  a('ms.apply.okBtn', '确认', 'Confirm');
+  a('ms.apply.okProgress', '查看提款审核进度', 'View Withdrawal Progress');
   // 说明弹窗
   a('ms.help.title', '单据流转说明', 'Document Flow Guide');
   a('ms.help.sub', '佣金从结算到付款的 5 层单据链', 'The 5-layer document chain from settlement to payment');
@@ -154,6 +161,7 @@ function MySettlementModule({ onNav }) {
   const [showWithdraw, setShowWithdraw] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
   const [blockOpen, setBlockOpen] = React.useState(false);   // v3.7.39 有未结束提款审核 阻断弹窗
+  const [successInfo, setSuccessInfo] = React.useState(null); // v3.7.66 提款申请提交成功弹窗(原为 toast)
 
   // 收款资料 — 与「我的帐户 → 收款方式」同源(me._payment / _formSnapshot)
   const snap = me._appData?._formSnapshot || {};
@@ -238,8 +246,8 @@ function MySettlementModule({ onNav }) {
     const hasUnfinished = my.some(s => s.status === 'reviewing' || s.status === 'auditing' || s.status === 'paying');
     if (hasUnfinished) { setShowWithdraw(false); setBlockOpen(true); return; }
     const wr = B.createWithdraw(me.id, eligible.map(s => s.id), payInfo.method, payInfo.account);
-    if (wr) toast(T('ms.apply.toast') + ' · ' + wr.id + ' · ' + wr.csCount + ' ' + T('ms.apply.toastN') + ' ' + CUR + F.fmtNum(wr.amount) + T('ms.apply.toastTail'));
     setShowWithdraw(false);
+    if (wr) setSuccessInfo({ id: wr.id, csCount: wr.csCount, amount: wr.amount, carry: auditCarrySum });
   };
 
   const csLabel = (s) => T('ms.st.' + s, (L[s] || {}).label || s);
@@ -367,9 +375,9 @@ function MySettlementModule({ onNav }) {
             <DRow l={T('ms.f.cycle')} v={detail.periodRange} />
             <DRow l={T('ms.f.settleTime')} v={fmtDT(detail.settledAt)} />
 
-            {/* 佣金来源 — 固定单行「可提款金额」(v3.7.56:删本期佣金/往期转入/转结金额分项,转结下期逻辑已废) */}
+            {/* 结算金额 — 单行「分润期号·{period}」+ 可提款金额值(v3.7.69:区标题佣金来源→结算金额,行 label 可提款金额→分润期号·期号) */}
             <div className="drawer-sec">{T('ms.sec.source')}</div>
-            <DRow l={T('ms.f.withdrawable')} v={CUR + F.fmtNum(detail.withdrawable)} vColor="var(--brand)" bold />
+            <DRow l={T('ms.f.period') + '·' + detail.period} v={CUR + F.fmtNum(detail.withdrawable)} vColor="var(--brand)" bold />
 
             {/* 关联提款申请单(已发起提款时显示) */}
             {wr && (
@@ -487,6 +495,37 @@ function MySettlementModule({ onNav }) {
       <ASTUI.Modal open={blockOpen} onClose={() => setBlockOpen(false)} title={T('ms.block.title')} width={360}
         footer={<button className="btn primary" onClick={() => setBlockOpen(false)}>{T('ms.block.ok')}</button>}>
         <div style={{ textAlign: 'center', padding: '10px 6px', fontSize: 13.5, lineHeight: 1.85, color: 'var(--text-1)' }}>{T('ms.block.body')}</div>
+      </ASTUI.Modal>
+
+      {/* v3.7.67 提款申请成功弹窗(按图2重做) */}
+      <ASTUI.Modal open={!!successInfo} onClose={() => setSuccessInfo(null)} title={T('ms.apply.okTitle')} width={420}>
+        {successInfo && (
+          <div style={{ padding: '6px 8px 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 24px' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 6px 16px rgba(16,185,129,.32)' }}>
+                <Icon name="check" size={34} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 15, columnGap: 14, fontSize: 15, padding: '0 6px' }}>
+              <span style={{ color: 'var(--text-3)' }}>{T('ms.apply.okWr')}</span>
+              <span className="text-mono" style={{ textAlign: 'right', color: 'var(--text-1)', fontWeight: 600 }}>{successInfo.id}</span>
+              <span style={{ color: 'var(--text-3)' }}>{T('ms.apply.okCount')}</span>
+              <span style={{ textAlign: 'right', color: 'var(--text-1)' }}>{successInfo.csCount}{lang === 'en' ? '' : '张'}</span>
+              <span style={{ color: 'var(--text-3)' }}>{T('ms.apply.okAmount')}</span>
+              <span className="text-mono" style={{ textAlign: 'right', color: 'var(--brand)', fontWeight: 700 }}>{CUR + F.fmtNum(successInfo.amount)}</span>
+              {successInfo.carry > 0 && (
+                <>
+                  <span style={{ color: 'var(--text-3)' }}>{T('ms.apply.carrySum')}</span>
+                  <span className="text-mono" style={{ textAlign: 'right', color: 'var(--danger)', fontWeight: 700 }}>{'-' + CUR + F.fmtNum(successInfo.carry)}</span>
+                </>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginTop: 28 }}>
+              <button className="btn primary" style={{ minWidth: 132 }} onClick={() => setSuccessInfo(null)}>{T('ms.apply.okBtn')}</button>
+              <button className="link-act" onClick={() => { setSuccessInfo(null); if (onNav) onNav('mod:my_withdraw_progress'); }}>{T('ms.apply.okProgress')} ›</button>
+            </div>
+          </div>
+        )}
       </ASTUI.Modal>
     </div>
   );

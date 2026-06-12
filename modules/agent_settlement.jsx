@@ -203,18 +203,9 @@ function AgentSettlementModule() {
             <AGS_DRow l="结算周期" v={detail.periodRange} />
             <AGS_DRow l="结算时间" v={fmtDT(detail.settledAt)} />
 
-            {/* 佣金来源 */}
-            <div className="drawer-sec">佣金来源</div>
-            {detail.curCommission > 0 && (
-              <AGS_SrcGroup src={detail.id} label="本期佣金" amount={CUR + F.fmtNum(detail.curCommission)} />
-            )}
-            {detail.carriedIn > 0 && (
-              <AGS_SrcGroup src={detail.carriedFromId || '—'} label="往期转结佣金" amount={CUR + F.fmtNum(detail.carriedIn)} />
-            )}
-            <div style={{ borderTop: '1px solid var(--line)', marginTop: 12, paddingTop: 8 }}>
-              <AGS_DRow l="可提款金额" v={CUR + F.fmtNum(detail.withdrawable)} vColor="var(--brand)" bold />
-              <AGS_DRow l="转结金额" v={CUR + F.fmtNum(carryAmt)} vColor="var(--danger)" bold />
-            </div>
+            {/* 结算金额 — 单行「分润期号·{period}」+ 可提款金额值(v3.7.70:与代理侧 my_settlement v3.7.69 对齐,删本期佣金/往期转结/可提款金额/转结金额多行) */}
+            <div className="drawer-sec">结算金额</div>
+            <AGS_DRow l={"分润期号·" + detail.period} v={CUR + F.fmtNum(detail.withdrawable)} vColor="var(--brand)" bold />
 
             {/* 关联提款申请单 */}
             {wr && (

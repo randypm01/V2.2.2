@@ -16,9 +16,10 @@
         ['提款申请单 WR', 'WR + 申请日期(YYYYMMDD)+ 6 位流水。例:WR20260429000008。'],
         ['财务核算单 FS', 'FS + 核算日期(YYYYMMDD)+ 6 位流水。'],
         ['付款单 PO', 'PO + 付款日期(YYYYMMDD)+ 6 位流水。'],
+        ['财务转结单 CF', 'CF + 转结日期(YYYYMMDD)+ 6 位流水。核算应付转结下期时生成,于下期财务调整中抵扣。'],
       ],
       smTitle: '订单状态机与流转',
-      smSub: '佣金结算单(CS)在提款全流程中的 10 种状态',
+      smSub: '佣金结算单(CS)在提款全流程中的 9 种状态',
       groups: [
         { label: '待处理', items: [
           ['待提款', '本期总佣金等待纳入提款申请;发起提款时校验申请总额是否达分润模式最低申请金额。'],
@@ -34,12 +35,12 @@
           ['付款失败·待提款', '出款失败,退回待提款。'],
         ] },
         { label: '终态', items: [
-          ['财务转结', '核算后应付 ≤ 0,欠款转结下期财务调整。'],
+          ['财务转结', '核算时转结下期(应付正负皆可),余额结转下期财务调整。'],
           ['付款成功', '出款成功,本期佣金结清。'],
         ] },
       ],
       flowTitle: '主流转链',
-      flow: '待提款 → 审核中 →(商户通过)核算中 →(核算完成)付款中 →(出款成功)付款成功。审核中被拒 → 已拒绝·待提款;核算中被驳回 → 已驳回·待提款;付款中失败 → 付款失败·待提款 —— 三种退回都回到「待提款」,可重新发起。核算后应付 ≤ 0 → 财务转结(终态);未达门槛 → 转结下期,不进提款流程。',
+      flow: '待提款 → 审核中 →(商户通过)核算中 →(核算完成)付款中 →(出款成功)付款成功。审核中被拒 → 已拒绝·待提款;核算中被驳回 → 已驳回·待提款;付款中失败 → 付款失败·待提款 —— 三种退回都回到「待提款」,可重新发起。核算时若转结下期(应付正负皆可)→ 财务转结(终态)。',
       noteTitle: '业务规则',
       note: '代理每次发起提款,系统会把当前「所有待提款」结算单一并打包到同一张提款申请单(WR)。且必须等当前提款审核全部结束(付款成功 / 退回待提款)后,才能再次发起提款审核;因此同一时间只有一张提款申请在途,「审核中 / 核算中 / 付款中」不会在同一代理身上同时出现。',
       docTitle: '单据流程',
@@ -69,7 +70,7 @@
           ['核算中', '扣除行政费 / 税金 / 风控等,核算应付金额。'],
           ['核算完成', '核算通过,进入付款。'],
           ['已驳回', '核算驳回,退回「待提款」,可重新发起。'],
-          ['已转结', '应付 ≤ 0,欠款转结下期财务调整。'],
+          ['已转结', '转结下期财务调整(应付正负皆可)。'],
         ] },
         { label: '付款单(PO)', flow: '付款中 → 付款成功 / 付款失败', items: [
           ['付款中', '核算完成后出款中。'],
@@ -87,9 +88,10 @@
         ['Withdrawal Request WR', 'WR + request date (YYYYMMDD) + 6-digit serial. e.g. WR20260429000008.'],
         ['Finance Settlement FS', 'FS + audit date (YYYYMMDD) + 6-digit serial.'],
         ['Payment Order PO', 'PO + payment date (YYYYMMDD) + 6-digit serial.'],
+        ['Finance Carry-over CF', 'CF + carry date (YYYYMMDD) + 6-digit serial. Created when payable is carried forward; deducted in next-period finance adjustment.'],
       ],
       smTitle: 'Order State Machine & Flow',
-      smSub: 'The 10 states of a Commission Settlement (CS) across the withdrawal flow',
+      smSub: 'The 9 states of a Commission Settlement (CS) across the withdrawal flow',
       groups: [
         { label: 'Pending', items: [
           ['Withdrawable', 'Awaiting a withdrawal request; the plan’s minimum amount is checked when applying.'],
@@ -105,12 +107,12 @@
           ['Pay Failed · Withdrawable', 'Payout failed; returned to withdrawable.'],
         ] },
         { label: 'Final', items: [
-          ['Finance Carried', 'Net payable ≤ 0 after audit; debt carried to next period.'],
+          ['Finance Carried', 'Carried forward during audit (any payable sign); balance carried to next-period finance adjustment.'],
           ['Paid', 'Payout succeeded; period commission settled.'],
         ] },
       ],
       flowTitle: 'Main Flow',
-      flow: 'Withdrawable → Reviewing →(approved)Auditing →(done)Paying →(success)Paid. If review fails → Rejected·Withdrawable; if audit declines → Declined·Withdrawable; if payout fails → Pay Failed·Withdrawable — all three return to Withdrawable and can be re-applied. Net payable ≤ 0 → Finance Carried (final); below threshold → Carried Forward (skips the withdrawal flow).',
+      flow: 'Withdrawable → Reviewing →(approved)Auditing →(done)Paying →(success)Paid. If review fails → Rejected·Withdrawable; if audit declines → Declined·Withdrawable; if payout fails → Pay Failed·Withdrawable — all three return to Withdrawable and can be re-applied. If carried forward during audit (any payable sign) → Finance Carried (final).',
       noteTitle: 'Business Rule',
       note: 'Each time an agent applies, the system bundles ALL currently-withdrawable settlements into one Withdrawal Request (WR). A new request can only be submitted after the current one has fully finished (paid or returned to withdrawable). So only one request is ever in flight at a time — “Reviewing / Auditing / Paying” will not co-exist for the same agent.',
       docTitle: 'Document Flow',
@@ -140,7 +142,7 @@
           ['Auditing', 'Computes payable after admin fee / tax / risk deductions.'],
           ['Audited', 'Passed; proceeds to payment.'],
           ['Declined', 'Declined; returns to “Withdrawable” and can be re-applied.'],
-          ['Carried', 'Net payable ≤ 0; debt carried to next-period finance adjustment.'],
+          ['Carried', 'Carried forward to next-period finance adjustment (any payable sign).'],
         ] },
         { label: 'Payment Order (PO)', flow: 'Paying → Paid / Pay Failed', items: [
           ['Paying', 'Paying out after audit is done.'],
