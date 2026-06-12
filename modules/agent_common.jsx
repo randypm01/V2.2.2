@@ -133,7 +133,7 @@ window.CURRENT_AGENT_ID = 'AC100006';
        'Monthly · Every 1st at 00:00, settles previous 1st 00:00 ~ month-end 23:59');
   add('mp_prof.comm.currency',   '結算幣種',         'Settlement Currency');
   add('mp_prof.comm.minAmt',     '最低結算佣金金額', 'Min. Settlement Amount');
-  add('mp_prof.comm.minAmt.hint','(低于该金额顺延至下期)', '(below this amount carries to next period)');
+  add('mp_prof.comm.minAmt.hint','(提款申请总额须达到此金额)', '(withdrawal requests must reach this amount)');
   add('mp_prof.comm.maxAmt',     '最高結算佣金上限', 'Max. Settlement Cap');
   add('mp_prof.comm.plan',       '分潤方案',         'RevShare Plan');
   add('mp_prof.comm.ratio',      '分潤比例',         'RevShare Ratio');
@@ -343,7 +343,7 @@ window.CURRENT_AGENT_ID = 'AC100006';
                                   'Monthly · 1st of each month 00:00:00, settling prev 1st 00:00:00 ~ month-end 23:59:59');
   add('mpf.comm.currency',        '结算币种',         'Settlement Currency');
   add('mpf.comm.minAmt',          '最低结算佣金金额', 'Min Settlement Amount');
-  add('mpf.comm.minAmt.hint',     '(低于该金额顺延至下期)', '(Carried to next period if below)');
+  add('mpf.comm.minAmt.hint',     '(提款申请总额须达到此金额)', '(withdrawal requests must reach this amount)');
   add('mpf.comm.maxAmt',          '最高结算佣金上限', 'Max Settlement Cap');
   add('mpf.comm.planType',        '分润方案',         'RevShare Plan');
   add('mpf.comm.ratio',           '分润比例',         'RevShare Rate');
@@ -755,8 +755,8 @@ window.AgentHero = function AgentHero({ icon='dashboard', tone='#3b82f6' }) {
         {[
           [T('hero.players','玩家'), F.fmtNum(myPlayers.length)],
           [T('hero.valid_cpa','有效 CPA'), F.fmtNum(validCpa) + (pendingCpa ? ' / +' + pendingCpa : '')],
-          [T('hero.ngr_total','累计 NGR'), '$' + F.money(ngr)],
-          [T('hero.commission_month','本月佣金'), '$' + F.money(commissionThisMonth)],
+          [T('hero.ngr_total','累计 NGR'), '$' + F.fmtNum(ngr)],
+          [T('hero.commission_month','本月佣金'), '$' + F.fmtNum(commissionThisMonth)],
         ].map(([l, v]) => (
           <div key={l} style={{textAlign:'right'}}>
             <div className="text-mute" style={{fontSize:11}}>{l}</div>

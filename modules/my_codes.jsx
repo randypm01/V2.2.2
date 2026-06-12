@@ -397,7 +397,7 @@ function MyCodesModule() {
   };
 
   const moneyCell = (n, color) => (
-    <span className="text-mono" style={color?{color}:undefined}>₹{F.money(n||0)}</span>
+    <span className="text-mono" style={color?{color}:undefined}>₹{F.fmtNum(n||0)}</span>
   );
 
   return (
@@ -448,11 +448,11 @@ function MyCodesModule() {
           [T('mc.kpi.codes_total','Code 总数量'), F.fmtNum(filtered.length)],
           [T('mc.kpi.reg','总注册人数'), F.fmtNum(totalReg)],
           [T('mc.kpi.dep_users','总充值人数'), F.fmtNum(totalDepUsers)],
-          [T('mc.kpi.dep_amt','总充值金额'), '₹' + F.money(totalDeposit)],
+          [T('mc.kpi.dep_amt','总充值金额'), '₹' + F.fmtNum(totalDeposit)],
           [T('mc.kpi.wd_users','总提款人数'), F.fmtNum(totalWdUsers)],
-          [T('mc.kpi.wd_amt','总提款金额'), '₹' + F.money(totalWithdraw)],
+          [T('mc.kpi.wd_amt','总提款金额'), '₹' + F.fmtNum(totalWithdraw)],
           [T('mc.kpi.cvr','充值转化率'), totalCvr.toFixed(1) + '%'],
-          [T('mc.kpi.gap','充提差'), (totalGap>=0?'+':'') + '₹' + F.money(Math.abs(totalGap)), totalGap>=0?'up':'down', 'green'],
+          [T('mc.kpi.gap','充提差'), (totalGap>=0?'+':'') + '₹' + F.fmtNum(Math.abs(totalGap)), totalGap>=0?'up':'down', 'green'],
         ].map(([l,v,delta,flag]) => (
           <div key={l} className="kpi" style={flag==='green'?{
             borderColor:'rgba(34,197,94,.35)', background:'rgba(34,197,94,.07)'
@@ -506,7 +506,7 @@ function MyCodesModule() {
                     <td className="right text-mono" style={{color: cvr>=30?'var(--success)':'var(--text-1)'}}>{cvr.toFixed(1)}%</td>
                     <td className="right">
                       <span className="text-mono" style={{color: gap>=0?'var(--success)':'var(--danger)'}}>
-                        {(gap>=0?'+':'-')}₹{F.money(Math.abs(gap))}
+                        {(gap>=0?'+':'-')}₹{F.fmtNum(Math.abs(gap))}
                       </span>
                     </td>
                   </tr>

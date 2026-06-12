@@ -100,6 +100,10 @@ const ASTUI = window.UI;
   a('ms.block.body', '必须等当前提款审核全部结束(付款成功 / 退回待提款)后,才能再次发起提款审核。', 'You must wait until the current withdrawal review is fully completed (paid / returned to withdrawable) before submitting another.');
   a('ms.block.ok', '确认', 'OK');
   a('ms.apply.sub', '申请提款所有待提款结算单', 'Apply to withdraw all withdrawable settlements');
+  // 最低申请提款金额(读分润模式最低结算佣金金额)+ 下限校验提示
+  a('ms.apply.minAmount', '最低申请提款金额', 'Min. Withdrawal Amount');
+  a('ms.apply.carrySum', '往期财务转结金额', 'Prior Finance Carry-over');
+  a('ms.apply.belowMin', '您的分润模式最低提款申请金额须达到 ', 'Your plan requires a minimum withdrawal amount of ');
   a('ms.apply.payInfo', '收款资料', 'Payout Details');
   a('ms.apply.editPay', '编辑收款方式', 'Edit payout method');
   a('ms.apply.method', '收款方式', 'Method');
@@ -185,7 +189,6 @@ function MySettlementModule({ onNav }) {
   const TAB_GROUPS = [
     { label: T('ms.grp.settle'), tabs: [
       { v: 'withdrawable', c: counts.withdrawable },
-      { v: 'carried', c: counts.carried },
     ] },
     { label: T('ms.grp.apply'), tabs: [
       { v: 'reviewing', c: counts.reviewing },
@@ -223,9 +226,14 @@ function MySettlementModule({ onNav }) {
     setShowWithdraw(true);
   };
   const wdAmount = available;
+  // 最低申请提款金额 = 该代理分润模式 minCommission(空则回退平台默认),与「我的账户 → 分润模式」同源
+  const _applyD = window.RV_PLATFORM_DEFAULTS || { minSettleAmount: 200 };
+  const minApply = (me._comm && me._comm.minCommission != null && me._comm.minCommission !== '') ? Number(me._comm.minCommission) : _applyD.minSettleAmount;
 
   const submitWithdraw = () => {
     if (eligible.length === 0) return;
+    // 下限校验:申请提款总额须 ≥ 分润模式最低申请提款金额,不足则提示、不提交
+    if (wdAmount < minApply) { toast(T('ms.apply.belowMin', '您的分润模式最低提款申请金额须达到 ') + CUR + F.fmtNum(minApply)); return; }
     // v3.7.39 校验:存在未结束的提款审核(在途状态 审核中/核算中/付款中)→ 阻断,不可再次发起
     const hasUnfinished = my.some(s => s.status === 'reviewing' || s.status === 'auditing' || s.status === 'paying');
     if (hasUnfinished) { setShowWithdraw(false); setBlockOpen(true); return; }
@@ -247,6 +255,9 @@ function MySettlementModule({ onNav }) {
     const po = fs && fs.poId ? B.poById(fs.poId) : null;
     return { wr, fs, po };
   };
+
+  // 往期财务转结金额累计 = 已财务转结(auditCarried)各期 fs.carryOut 之和
+  const auditCarrySum = my.filter(s => s.status === 'auditCarried').reduce((a, s) => { const { fs } = chainOf(s); return a + (fs ? (fs.carryOut || 0) : 0); }, 0);
 
   return (
     <div className="page">
@@ -340,6 +351,7 @@ function MySettlementModule({ onNav }) {
           const carryAmt = detail.status === 'carried' ? detail.totalCommission : (detail.status === 'auditCarried' && fs ? fs.carryOut : 0);
           const stColor = CS_TONE_COLOR[(L[detail.status] || {}).tone] || 'var(--text-1)';
           return (
+          <window.CSDetailTabs cs={detail} B={B} CUR={CUR} F={F} en={lang === 'en'} pad="18px 24px 96px" renderDetail={() => (
           <div style={{ padding: '18px 24px 96px' }}>
             {/* 状态 */}
             <div className="drawer-sec">{T('ms.sec.status')}</div>
@@ -355,18 +367,9 @@ function MySettlementModule({ onNav }) {
             <DRow l={T('ms.f.cycle')} v={detail.periodRange} />
             <DRow l={T('ms.f.settleTime')} v={fmtDT(detail.settledAt)} />
 
-            {/* 佣金来源 — 按来源 CS 分组 */}
+            {/* 佣金来源 — 固定单行「可提款金额」(v3.7.56:删本期佣金/往期转入/转结金额分项,转结下期逻辑已废) */}
             <div className="drawer-sec">{T('ms.sec.source')}</div>
-            {detail.curCommission > 0 && (
-              <SrcGroup src={detail.id} label={T('ms.f.curCom')} amount={CUR + F.fmtNum(detail.curCommission)} />
-            )}
-            {detail.carriedIn > 0 && (
-              <SrcGroup src={detail.carriedFromId || '—'} label={T('ms.f.carryCom')} amount={CUR + F.fmtNum(detail.carriedIn)} />
-            )}
-            <div style={{ borderTop: '1px solid var(--line)', marginTop: 12, paddingTop: 8 }}>
-              <DRow l={T('ms.f.withdrawable')} v={CUR + F.fmtNum(detail.withdrawable)} vColor="var(--brand)" bold />
-              <DRow l={T('ms.f.carryAmt')} v={CUR + F.fmtNum(carryAmt)} vColor="var(--danger)" bold />
-            </div>
+            <DRow l={T('ms.f.withdrawable')} v={CUR + F.fmtNum(detail.withdrawable)} vColor="var(--brand)" bold />
 
             {/* 关联提款申请单(已发起提款时显示) */}
             {wr && (
@@ -396,6 +399,7 @@ function MySettlementModule({ onNav }) {
               </>
             )}
           </div>
+          )} />
           );
         })()}
       </ASTUI.Drawer>
@@ -459,10 +463,22 @@ function MySettlementModule({ onNav }) {
             )}
           </div>
 
-          {/* 汇总 — 右对齐 */}
-          <div className="full" style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, alignItems: 'baseline', paddingTop: 2 }}>
+          {/* 汇总 — 结算单数左对齐 / 佣金金额右对齐 */}
+          <div className="full" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 2 }}>
             <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{T('ms.apply.count')} <strong style={{ color: 'var(--brand)', fontFamily: 'var(--font-mono)' }}>{eligible.length}</strong></span>
             <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{T('ms.apply.amount')} <strong className="text-mono" style={{ color: 'var(--brand)', fontSize: 15 }}>{CUR}{F.fmtNum(wdAmount)}</strong></span>
+          </div>
+
+          {/* 往期财务转结金额 — 已财务转结(auditCarried)各期 fs.carryOut 之和 */}
+          <div className="full" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: 8, paddingTop: 2, marginTop: -2 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{T('ms.apply.carrySum', '往期财务转结金额')}</span>
+            <strong className="text-mono" style={{ fontSize: 13.5, color: auditCarrySum > 0 ? 'var(--danger)' : 'var(--text-1)' }}>{auditCarrySum > 0 ? '-' + CUR + F.fmtNum(auditCarrySum) : CUR + '0'}</strong>
+          </div>
+
+          {/* 最低申请提款金额 — 读分润模式 minCommission;灰字 */}
+          <div className="full" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: 8, paddingTop: 2, marginTop: -2 }}>
+            <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{T('ms.apply.minAmount', '最低申请提款金额')}</span>
+            <strong className="text-mono" style={{ fontSize: 13.5, color: 'var(--text-2)' }}>{CUR}{F.fmtNum(minApply)}</strong>
           </div>
         </div>
       </ASTUI.Modal>

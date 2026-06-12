@@ -1,10 +1,210 @@
 // 版本历史 — PRD 规划 → 版本
 // 用户告知做事情时会带上版本号(如 v222 = v2.2.2),完成后在此追加更新项
+// ⚠️ 版本真源同步:每次在本数组顶部加记录时,必须同步在 `CHANGELOG.md` 顶部加对应条目
+//    (版本号 + 日期 + 时间 + 改了什么;标签 fix→修复/add→新增/modify→修改/remove→删除/feat→功能)。两者保持一致。
 const VERSIONS = [
+  {
+    ver: 'v3.7.64',
+    date: '2026-06-12',
+    current: true,
+    changes: [
+      { type: 'modify', text: '协作规范死规则⑥ 补「计时块每行必须真换行」(项目文档,非产品功能):输出时用 Markdown 列表/空行使起始时间、阶段 1~5、结束时间渲染后各占一行,禁用全角空格把多行连成一大条(真犯过);HANDOFF + 规范两文件同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.63',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'modify', text: '协作规范死规则⑥ 计时报告格式改版(项目文档,非产品功能):加「起始时间 HH:MM:SS / 结束时间 HH:MM:SS」两行 + 分段换行编号(1找资料/2改/3验证/4收尾/5检查);起始=确认口令刻,结束=含输出自查表之后那一刻(检查也计入耗时,故末时钟须在自查表后读);>60秒用分秒;两文件同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.62',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'modify', text: '协作规范死规则⑥ 补「逐点打点纪律」(项目文档,非产品功能):分段耗时必须靠真打点——起始 t0 + 每个阶段切换点再读一次(找资料完 t1/改完 t2/验证完 t3),禁只打首尾两点再用「纯文档未拆段」跳过分段(真犯过:只打 t0/t1 就报总数 158s);HANDOFF 补整段报告样板;两文件同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.61',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'modify', text: '协作规范死规则⑥ 补强(项目文档,非产品功能):计时第一动作改为「show_html 加载预览 → 再 eval_js Date.now() 打点」;「无计时」从默认退路降级为「show_html 加载后仍读不到」的例外,且该情况自查表⑥记✗ —— 堵死「裸跑 eval_js 撞viewport not ready就写无计时」的偷懒造假(真犯过);HANDOFF.md + 规范.md 正文+速记同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.60',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'add', text: '协作规范新增死规则⑧「收尾自查清单 + 违规三步」(项目文档,非产品功能):每个 B 类任务收尾强制输出自查表(★无不诚实 / ①报清单等口令 / ②无scrollIntoView / ③验证≤1次 / ④四步未压缩+复述id / ⑤确认有a/b / ⑥计时如实 / ⑦无自创格式 / ⑧输出项全到位),任一✗→走违规三步(承认→根因→修复方案),禁只停在承认;HANDOFF.md(违规区+第6步+适用范围)+ 规范.md(死规则区+总开关+速记)同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.59',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'modify', text: '协作规范补强(项目文档,非产品功能):死规则④ 补「四步次序」——①只给方向选项 a/b/c(不提口令)→②用户选→③据所选方向报「具体怎么做」清单→④这时才问口令;禁把 ①④ 塑进同句(让用户一边选方向一边被催口令);HANDOFF.md + 规范.md 正文+速记同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.58',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'modify', text: '协作规范补强(项目文档,非产品功能):死规则⑤ 补「含二选一也必须给 a/b 选项、禁开放式问句」——修正「凡需拍板」被择窄解读成「仅多方案才用 a/b/c」的漏洞;HANDOFF.md + 规范.md 两处同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.57',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'fix', text: '修复 W26064 期佣金两端对不上:分润报表·已结算该期总佣金为 ₹4,880(REVSHARE_PERIOD_TARGET[31]),但佣金结算单还停在 ₹4,200 —— 将 data-billing.js RICH_PERIODS W26064 cur 4200→4880,两表同源对齐(代理+商户两端结算单同时跟齐);其余期(W26063 680 / W26062 5400 / W26061 3100)本就一致,仅此期漏同步' },
+    ],
+  },
+  {
+    ver: 'v3.7.56',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'modify', text: '佣金结算单 · 结算明细抽屉「佣金来源」区简化:转结下期逻辑已废,删除本期佣金 / 往期转入佣金两个分项 + 底部「转结金额」行(原恮显示 ₹0 噪声),整区固定只留单行「可提款金额」(my_settlement.jsx 结算明细抽屉)' },
+    ],
+  },
+  {
+    ver: 'v3.7.55',
+    date: '2026-06-12',
+    current: false,
+    changes: [
+      { type: 'modify', text: '專業代理後台 所有金额数值去除 K/M 缩写,改显示千分位全数字(F.money→F.fmtNum):agent_common 仪表盘 hero(累计NGR/本月佣金)/ my_cpa(CPA 报表 KPI+明细表)/ my_wallet(钱包余额卡+流水+提款单)/ my_revshare(分润报表)/ my_players(玩家报表)/ my_codes(Code 报表),共 6 个模块 29 处' },
+    ],
+  },
+  {
+    ver: 'v3.7.54',
+    date: '2026-06-11',
+    current: false,
+    changes: [
+      { type: 'modify', text: '商户后台「代理提款审核」提款审核进度弹窗底部同步重构(与代理侧 v3.7.53 一致):删「提款申请金额」+「关联佣金结算单」两段,合并为「关联订单」—— 佣金结算单(可多张可点)/ 提款审核单 / 财务核算单(WR通过生成FS才显示)/ 财务转结单(转结才显示,带符号)/ 付款单(付款才显示),逐单据生成才出现' },
+    ],
+  },
+  {
+    ver: 'v3.7.53',
+    date: '2026-06-11',
+    current: false,
+    changes: [
+      { type: 'modify', text: '代理后台「提款审核进度」弹窗底部重构:删除原「提款申请金额」+「关联佣金结算单」两段,合并为一个「关联订单」大段 —— 按单据链顺序分组列出 佣金结算单(可多张,可点)/ 提款审核单(WR)/ 财务核算单(FS)/ 财务转结单(CF,转结才显示,带符号)/ 付款单(PO,付款才显示),每种单据生成了才出现' },
+    ],
+  },
+  {
+    ver: 'v3.7.52',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'modify', text: '财务核算单「财务转结」区显示精简:标题「财务转结」→「财务转结单」;原两行(财务转结单号 CF… / 转结金额 +₹X)合并为一行 —— CF 单号(左)+ 金额(右,带符号 正绿负红),更干净(代理 my_withdraw_progress + 商户 withdraw_review 两处)' },
+    ],
+  },
+  {
+    ver: 'v3.7.51',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'fix', text: '代理提款审核 + 提款审核进度 列表「转结金额」列:修正只认旧 carryOut>0 导致正值转结(carryOut=0)和演示链负值转结(carryOut=0)显示为「—」的问题。改为读财务转结单(CF)金额、带符号显示:正值 +₹X 绿、负值 −₹X 红(商户 withdraw_review + 代理 my_withdraw_progress 两处列表)' },
+    ],
+  },
+  {
+    ver: 'v3.7.50',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'fix', text: '商户后台「代理提款审核」转结下期:修正「应付>0 不让转结」的拦截 —— 按 m0089/m0090 定的规则,应付正负皆可转结下期,转结金额=应付(原样带符号)。去掉 tryCarryFS 的 payable>0 拦截;doCarryFS 改调新动作 B.carryFS;转结确认弹窗金额改带符号(正绿负红)' },
+      { type: 'add', text: 'data-billing.js 新增 store.carryFS(fsId):任意符号应付都能转结,生成财务转结单(金额=应付带符号,待抵扣),FS→已转结、CS→财务转结。原 finishAudit 的「应付≤0 自动转结」旧逻辑(carryOut=申请额)不再用于转结按钮' },
+      { type: 'modify', text: '财务核算单「财务转结」区(代理+商户两处 FSCard):转结金额改带符号显示(读 CF 金额),正值(+₹X 绿)/负值(−₹X 红)均能显示,不再只在应付为负时出现' },
+    ],
+  },
+  {
+    ver: 'v3.7.49',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'modify', text: '财务核算单 UI(代理 my_withdraw_progress + 商户 withdraw_review):「核算结果」下方新增独立大项「财务转结」—— 转结下期时才出现,内含 财务转结单号(CF…)+ 转结金额(−X 红字);删除原「应付金额」下方那行「转结金额」' },
+    ],
+  },
+  {
+    ver: 'v3.7.48',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'feat', text: '数据分档:只有 AC100006(全状态演示账户)保留完整数据;AC100005 / AC100007 / AC100008 清空为「新开、零数据」账户(账户状态冻结/停用不动)。解决原先「任何登入代理都重建同一份满血 demo」导致 05/07/08 也满数据的问题' },
+      { type: 'modify', text: 'data.js:新增 randAgentId() 随机分配排除 AC100005/100007/100008 → 玩家/Code/CPA/结算记录(STM)/风控名单均不再分给这三个账户;genAgents 对这三个账户聚合数(players/commission/pendingCommission/ngr)清零,商户后台列表显示为 0 玩家/0 佣金的新账户' },
+      { type: 'modify', text: 'data-billing.js focusAgent:改为只对 AC100006 建满血单据链(CS/WR/FS/PO/CF),其余账户登入/查看一律清空(含新增 cf 数组);init 的 others 过滤 players>0 已自动排除清零后的三账户' },
+      { type: 'remove', text: '备注:AC100005 的「真实流转范例」数据为后续单独一轮再建,本次仅清空' },
+    ],
+  },
+  {
+    ver: 'v3.7.47',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'feat', text: 'Q3 财务转结闭环(第1步·核心+演示)——新增「财务转结单」数据模型(单号CF+日期+流水/金额带正负/来源核算单/状态 待抵扣·已抵扣/被哪期抵扣)。财务核算单计算纳入「往期财务转结金额」转入抵扣(calcPayable += carryIn);任一应付为负的转结期都生成一张财务转结单' },
+      { type: 'add', text: 'data-billing.js 新增 A2 演示链(整笔转入+不够开新单):周期A 申请4,000 扣款9,000→应付−5,000→转结生成 CF_A(−5,000);周期B 申请2,000 财务调整转入 CF_A(−5,000)→应付−3,000→转结,CF_A整笔消耗(已抵扣)、生成 CF_B(−3,000)。深度恒为1,扁平单号链不嵌套' },
+      { type: 'modify', text: '财务核算单 UI(代理 my_withdraw_progress + 商户 withdraw_review):财务调整明细新增「往期财务转结 −X 财务转结单号 CF…」行;应付金额改为带符号显示(负值红字 −X,不再压成0);转结金额兼容新模型(carryOut或负应付取绝对值)' },
+    ],
+  },
+  {
+    ver: 'v3.7.46',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'feat', text: '佣金结算单弹窗新增「提款流转记录」分页(解决重新申请覆盖旧记录)—— 顶部加 [结算明细 | 提款流转记录] 两个 tab。结算明细=原内容不变;流转记录=在 store.wr 捞所有含本 CS 的提款申请单(倒序),每次申请一张卡(第N次/WR号/时间/金额/终态徽章[已拒绝/已驳回/付款失败/财务转结/已付款/进行中]+WR→FS→PO链+驳回原因),被拒/驳回/付款失败/财务转结后重新申请的历史完整留痕' },
+      { type: 'add', text: '新增共享组件 modules/cs_flow_history.jsx(window.CSDetailTabs + CSFlowHistory),自带 tab 状态解决 IIFE 内不能用 hooks;4 处 CS 详情抽屉统一接入:代理后台 my_settlement/my_withdraw_progress + 商户后台 agent_settlement/withdraw_review。代理端跟随中英语言,商户端 zh 锁定' },
+    ],
+  },
+  {
+    ver: 'v3.7.45',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'fix', text: '代理后台 → 佣金结算单 → 申请提款弹窗:「往期财务转结金额」由 ₹1,746 改为负号显示 −₹1,746(红字),正确反映往期欠下、顺延抵扣的负向金额;为 0 时显示 ₹0' },
+    ],
+  },
+  {
+    ver: 'v3.7.44',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'fix', text: '财务转结提款单「关联佣金结算单」出现两笔同结算单号、不同金额(如 CSW26052000005 ₹4,600/₹2,069)—— 根因 csByIds 跨代理把同 id 的 CS 都捞出。代理后台「提款审核进度」+ 商户后台「代理提款审核」共 4 处显示按 agentId 过滤去重,去重后只显示本代理的 CS,金额=核算前佣金(totalCommission)' },
+      { type: 'modify', text: '财务转结演示数据(W26052 / FS20260521000003):转结金额由「=申请额 4,600」改为「扣款合计−申请额=差额」。违规扣款3,300+风控扣款3,000+行政费46=扣款6,346,转结=−1,746,应付0;FS核算单对账:应提4,600−调整6,346=转结−1,746(刻意≠申请额4,600,避免混淆)' },
+    ],
+  },
+  {
+    ver: 'v3.7.43',
+    date: '2026-06-11',
+    current: true,
+    changes: [
+      { type: 'add', text: '代理后台 → 佣金结算单 → 申请提款弹窗:佣金金额下方新增「往期财务转结金额」,数值=该代理已财务转结(auditCarried)各期 fs.carryOut 累计,反映往期财务核算转结到本期的金额' },
+      { type: 'modify', text: '申请提款弹窗汇总块:结算单数改为左对齐(与佣金金额左右分列);「最低申请提款金额」金额由「不足标红」改为固定灰字(--text-2)' },
+    ],
+  },
+  {
+    ver: 'v3.7.42',
+    date: '2026-06-10',
+    current: false,
+    changes: [
+      { type: 'feat', text: '佣金结算单取消「结算门槛转结」机制 — 原逻辑佣金低于分润模式最低结算佣金时状态=转结下期并并入下期;现改为结算单一律「待提款」,门槛改到提款申请时校验。data-billing.js 删 buildDemo / buildRichDemo 的 carried 生成分支;演示数据 W26063 改为独立待提款期、解除 W26064 转结入关联' },
+      { type: 'add', text: '代理后台 → 佣金结算单 → 申请提款弹窗:佣金金额下方新增「最低申请提款金额」(读该代理分润模式 minCommission,与「我的账户 → 分润模式」同源),申请总额不足时标红' },
+      { type: 'add', text: '申请提款点「申请」新增下限校验:申请提款总额 < 最低申请提款金额时,toast「您的分润模式最低提款申请金额须达到 ₹XXXX」并不提交(按钮仍可点)' },
+      { type: 'remove', text: '删除代理后台佣金结算单 + 商户后台代理佣金结算单的「转结下期」状态分类 tab(结算门槛转结已取消);财务转结 auditCarried 不受影响、保留' },
+      { type: 'modify', text: '文案同步:分润模式「最低结算佣金金额」 hint 「(低于该金额顺延至下期)」→「(提款申请总额须达到此金额)」(agent_common / agent_revshare);说明弹窗 billing_help 删「转结下期」项、改「待提款」描述' },
+    ],
+  },
   {
     ver: 'v3.7.41',
     date: '2026-06-10',
-    current: true,
+    current: false,
     changes: [
       { type: 'fix', text: '测试演示用状态切换按钮放错后台 —— 从「专业代理后台 → 提款审核进度」移到「商户后台 → 代理提款审核 → 付款单弹窗」(代理后台不控制审核,审核/付款由商户控)。付款中状态下显示[付款失败][付款成功],点击调用 APS_BILLING.payFail / pay 切换该笔付款单全链状态,改完关闭抽屉刷新。中/英双语' },
       { type: 'remove', text: '移除专业代理后台 my_withdraw_progress.jsx 付款单弹窗(POCard)里的测试按钮 —— 代理只能查看进度,不能改付款状态' },

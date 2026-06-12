@@ -55,9 +55,10 @@
     wr: [],   // 提款申请单
     fs: [],   // 财务核算单
     po: [],   // 付款单
+    cf: [],   // 财务转结单(carry-forward,记 待抵扣/已抵扣)
     _inited: false,
     _subs: new Set(),
-    _seq: { wr: 0, fs: 0, po: 0 },
+    _seq: { wr: 0, fs: 0, po: 0, cf: 0 },
     subscribe(fn) { this._subs.add(fn); return () => this._subs.delete(fn); },
     _notify() { this._subs.forEach((fn) => { try { fn(); } catch (e) {} }); },
     CUR, THRESHOLD, PERIODS,
@@ -68,7 +69,7 @@
   function calcPayable(fs) {
     return Math.round(
       fs.applyAmount - fs.adminFee - fs.tax - fs.violationDeduct - fs.riskDeduct
-      + fs.manualAdjust - fs.reserve - fs.carryOut
+      + fs.manualAdjust - fs.reserve - fs.carryOut + (fs.carryIn || 0)
     );
   }
   store.calcPayable = calcPayable;
@@ -131,8 +132,8 @@
   // 审核中 / 已拒绝 / 核算中 / 已驳回 / 已转结 / 付款中 / 付款失败 / 付款成功
   // 另保留 待提款(withdrawable)/ 已转结(carried)两期供「佣金结算单」页演示(不生成 WR,不进度列表)
   const RICH_PERIODS = [
-    { code: 'W26064', serial: 1,  range: '2026/6/22 ~ 2026/6/28', end: '2026/6/28', cur: 4200,  carriedIn: 680, fromId: 'CSW26063000017', stage: 'withdrawable' },
-    { code: 'W26063', serial: 17, range: '2026/6/15 ~ 2026/6/21', end: '2026/6/21', cur: 680,   carriedIn: 0,   fromId: null, stage: 'carried' },
+    { code: 'W26064', serial: 1,  range: '2026/6/22 ~ 2026/6/28', end: '2026/6/28', cur: 4880,  carriedIn: 0,   fromId: null, stage: 'withdrawable' },
+    { code: 'W26063', serial: 17, range: '2026/6/15 ~ 2026/6/21', end: '2026/6/21', cur: 680,   carriedIn: 0,   fromId: null, stage: 'withdrawable' },
     { code: 'W26062', serial: 2,  range: '2026/6/8 ~ 2026/6/14',  end: '2026/6/14', cur: 5400,  carriedIn: 0,   fromId: null, stage: 'reviewing' },
     { code: 'W26061', serial: 9,  range: '2026/6/1 ~ 2026/6/7',   end: '2026/6/7',  cur: 3100,  carriedIn: 0,   fromId: null, stage: 'rejected' },
     { code: 'W26054', serial: 16, range: '2026/5/25 ~ 2026/5/31', end: '2026/5/31', cur: 7250,  carriedIn: 0,   fromId: null, stage: 'auditing' },
@@ -202,12 +203,24 @@
 
     // 财务转结:扣款后应付 ≤ 0,本期欠款转结下期 —— CS 状态 auditCarried(区别于结算门槛的 carried)
     if (stage === 'fsCarried') {
-      fs.violationDeduct = Math.round(applyAmount * 0.5);
-      fs.riskDeduct = Math.round(applyAmount * 0.6);
-      fs.carryOut = applyAmount;
-      fs.payable = calcPayable(fs);
+      // 扣款合计 > 申请额 → 应付0,差额(扣款−申请)转结下期
+      // 转结金额取实际差额,刻意与申请额(4600)不同,避免混淆
+      fs.violationDeduct = 3300;
+      fs.riskDeduct = 3000;
+      const _deduct = fs.adminFee + fs.tax + fs.violationDeduct + fs.riskDeduct + fs.reserve - fs.manualAdjust;
+      fs.carryOut = _deduct - applyAmount;   // = 1746,差额转结,≠ 申请额
+      fs.payable = 0;                          // 应付0,本期不付款,差额转下期
       fs.status = 'carried'; fs.statusAt = fs.auditAt + 3600000;
       cs.status = 'auditCarried'; cs.statusAt = fs.statusAt;
+      // 生成财务转结单(金额=负的转结额,待抵扣)
+      const cf52 = {
+        id: 'CF' + ymd(fs.statusAt) + pad6(++store._seq.cf),
+        agentId: agent.id, agentName: agent.name,
+        amount: -fs.carryOut, sourceFsId: fs.id, sourceWrId: wr.id,
+        status: 'pending', createdAt: fs.statusAt, consumedFsId: null, consumedAt: null,
+      };
+      fs.carryCfId = cf52.id;
+      store.cf.push(cf52);
       return;
     }
 
@@ -256,18 +269,81 @@
         curCommission: p.cur, carriedIn: p.carriedIn, carriedFromId: p.fromId,
         totalCommission: total,
         threshold: THRESHOLD,
-        withdrawable: p.stage === 'carried' ? 0 : (total >= THRESHOLD ? total : 0),
+        withdrawable: total,
         status: 'withdrawable', statusAt: settledAt, wrId: null,
       };
       store.cs.push(cs);
       if (p.stage === 'withdrawable') return;           // 待提款,保持
-      if (p.stage === 'carried') { cs.status = 'carried'; cs.withdrawable = 0; return; }
       // 合并组:多张 CS 打包到「一张」提款申请单(同一 WR/FS/PO)
       if (p.mergeGroup) { (mergeBuckets[p.mergeGroup] = mergeBuckets[p.mergeGroup] || []).push({ cs, i }); return; }
       buildSingleChain(agent, i, cs, p.stage);
     });
     // 逐个合并组生成一条「付款成功」的合并链
     Object.values(mergeBuckets).forEach((items) => buildMergedPaidChain(agent, items));
+    // A2 演示:财务转结闭环链(整笔转入 + 不够开新单)
+    buildCarryDemo(agent);
+  }
+
+  // —— A2 演示:财务转结闭环 —— 周期A 应付 -5000 → 转结 CF_A;周期B 申请2000 转入 CF_A → 应付 -3000 → 转结 CF_B
+  function buildCarryDemo(agent) {
+    const M = METHODS[0];
+    function makeCarriedPeriod(opts) {
+      const settledAt = opts.endTs + 2 * 86400000;
+      const apply = opts.apply;
+      const cs = {
+        id: 'CS' + opts.code + pad6(opts.serial),
+        agentId: agent.id, agentName: agent.name,
+        period: opts.code, periodType: 'W', periodRange: opts.range,
+        settledAt, cpa: Math.round(apply * 0.5), revShare: apply - Math.round(apply * 0.5), adjust: 0,
+        curCommission: apply, carriedIn: 0, carriedFromId: null,
+        totalCommission: apply, threshold: THRESHOLD, withdrawable: apply,
+        status: 'auditCarried', statusAt: settledAt, wrId: null,
+      };
+      store.cs.push(cs);
+      const reqTs = settledAt + 86400000;
+      const wr = {
+        id: 'WR' + ymd(reqTs) + pad6(++store._seq.wr),
+        agentId: agent.id, agentName: agent.name, requestAt: reqTs,
+        csIds: [cs.id], csCount: 1, amount: apply,
+        method: M.method, account: M.acct,
+        reviewer: 'ops.lily', reviewAt: reqTs + 3 * 3600000,
+        status: 'carried', rejectReason: null, fsId: null,
+      };
+      cs.wrId = wr.id;
+      store.wr.push(wr);
+      const fsTs = reqTs + 86400000;
+      const fs = {
+        id: 'FS' + ymd(fsTs) + pad6(++store._seq.fs), wrId: wr.id,
+        agentId: agent.id, agentName: agent.name, applyAmount: apply,
+        adminFee: 0, tax: 0, violationDeduct: opts.viol || 0, riskDeduct: opts.risk || 0,
+        manualAdjust: 0, reserve: 0, carryOut: 0, carryIn: 0, carryInCfId: null,
+        payable: 0, auditor: 'finance.amy', auditAt: fsTs + 2 * 3600000,
+        status: 'carried', statusAt: fsTs + 3 * 3600000, createdAt: fsTs, poId: null,
+      };
+      if (opts.carryInCf) {
+        fs.carryIn = opts.carryInCf.amount;          // 负值,整笔转入
+        fs.carryInCfId = opts.carryInCf.id;
+        opts.carryInCf.status = 'consumed';
+        opts.carryInCf.consumedFsId = fs.id;
+        opts.carryInCf.consumedAt = fs.statusAt;
+      }
+      fs.payable = calcPayable(fs);                  // 负值
+      wr.fsId = fs.id;
+      store.fs.push(fs);
+      const cf = {
+        id: 'CF' + ymd(fs.statusAt) + pad6(++store._seq.cf),
+        agentId: agent.id, agentName: agent.name,
+        amount: fs.payable, sourceFsId: fs.id, sourceWrId: wr.id,
+        status: 'pending', createdAt: fs.statusAt, consumedFsId: null, consumedAt: null,
+      };
+      fs.carryCfId = cf.id;
+      store.cf.push(cf);
+      return { cs, wr, fs, cf };
+    }
+    // 周期A:申请4000,违规6000,风控3000 → 应付 -5000 → CF_A(-5000)
+    const A = makeCarriedPeriod({ code: 'W26032', serial: 3, range: '2026/3/9 ~ 2026/3/15', endTs: new Date('2026/3/15').getTime(), apply: 4000, viol: 6000, risk: 3000 });
+    // 周期B:申请2000,转入 CF_A(-5000) → 应付 -3000 → CF_B(-3000)
+    makeCarriedPeriod({ code: 'W26033', serial: 4, range: '2026/3/16 ~ 2026/3/22', endTs: new Date('2026/3/22').getTime(), apply: 2000, carryInCf: A.cf });
   }
 
   // —— 多张 CS 合并到「一张」提款申请单,并走完整付款成功链(WR/FS/PO 各一)——
@@ -331,7 +407,7 @@
       const adjust = rnd() > 0.78 ? Math.round((rnd() - 0.55) * 600) : 0;
       const curCommission = cpa + revShare + adjust;        // 本期佣金
       const totalCommission = curCommission + carriedIn;    // 本期总佣金
-      const withdrawable = totalCommission >= THRESHOLD ? totalCommission : 0;
+      const withdrawable = totalCommission;
 
       const cs = {
         id: 'CS' + p.code + pad6(serial),
@@ -346,13 +422,8 @@
         wrId: null,
       };
 
-      // 未达门槛 → 已转结(金额并入下期 carriedIn)
-      if (totalCommission < THRESHOLD) {
-        cs.status = 'carried';
-        carriedIn = totalCommission;     // 结转下期
-      } else {
-        carriedIn = 0;
-      }
+      // v3.7.42 取消「结算门槛转结」:一律待提款,门槛改到提款申请时校验
+      carriedIn = 0;
       csList.push(cs);
     });
 
@@ -501,14 +572,18 @@
     if (!agentId || !this._inited) return;
     if (!this._richSet) this._richSet = new Set();
     if (this._richSet.has(agentId)) return;
-    const D = window.APS_DATA;
-    const found = (D && D.agents.find((a) => a.id === agentId)) || { id: agentId, name: agentId };
-    const agent = { ...found, name: resolveAgentName(agentId, found.name) };
+    // v3.7.48 只有 AC100006(全状态演示账户)建满血单据链;其余账户当作「新开、零数据」
     this.cs = this.cs.filter((c) => c.agentId !== agentId);
     this.wr = this.wr.filter((w) => w.agentId !== agentId);
     this.fs = this.fs.filter((f) => f.agentId !== agentId);
     this.po = this.po.filter((p) => p.agentId !== agentId);
-    buildAgentChain(agent, 0, true);
+    this.cf = this.cf.filter((c) => c.agentId !== agentId);
+    if (agentId === 'AC100006') {
+      const D = window.APS_DATA;
+      const found = (D && D.agents.find((a) => a.id === agentId)) || { id: agentId, name: agentId };
+      const agent = { ...found, name: resolveAgentName(agentId, found.name) };
+      buildAgentChain(agent, 0, true);
+    }
     this._richSet.add(agentId);
   };
 
@@ -519,6 +594,8 @@
   store.wrById = function (id) { return this.wr.find((w) => w.id === id) || null; };
   store.poById = function (id) { return this.po.find((p) => p.id === id) || null; };
   store.csByIds = function (ids) { return this.cs.filter((c) => ids.includes(c.id)); };
+  store.cfById = function (id) { return this.cf.find((c) => c.id === id) || null; };
+  store.cfOf = function (agentId) { return this.cf.filter((c) => c.agentId === agentId); };
 
   // —— 单据备注(商户后台用,按单号 WR/FS 存;跨页保留,刷新重置)——
   store.getNote = function (id) { return (this._notes && this._notes[id]) || []; };
@@ -610,6 +687,25 @@
       const wr = this.wrById(fs.wrId);
       if (wr) { this.csByIds(wr.csIds).forEach((c) => { c.status = 'auditCarried'; c.statusAt = Date.now(); }); }
     }
+    this._notify();
+  };
+
+  // 财务:转结下期(应付正负皆可,m0089/m0090)→ FS 已转结,生成财务转结单(金额=应付,带符号),CS 财务转结
+  store.carryFS = function (fsId) {
+    const fs = this.fsById(fsId); if (!fs || fs.status !== 'auditing') return;
+    fs.payable = calcPayable(fs);
+    fs.carryOut = 0; // 新模型:转结额=应付(带符号),不用旧 carryOut
+    fs.status = 'carried'; fs.statusAt = Date.now();
+    const wr = this.wrById(fs.wrId);
+    if (wr) { this.csByIds(wr.csIds).forEach((c) => { c.status = 'auditCarried'; c.statusAt = Date.now(); }); }
+    const cf = {
+      id: 'CF' + ymd(fs.statusAt) + pad6(++this._seq.cf),
+      agentId: fs.agentId, agentName: fs.agentName,
+      amount: fs.payable, sourceFsId: fs.id, sourceWrId: fs.wrId,
+      status: 'pending', createdAt: fs.statusAt, consumedFsId: null, consumedAt: null,
+    };
+    fs.carryCfId = cf.id;
+    this.cf.push(cf);
     this._notify();
   };
 

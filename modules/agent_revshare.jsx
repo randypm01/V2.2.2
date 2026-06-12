@@ -1111,7 +1111,7 @@ function RevsharePlanView({ comm, EN }) {
     cycle:    EN ? 'Settlement Cycle'        : '結算周期',
     currency: EN ? 'Settlement Currency'     : '結算幣種',
     minAmt:   EN ? 'Min. Settlement Commission' : '最低結算佣金金額',
-    minHint:  EN ? '(below this carries to next period)' : '(低于该金额顺延至下期)',
+    minHint:  EN ? '(withdrawal requests must reach this amount)' : '(提款申请总额须达到此金额)',
     maxAmt:   EN ? 'Max. Settlement Commission Cap' : '最高結算佣金上限',
     plan:     EN ? 'RevShare Plan'           : '分潤方案',
     ratio:    EN ? 'Share Rate'              : '分潤比例',

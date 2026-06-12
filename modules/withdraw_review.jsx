@@ -51,6 +51,12 @@ const WPUI = window.UI;
   a('wp.sec.progress', '审核进度', 'Progress');
   a('wp.sec.applyAmt', '提款申请金额', 'Request Amount');
   a('wp.sec.linkedCs', '关联佣金结算单', 'Linked Settlements');
+  a('wp.sec.linkedDocs', '关联订单', 'Linked Documents');
+  a('wp.lo.cs', '佣金结算单', 'Commission Settlement');
+  a('wp.lo.wr', '提款审核单', 'Withdrawal Review');
+  a('wp.lo.fs', '财务核算单', 'Finance Settlement');
+  a('wp.lo.cf', '财务转结单', 'Carry-forward Note');
+  a('wp.lo.po', '付款单', 'Payment Order');
   a('wp.view', '查看', 'View');
   a('wp.period', '期号', 'Period');
   // 阶段标题 / 单据名
@@ -121,7 +127,10 @@ const WPUI = window.UI;
   a('wp.f.totalApply', '总申请提款', 'Total Requested');
   a('wp.f.adjust', '财务调整', 'Finance Adjustment');
   a('wp.f.payable', '应付金额', 'Net Payable');
+  a('wp.f.priorCarry', '往期财务转结', 'Prior Carry-over');
   a('wp.f.carryAmt', '转结金额', 'Carried Amount');
+  a('wp.f.carrySection', '财务转结单', 'Carry-forward Note');
+  a('wp.f.carryNo', '财务转结单号', 'Carry-forward No.');
   a('wp.f.poNo', '付款单号', 'Payment No.');
   a('wp.f.poTime', '付款单生成时间', 'PO Created');
   a('wp.f.provider', '支付商', 'Payment Provider');
@@ -221,9 +230,9 @@ function WithdrawReviewModule() {
   };
   const fsPayableOf = (fs) => fs.payable; // store 即真值(财务调整已写回 fs)
   const tryApproveFS = (fs) => { if (fsPayableOf(fs) > 0) setApproveFS(fs); else toast('应付金额小于0,请转结下期', 'error'); };
-  const tryCarryFS = (fs) => { if (fsPayableOf(fs) <= 0) setCarryFS(fs); else toast('应付金额大于0,请通过或驳回审核', 'error'); };
+  const tryCarryFS = (fs) => { setCarryFS(fs); }; // 应付正负皆可转结(m0089/m0090)
   const doApproveFS = () => { const fs = approveFS; B.finishAudit(fs.id); setApproveFS(null); setDocView(null); toast('已通过财务核算,付款中', 'success'); setTimeout(() => { B.pay(fs.id); toast('付款成功', 'success'); }, 4000); };
-  const doCarryFS = () => { const fs = carryFS; B.finishAudit(fs.id); setCarryFS(null); setDocView(null); toast('已转结下期', 'success'); };
+  const doCarryFS = () => { const fs = carryFS; B.carryFS(fs.id); setCarryFS(null); setDocView(null); toast('已转结下期', 'success'); };
   const doRejectFS = () => { const fs = rejectFS; B.rejectFS(fs.id, fsRejText); setRejectFS(null); setDocView(null); toast('已驳回财务核算', 'success'); };
   const openAdjust = (fs) => {
     // 项目只能从「审核模板·财务调整项模板」选;预填优先读 store 已存的 _adjustItems,否则从 fs 固定字段派生(过滤非模板项)
@@ -277,8 +286,8 @@ function WithdrawReviewModule() {
       else if (fs.status === 'payFailed') { poStat = 'failed'; payAmt = fs.payable; }
       else if (fs.status === 'paid') { poStat = 'paid'; payAmt = po ? po.amount : fs.payable; }
     }
-    // 转结金额:财务核算应付 ≤ 0 转结下期时的金额(fs.carryOut)
-    const carryAmt = (fs && fs.status === 'carried' && fs.carryOut > 0) ? fs.carryOut : null;
+    // 转结金额(带符号):优先读财务转结单(CF)金额;否则旧模型 carryOut(负)/ 应付(负)
+    const carryAmt = (fs && fs.status === 'carried') ? ((fs.carryCfId && B.cfById && B.cfById(fs.carryCfId)) ? B.cfById(fs.carryCfId).amount : (fs.carryOut > 0 ? -fs.carryOut : fs.payable)) : null;
     return { w, fs, po, apply, fsStat, poStat, payAmt, carryAmt };
   };
   const rows = mine.map(derive);
@@ -504,7 +513,7 @@ function WithdrawReviewModule() {
                     <td><StatTxt meta={applyMeta[r.apply]} /></td>
                     <td>{r.fsStat ? <StatTxt meta={fsMeta[r.fsStat]} /> : dash}</td>
                     <td>{r.poStat ? <StatTxt meta={poMeta[r.poStat]} /> : dash}</td>
-                    <td className="right text-mono" style={{ color: r.carryAmt != null ? 'var(--danger)' : undefined }}>{r.carryAmt != null ? '-' + CUR + F.fmtNum(r.carryAmt) : dash}</td>
+                    <td className="right text-mono" style={{ color: r.carryAmt != null ? (r.carryAmt < 0 ? 'var(--danger)' : 'var(--success)') : undefined }}>{r.carryAmt != null ? (r.carryAmt < 0 ? '-' : '+') + CUR + F.fmtNum(Math.abs(r.carryAmt)) : dash}</td>
                     <td className="right text-mono" style={{ color: 'var(--text-0)' }}>{r.payAmt != null ? CUR + F.fmtNum(r.payAmt) : dash}</td>
                     <td onClick={e => e.stopPropagation()}><button className="link-act" onClick={() => setDetail(w)}>查看&审核</button></td>
                   </tr>
@@ -576,25 +585,49 @@ function WithdrawReviewModule() {
               </div>
 
               {/* 提款申请金额 — 单据号 + 合计,行式呈现(与下方结算单同款式) */}
-              <div className="drawer-sec" style={{ marginTop: 24 }}>{WRV_T('wp.sec.applyAmt')}</div>
-              <div style={{ marginTop: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 2px', borderBottom: '1px solid var(--line-soft)', fontSize: 12.5 }}>
-                  <span className="text-mono" style={{ color: 'var(--text-1)', fontSize: 12 }}>{detail.id}</span>
-                  <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--brand)' }}>{CUR}{F.fmtNum(detail.amount)}</span>
-                </div>
-              </div>
-
-              {/* 关联佣金结算单 */}
-              <div className="drawer-sec" style={{ marginTop: 24 }}>{WRV_T('wp.sec.linkedCs')}</div>
-              <div style={{ marginTop: 6 }}>
-                {B.csByIds(detail.csIds).map(c => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 2px', borderBottom: '1px solid var(--line-soft)', fontSize: 12.5 }}>
-                    <span className="text-mono" onClick={() => setCsView(c)} style={{ color: 'var(--brand)', fontSize: 12, textDecoration: 'underline', cursor: 'pointer' }}>{c.id}</span>
-                    <span className="text-mute" style={{ fontSize: 11.5 }}>· {WRV_T('wp.period')} {c.period}</span>
-                    <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--brand)' }}>{CUR}{F.fmtNum(c.totalCommission)}</span>
+              {/* 关联订单 — 整条单据链,按生成顺序列出,每种单据生成了才显示 */}
+              <div className="drawer-sec" style={{ marginTop: 24 }}>{WRV_T('wp.sec.linkedDocs')}</div>
+              {(() => {
+                const fsD = detail.fsId ? B.fsById(detail.fsId) : null;
+                const poD = fsD && fsD.poId ? B.poById(fsD.poId) : null;
+                const cfD = fsD && fsD.carryCfId && B.cfById ? B.cfById(fsD.carryCfId) : null;
+                const csList = B.csByIds(detail.csIds).filter(c => c.agentId === detail.agentId);
+                const subLabel = (txt) => <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 14, marginBottom: 2 }}>{txt}</div>;
+                const rowBase = { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 2px', borderBottom: '1px solid var(--line-soft)', fontSize: 12.5 };
+                const docRow = (id, amtNode) => (
+                  <div style={rowBase}>
+                    <span className="text-mono" style={{ color: 'var(--text-1)', fontSize: 12 }}>{id}</span>
+                    <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--brand)' }}>{amtNode}</span>
                   </div>
-                ))}
-              </div>
+                );
+                return (
+                  <div style={{ marginTop: 4 }}>
+                    {/* 佣金结算单(可多张,可点) */}
+                    {subLabel(WRV_T('wp.lo.cs'))}
+                    {csList.map(c => (
+                      <div key={c.id} onClick={() => setCsView(c)} style={{ ...rowBase, cursor: 'pointer' }}>
+                        <span className="text-mono" style={{ color: 'var(--brand)', fontSize: 12, textDecoration: 'underline' }}>{c.id}</span>
+                        <span className="text-mute" style={{ fontSize: 11.5 }}>· {WRV_T('wp.period')} {c.period}</span>
+                        <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--brand)' }}>{CUR}{F.fmtNum(c.totalCommission)}</span>
+                      </div>
+                    ))}
+                    {/* 提款审核单(detail 即 WR,总有) */}
+                    {subLabel(WRV_T('wp.lo.wr'))}
+                    {docRow(detail.id, CUR + F.fmtNum(detail.amount))}
+                    {/* 财务核算单 — WR 通过(生成 FS)才显示 */}
+                    {fsD && <React.Fragment>{subLabel(WRV_T('wp.lo.fs'))}{docRow(fsD.id, CUR + F.fmtNum(fsD.applyAmount))}</React.Fragment>}
+                    {/* 财务转结单 — 转结才显示 */}
+                    {cfD && <React.Fragment>{subLabel(WRV_T('wp.lo.cf'))}
+                      <div style={rowBase}>
+                        <span className="text-mono" style={{ color: 'var(--text-1)', fontSize: 12 }}>{cfD.id}</span>
+                        <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 600, color: cfD.amount < 0 ? 'var(--danger)' : 'var(--success)' }}>{(cfD.amount < 0 ? '-' : '+') + CUR + F.fmtNum(Math.abs(cfD.amount))}</span>
+                      </div>
+                    </React.Fragment>}
+                    {/* 付款单 — 付款才显示 */}
+                    {poD && <React.Fragment>{subLabel(WRV_T('wp.lo.po'))}{docRow(poD.id, CUR + F.fmtNum(poD.amount))}</React.Fragment>}
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
@@ -708,6 +741,7 @@ function WithdrawReviewModule() {
           const docStatusText = (kind, status) => (window.BILLING_LABELS[kind][status] || {}).label || status;
           const docTone = (kind, status) => (window.BILLING_LABELS[kind][status] || {}).tone || 'b-neutral';
           return (
+            <window.CSDetailTabs cs={cs} B={B} CUR={CUR} F={F} en={false} pad="2px 0 4px" renderDetail={() => (
             <div style={{ padding: '2px 0 4px' }}>
               <div className="drawer-sec">状态</div>
               <AGS_DRow l="订单状态" v={<span style={{ color: stColor, fontWeight: 600 }}>{csLabel(cs.status)}</span>} plain />
@@ -760,6 +794,7 @@ function WithdrawReviewModule() {
                 </>
               )}
             </div>
+          )} />
           );
         })()}
       </WPUI.Modal>
@@ -785,7 +820,7 @@ function WithdrawReviewModule() {
         </>}>
         {carryFS && (
           <div style={{ textAlign: 'center', padding: '6px 0', fontSize: 13, color: 'var(--text-2)' }}>转结金额
-            <span className="text-mono" style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 18, marginLeft: 8 }}>-{CUR}{F.fmtNum(Math.abs(fsPayableOf(carryFS)))}</span>
+            <span className="text-mono" style={{ color: fsPayableOf(carryFS) < 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 700, fontSize: 18, marginLeft: 8 }}>{fsPayableOf(carryFS) < 0 ? '-' : '+'}{CUR}{F.fmtNum(Math.abs(fsPayableOf(carryFS)))}</span>
           </div>
         )}
       </WPUI.Modal>
@@ -1022,7 +1057,7 @@ function WRV_WRCard({ wr, B, CUR, F, agent, L, notes = [], onOpenCs }) {
       <WRV_DocRow l="Email" v={pay.email || '—'} />
 
       <div className="drawer-sec">{WRV_T('wp.f.applySource')}</div>
-      {B.csByIds(wr.csIds).map((c, i) => (
+      {B.csByIds(wr.csIds).filter(c => c.agentId === wr.agentId).map((c, i) => (
         <div key={c.id + '-' + i} onClick={() => onOpenCs && onOpenCs(c)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--line-soft)', fontSize: 12, cursor: onOpenCs ? 'pointer' : 'default' }}>
           <span className="text-mono" style={{ color: 'var(--brand)', fontSize: 12, textDecoration: onOpenCs ? 'underline' : 'none' }}>{c.id}</span>
           <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--brand)' }}>{CUR}{F.fmtNum(c.totalCommission)}</span>
@@ -1051,7 +1086,7 @@ function WRV_FSCard({ fs, B, CUR, F, agent, L, notes = [], adjust }) {
   const hasOv = Array.isArray(adjust);
   const totalAdjust = hasOv ? adjust.reduce((a, it) => a + (Number(it.amount) || 0), 0) : (fs.payable - fs.applyAmount); // 财务调整合计
   const payableVal = hasOv ? (fs.applyAmount + totalAdjust) : fs.payable;
-  const carryVal = hasOv ? (payableVal < 0 ? Math.abs(payableVal) : 0) : fs.carryOut;
+  const carryVal = hasOv ? (payableVal < 0 ? Math.abs(payableVal) : 0) : (fs.carryOut > 0 ? fs.carryOut : (fs.payable < 0 ? Math.abs(fs.payable) : 0));
   // 订单状态:核算中 / 已驳回 / 已转结 / 核算完成
   let fsStat;
   if (fs.status === 'rejected') fsStat = 'rejected';
@@ -1116,6 +1151,7 @@ function WRV_FSCard({ fs, B, CUR, F, agent, L, notes = [], adjust }) {
           {fs.reserve > 0 && <WRV_DocRow l={WRV_T('wp.f.reserve')} v={'-' + CUR + F.fmtNum(fs.reserve)} vColor={red} />}
         </>
       )}
+      {!hasOv && fs.carryIn < 0 && <WRV_DocRow l={WRV_T('wp.f.priorCarry') + (fs.carryInCfId ? '  ' + fs.carryInCfId : '')} v={'-' + CUR + F.fmtNum(Math.abs(fs.carryIn))} vColor={red} />}
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', borderTop: '1px solid var(--line)', marginTop: 2 }}>
         <span style={{ color: 'var(--text-0)', fontWeight: 600, fontSize: 12.5 }}>{WRV_T('wp.f.subtotal')}</span>
         <span className="text-mono" style={{ fontWeight: 600, color: totalAdjust < 0 ? red : 'var(--text-0)' }}>{totalAdjust < 0 ? '-' + CUR + F.fmtNum(Math.abs(totalAdjust)) : CUR + '0'}</span>
@@ -1126,9 +1162,20 @@ function WRV_FSCard({ fs, B, CUR, F, agent, L, notes = [], adjust }) {
       <WRV_DocRow l={WRV_T('wp.f.adjust')} v={totalAdjust < 0 ? '-' + CUR + F.fmtNum(Math.abs(totalAdjust)) : CUR + '0'} vColor={totalAdjust < 0 ? red : undefined} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '11px 0 0', borderTop: '1px solid var(--line)', marginTop: 2 }}>
         <span style={{ color: 'var(--text-0)', fontWeight: 600, fontSize: 12.5 }}>{WRV_T('wp.f.payable')}</span>
-        <span className="text-mono" style={{ color: payableVal > 0 ? green : 'var(--text-3)', fontWeight: 600, fontSize: 15 }}>{CUR}{F.fmtNum(Math.max(0, payableVal))}</span>
+        <span className="text-mono" style={{ color: payableVal > 0 ? green : (payableVal < 0 ? red : 'var(--text-3)'), fontWeight: 600, fontSize: 15 }}>{payableVal < 0 ? '-' + CUR + F.fmtNum(Math.abs(payableVal)) : CUR + F.fmtNum(payableVal)}</span>
       </div>
-      <WRV_DocRow l={WRV_T('wp.f.carryAmt')} v={carryVal > 0 ? '-' + CUR + F.fmtNum(carryVal) : CUR + '0'} vColor={carryVal > 0 ? red : undefined} />
+      {(() => {
+        const isCarried = fs.status === 'carried' || !!fs.carryCfId;
+        if (!isCarried) return null;
+        const cf = (fs.carryCfId && B.cfById) ? B.cfById(fs.carryCfId) : null;
+        const amt = cf ? cf.amount : (fs.carryOut > 0 ? -fs.carryOut : fs.payable);
+        return (
+          <>
+            <div className="drawer-sec">{WRV_T('wp.f.carrySection')}</div>
+            <WRV_DocRow l={cf ? cf.id : WRV_T('wp.f.carryAmt')} v={(amt < 0 ? '-' : '+') + CUR + F.fmtNum(Math.abs(amt))} vColor={amt < 0 ? red : green} />
+          </>
+        );
+      })()}
 
       <div className="drawer-sec">备注</div>
       {notes.length === 0 ? (

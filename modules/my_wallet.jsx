@@ -54,24 +54,24 @@ function MyWalletModule() {
         <div style={{position:'relative'}}>
           <div style={{fontSize:12,opacity:.85}}>可用余额 ({me.currency})</div>
           <div style={{fontSize:38,fontWeight:600,fontFamily:'var(--font-mono)',marginTop:4,letterSpacing:-0.5}}>
-            ${F.money(available)}
+            ${F.fmtNum(available)}
           </div>
           <div style={{display:'flex',gap:30,marginTop:18,fontSize:12,opacity:.95}}>
             <div>
               <div style={{opacity:.7,fontSize:11}}>处理中提款</div>
-              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.money(withdrawals.filter(w=>w.status!=='paid').reduce((a,w)=>a+w.amount,0))}</div>
+              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.fmtNum(withdrawals.filter(w=>w.status!=='paid').reduce((a,w)=>a+w.amount,0))}</div>
             </div>
             <div>
               <div style={{opacity:.7,fontSize:11}}>待结算</div>
-              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.money(pending)}</div>
+              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.fmtNum(pending)}</div>
             </div>
             <div>
               <div style={{opacity:.7,fontSize:11}}>风控冷却</div>
-              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.money(onHold)}</div>
+              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.fmtNum(onHold)}</div>
             </div>
             <div style={{marginLeft:'auto'}}>
               <div style={{opacity:.7,fontSize:11}}>累计已提</div>
-              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.money(totalPaid)}</div>
+              <div className="text-mono" style={{fontSize:16,marginTop:2}}>${F.fmtNum(totalPaid)}</div>
             </div>
           </div>
         </div>
@@ -154,7 +154,7 @@ function MyWalletModule() {
                       <td>{r[1].includes('入账') ? <span className="badge b-success">{r[1]}</span> : <span className="badge b-warning">{r[1]}</span>}</td>
                       <td className="text-mute" style={{fontSize:11.5}}>{r[2]}</td>
                       <td className="right text-mono" style={{color: r[3].startsWith('+')?'var(--success)':'var(--danger)',fontWeight:600}}>${r[3]}</td>
-                      <td className="right text-mono">${F.money(r[4])}</td>
+                      <td className="right text-mono">${F.fmtNum(r[4])}</td>
                       <td><span className={'badge b-'+r[5]}><span className="dot"/>{r[5]==='success'?'已完成':r[5]==='warning'?'处理中':'已扣减'}</span></td>
                     </tr>
                   ))}
@@ -178,9 +178,9 @@ function MyWalletModule() {
                     <td className="id" style={{color:'var(--brand)',fontFamily:'var(--font-mono)',fontSize:11.5}}>{w.id}</td>
                     <td><span className="badge b-neutral">{w.method}</span></td>
                     <td className="text-mono" style={{fontSize:11}}>{w.account}</td>
-                    <td className="right text-mono">${F.money(w.amount)}</td>
-                    <td className="right text-mono">${F.money(w.fee)}</td>
-                    <td className="right text-mono" style={{color:'var(--text-0)',fontWeight:600}}>${F.money(w.amount - w.fee)}</td>
+                    <td className="right text-mono">${F.fmtNum(w.amount)}</td>
+                    <td className="right text-mono">${F.fmtNum(w.fee)}</td>
+                    <td className="right text-mono" style={{color:'var(--text-0)',fontWeight:600}}>${F.fmtNum(w.amount - w.fee)}</td>
                     <td>
                       {w.status === 'paid' && <span className="badge b-success"><span className="dot"/>已到账</span>}
                       {w.status === 'processing' && <span className="badge b-brand"><span className="dot"/>付款中</span>}
@@ -237,7 +237,7 @@ function MyWalletModule() {
 
       {/* 提款 Modal */}
       <AWUI.Modal open={showWithdraw} onClose={()=>setShowWithdraw(false)} title="申请提款"
-        subtitle={'当前可用余额 $' + F.money(available)}
+        subtitle={'当前可用余额 $' + F.fmtNum(available)}
         footer={<>
           <button className="btn ghost" onClick={()=>setShowWithdraw(false)}>取消</button>
           <button className="btn primary" onClick={()=>{toast('提款已提交,审核通过后 24h 内到账');setShowWithdraw(false);}}><Icon name="check" size={13}/>提交申请</button>
@@ -253,7 +253,7 @@ function MyWalletModule() {
           </div>
           <div className="full">
             <label className="text-soft" style={{fontSize:12,display:'block',marginBottom:6}}>提款金额 (USD)</label>
-            <input className="input" placeholder={'最低 $200,可用 $' + F.money(available)} defaultValue="1500"/>
+            <input className="input" placeholder={'最低 $200,可用 $' + F.fmtNum(available)} defaultValue="1500"/>
             <div style={{display:'flex',gap:6,marginTop:8}}>
               {[500, 1000, 2000, 5000, '全部'].map(amt => (
                 <button key={amt} className="btn sm" style={{flex:1}}>${amt}</button>

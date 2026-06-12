@@ -227,8 +227,8 @@ function MyRevshareModule() {
   // 而非「逐户 clamp 后求和」—亏损玩家会冲抵盈利玩家。不受下方搜索影响。
   const totalCommission = aggregateCommission(players).commission;
 
-  const money = (n) => (n < 0 ? '-₹' : '₹') + F.money(Math.abs(n||0));
-  const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.money(Math.abs(n||0));
+  const money = (n) => (n < 0 ? '-₹' : '₹') + F.fmtNum(Math.abs(n||0));
+  const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.fmtNum(Math.abs(n||0));
 
   // 重置筛选(切 tab 时)
   const switchTab = (k) => { setTab(k); setPage(1); };

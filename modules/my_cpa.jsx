@@ -51,9 +51,9 @@ function MyCpaModule() {
 
       <div className="kpi-grid mb-4" style={{gridTemplateColumns:'repeat(5,1fr)'}}>
         {[
-          ['有效 CPA', F.fmtNum(counts.approved), '+' + F.money(approvedAmt) + ' USD'],
-          ['待审核', F.fmtNum(counts.pending), '$' + F.money(pendingAmt) + ' 待结算'],
-          ['已拒绝', F.fmtNum(counts.rejected), '$' + F.money(rejectedAmt) + ' 不计入'],
+          ['有效 CPA', F.fmtNum(counts.approved), '+' + F.fmtNum(approvedAmt) + ' USD'],
+          ['待审核', F.fmtNum(counts.pending), '$' + F.fmtNum(pendingAmt) + ' 待结算'],
+          ['已拒绝', F.fmtNum(counts.rejected), '$' + F.fmtNum(rejectedAmt) + ' 不计入'],
           ['暂扣中', F.fmtNum(counts.held), '风控冷却'],
           ['通过率', passRate + '%', counts.all + ' 总申报'],
         ].map(([l,v,d]) => (
@@ -105,9 +105,9 @@ function MyCpaModule() {
                       <td className="id" style={{color:'var(--brand)',fontFamily:'var(--font-mono)',fontSize:11.5}}>{r.id}</td>
                       <td className="text-mono" style={{fontSize:11.5}}>{r.playerId}</td>
                       <td className="text-mono" style={{fontSize:11}}>{r.code}</td>
-                      <td className="right text-mono">${F.money(r.ftdAmount)}</td>
-                      <td className="right text-mono">${F.money(r.wager)}</td>
-                      <td className="right text-mono">${F.money(r.ngr)}</td>
+                      <td className="right text-mono">${F.fmtNum(r.ftdAmount)}</td>
+                      <td className="right text-mono">${F.fmtNum(r.wager)}</td>
+                      <td className="right text-mono">${F.fmtNum(r.ngr)}</td>
                       <td>
                         {r.d3 === true && <span className="badge b-success">✓</span>}
                         {r.d3 === false && <span className="badge b-danger">✗</span>}
@@ -119,7 +119,7 @@ function MyCpaModule() {
                         {r.status === 'rejected' && <span className="badge b-danger"><span className="dot"/>已拒绝</span>}
                         {r.status === 'risk_hold' && <span className="badge b-warning"><span className="dot"/>暂扣</span>}
                       </td>
-                      <td className="right text-mono">${F.money(r.cpaAmount)}</td>
+                      <td className="right text-mono">${F.fmtNum(r.cpaAmount)}</td>
                       <td className="text-mute" style={{fontSize:11}}>{new Date(r.ftdAt).toLocaleDateString('zh-CN')}</td>
                       <td className="text-mute" style={{fontSize:11}}>{r.reviewedAt?new Date(r.reviewedAt).toLocaleDateString('zh-CN'):'-'}</td>
                       <td>

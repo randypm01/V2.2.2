@@ -66,8 +66,8 @@ function MyPlayersModule() {
   const totalGgr      = sum('ggr');
   const totalCom      = sum('commission');
 
-  const money = (n) => '₹' + F.money(n||0);
-  const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.money(Math.abs(n||0));
+  const money = (n) => '₹' + F.fmtNum(n||0);
+  const fmtGap = (n) => (n>=0?'+':'-') + '₹' + F.fmtNum(Math.abs(n||0));
 
   return (
     <div className="page">

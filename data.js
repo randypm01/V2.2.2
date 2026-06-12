@@ -44,8 +44,10 @@ function genAgents(n=AGENT_COUNT) {
     // v3.1.35 P0 簡化版:整個系統只剩 AC(代理後台自行申請),不再有 AG / AP 範例
     // 前 5 筆示例 status 固定(供仪表盘/报表展示);未启用(pending)的玩家数固定为 0
     const fixedStatus = i < 5 ? ['pending','active','frozen','suspended','pending'][i] : null;
-    const players = fixedStatus === 'pending' ? 0 : srand(0, 4500);
-    const commission = srand(0, 250000);
+    // v3.7.48 空账户:AC100005 / 100007 / 100008 当作新开账户,聚合数清零(玩家/佣金/NGR)
+    const isEmptyAcct = [100005, 100007, 100008].includes(100001 + i);
+    const players = (fixedStatus === 'pending' || isEmptyAcct) ? 0 : srand(0, 4500);
+    const commission = isEmptyAcct ? 0 : srand(0, 250000);
     list.push({
       id: id('AC', 100001 + i),
       name: i < 5
@@ -65,8 +67,8 @@ function genAgents(n=AGENT_COUNT) {
       players,
       activeCpa: Math.floor(players * (0.1 + seedRand() * 0.4)),
       commission,
-      pendingCommission: srand(0, 50000),
-      ngr: srand(5000, 800000),
+      pendingCommission: isEmptyAcct ? 0 : srand(0, 50000),
+      ngr: isEmptyAcct ? 0 : srand(5000, 800000),
       // 前 5 笔示例数据固定风险等级:依序 低/低/中/高/低 (AG×4 + AP範例6)
       risk: i < 5
         ? ['low','low','medium','high','low'][i]
@@ -75,6 +77,13 @@ function genAgents(n=AGENT_COUNT) {
     });
   }
   return list;
+}
+
+// v3.7.48 随机 agentId 排除空账户(AC100005 / 100007 / 100008 当作新开、无数据)
+function randAgentId() {
+  let no;
+  do { no = 100001 + srand(0, AGENT_COUNT - 1); } while (no === 100005 || no === 100007 || no === 100008);
+  return id('AC', no);
 }
 
 // ---------- Players ----------
@@ -88,7 +97,7 @@ function genPlayers(n=200) {
     const ngr = wager * (0.03 + seedRand() * 0.07);
     list.push({
       id: id('P', 800000 + i),
-      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
+      agentId: randAgentId(),
       codeId: id('C', 7000 + srand(0, 49)),
       country: spick(COUNTRIES),
       currency: spick(CURRENCIES),
@@ -122,7 +131,7 @@ function genCodes(n=50) {
       id: id('C', 7000 + i),
       code: 'PROMO' + String(srand(1000,9999)),
       name: spick(['Summer Push','LATAM Q3','Telegram VIP','TikTok Influence','BR World Cup','PIX Boost','VN Newbie','TH Masters','PH Streamer','Retargeting Burst']),
-      agent: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
+      agent: randAgentId(),
       channel: spick(CHANNELS),
       campaign: 'CMP-' + srand(1000, 9999),
       market: spick(MARKETS),
@@ -148,7 +157,7 @@ function genCpaRecords(n=120) {
     const status = spick(['approved','approved','approved','pending','pending','rejected','risk_hold']);
     list.push({
       id: id('CPA', 50000 + i),
-      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
+      agentId: randAgentId(),
       playerId: id('P', 800000 + srand(0, 199)),
       ftdAmount: srand(20, 800),
       ftdAt: Date.now() - srand(1, 60) * 86400000,
@@ -177,7 +186,7 @@ function genSettlements(n=40) {
     const total = cpa + rev + sub + adj - risk;
     list.push({
       id: 'STM-2026-' + String(srand(10000, 99999)),
-      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
+      agentId: randAgentId(),
       period: spick(['2026-W17','2026-W18','2026-W19','2026-04','2026-03']),
       cpa, rev, sub, adj, risk,
       tax: Math.floor(total * 0.05),
@@ -208,7 +217,7 @@ function genRiskPlayers(n=40) {
   for (let i = 0; i < n; i++) {
     list.push({
       id: id('P', 800000 + srand(0, 199)),
-      agentId: id('AC', 100001 + srand(0, AGENT_COUNT - 1)),
+      agentId: randAgentId(),
       codeId: id('C', 7000 + srand(0, 49)),
       reason: spick(reasons),
       level: spick(['low','medium','high','critical']),

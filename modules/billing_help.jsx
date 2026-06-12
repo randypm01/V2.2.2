@@ -21,8 +21,7 @@
       smSub: '佣金结算单(CS)在提款全流程中的 10 种状态',
       groups: [
         { label: '待处理', items: [
-          ['待提款', '本期总佣金已达提款门槛,等待纳入提款申请。'],
-          ['转结下期', '本期总佣金未达门槛,金额并入下期佣金,不可单独提款。'],
+          ['待提款', '本期总佣金等待纳入提款申请;发起提款时校验申请总额是否达分润模式最低申请金额。'],
         ] },
         { label: '流转中 · 已在提款申请单内', items: [
           ['审核中', '已纳入提款申请单(WR),等待商户运营审核。'],
@@ -93,8 +92,7 @@
       smSub: 'The 10 states of a Commission Settlement (CS) across the withdrawal flow',
       groups: [
         { label: 'Pending', items: [
-          ['Withdrawable', 'Total commission meets the threshold; awaiting a withdrawal request.'],
-          ['Carried Forward', 'Below threshold; amount rolls into next period, not separately withdrawable.'],
+          ['Withdrawable', 'Awaiting a withdrawal request; the plan’s minimum amount is checked when applying.'],
         ] },
         { label: 'In Progress · inside a request', items: [
           ['Reviewing', 'Bundled into a Withdrawal Request (WR); pending merchant review.'],

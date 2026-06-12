@@ -46,7 +46,6 @@ function AgentSettlementModule() {
   const TAB_GROUPS = [
     { label: '结算', tabs: [
       { v: 'withdrawable', l: '待提款', c: counts.withdrawable },
-      { v: 'carried', l: '转结下期', c: counts.carried },
     ] },
     { label: '提款申请', tabs: [
       { v: 'reviewing', l: '审核中', c: counts.reviewing },
@@ -188,6 +187,7 @@ function AgentSettlementModule() {
           const carryAmt = detail.status === 'carried' ? detail.totalCommission : (detail.status === 'auditCarried' && fs ? fs.carryOut : 0);
           const stColor = AGS_CS_TONE_COLOR[(L[detail.status] || {}).tone] || 'var(--text-1)';
           return (
+          <window.CSDetailTabs cs={detail} B={B} CUR={CUR} F={F} en={false} pad="18px 24px 40px" renderDetail={() => (
           <div style={{ padding: '18px 24px 40px' }}>
             {/* 状态 */}
             <div className="drawer-sec">状态</div>
@@ -244,6 +244,7 @@ function AgentSettlementModule() {
               </>
             )}
           </div>
+          )} />
           );
         })()}
       </AGSUI.Drawer>
